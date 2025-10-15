@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '../components/layouts/theme-provider';
-import Navbar from '../components/layouts/navbar';
+import ConditionalNavbar from '../components/layouts/conditional-navbar';
 import AuthProvider from '@/components/providers/session-provider';
 
 const geistSans = Geist({
@@ -35,7 +35,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <Navbar />
+            <ConditionalNavbar />
             <main className="min-h-screen">{children}</main>
           </ThemeProvider>
         </AuthProvider>
