@@ -1,0 +1,115 @@
+import { redirect } from 'next/navigation';
+import Link from 'next/link'; // Correct import
+import { auth } from '@/lib/auth';
+import { getAllUsers } from '@/actions/user';
+import { UserTable } from '@/components/admin/user-table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Shield, Users, UserCheck, UserX, ArrowLeft } from 'lucide-react';
+
+export default async function Viewusers() {
+  const session = await auth();
+
+  // Check if user is logged in
+  if (!session?.user) {
+    redirect('/');
+  }
+
+  // Check if user is admin
+  const userRole = (session.user as any)?.role;
+  if (userRole !== 'admin') {
+    redirect('/dashboard');
+  }
+
+  // Fetch all users
+  const users = await getAllUsers();
+
+  // Calculate statistics
+  const totalUsers = users.length;
+  const adminCount = users.filter((u) => u.role === 'admin').length;
+  const regularUserCount = users.filter((u) => u.role === 'user').length;
+  const verifiedCount = users.filter((u) => u.emailVerified).length;
+
+  return (
+    <div className="container mx-auto p-8">
+      {/* Back Button */}
+      <Link href="/admin">
+        <Button variant="ghost" className="mb-6 gap-2">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Admin Dashboard
+        </Button>
+      </Link>
+
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold flex items-center gap-2">
+          <Users className="h-8 w-8 text-amber-600" />
+          User Management
+        </h1>
+        <p className="text-muted-foreground mt-2">
+          View and manage all registered users
+        </p>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalUsers}</div>
+            <p className="text-xs text-muted-foreground">All registered users</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Admins</CardTitle>
+            <Shield className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{adminCount}</div>
+            <p className="text-xs text-muted-foreground">Users with admin role</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Regular Users</CardTitle>
+            <UserX className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{regularUserCount}</div>
+            <p className="text-xs text-muted-foreground">Standard user accounts</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Verified</CardTitle>
+            <UserCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{verifiedCount}</div>
+            <p className="text-xs text-muted-foreground">Email verified users</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Users Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>All Users</CardTitle>
+          <CardDescription>
+            View and manage all registered users. Click the actions menu to change user roles.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <UserTable users={users} currentUserId={session.user.id as string} />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
