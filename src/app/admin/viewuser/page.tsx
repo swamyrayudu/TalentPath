@@ -1,11 +1,9 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link'; // Correct import
 import { auth } from '@/lib/auth';
 import { getAllUsers } from '@/actions/user';
 import { UserTable } from '@/components/admin/user-table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Shield, Users, UserCheck, UserX, ArrowLeft } from 'lucide-react';
+import { Shield, Users, UserCheck, UserX } from 'lucide-react';
 
 export default async function Viewusers() {
   const session = await auth();
@@ -32,22 +30,13 @@ export default async function Viewusers() {
 
   return (
     <div className="container mx-auto p-8">
-      {/* Back Button */}
-      <Link href="/admin">
-        <Button variant="ghost" className="mb-6 gap-2">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Admin Dashboard
-        </Button>
-      </Link>
-
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Users className="h-8 w-8 text-amber-600" />
-          User Management
+          <Shield className="h-8 w-8 text-amber-600" />
+          Admin Dashboard
         </h1>
         <p className="text-muted-foreground mt-2">
-          View and manage all registered users
+          Manage users and their roles
         </p>
       </div>
 

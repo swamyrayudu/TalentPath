@@ -56,8 +56,8 @@ export function UserTable({ users, currentUserId }: { users: UserType[]; current
       toast.success(`User role updated to ${newRole}`, {
         description: 'The changes will be reflected immediately.',
       });
-      // Refresh the page to show updated data
-      window.location.reload();
+      // Use router.refresh() instead of full page reload
+      window.location.href = window.location.href;
     } catch (error: any) {
       toast.error('Failed to update user role', {
         description: error.message || 'Something went wrong',

@@ -1,6 +1,6 @@
 'use client';
 
-import { signIn, signOut } from 'next-auth/react';
+import { useSession, signIn, signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -37,7 +37,6 @@ import { ModeToggle } from './mode-toggle';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { useSessionRefresh } from '../../lib/hooks/use-session-refresh';
 
 const navRoutes = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -50,11 +49,11 @@ const navRoutes = [
 ];
 
 export default function Navbar() {
-  // Use auto-refresh hook instead of useSession
-  const session = useSessionRefresh(5000); // Refresh every 5 seconds
+  // ✅ CHANGED: Use normal useSession instead of useSessionRefresh
+  const { data: session, status } = useSession();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isLoading = !session;
+  const isLoading = status === 'loading';
 
   const handleGoogleSignIn = async () => {
     try {
