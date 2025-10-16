@@ -1,7 +1,15 @@
 'use client';
 
-import { useSession, signIn } from 'next-auth/react';
+import { useSession, signIn, signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Sheet,
   SheetContent,
@@ -9,11 +17,16 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { ModeToggle } from './mode-toggle';
 import Link from 'next/link';
 import { 
   Code, 
   LogIn, 
+  LogOut,
+  User,
+  Shield,
   Menu,
   Trophy,
   LayoutDashboard,
@@ -36,13 +49,28 @@ const navRoutes = [
 ];
 
 export default function HomeNavbar() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isLoading = status === 'loading';
 
   const handleGoogleSignIn = async () => {
-    await signIn('google', { callbackUrl: '/dashboard' });
+    await signIn('google');
   };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut({ 
+        callbackUrl: '/',
+        redirect: true,
+      });
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
+
+  const userRole = (session?.user as any)?.role || 'user';
+  const isAdmin = userRole === 'admin';
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -58,7 +86,7 @@ export default function HomeNavbar() {
             </h1>
           </Link>
 
-          {/* Desktop Navigation - All routes visible */}
+          {/* Desktop Navigation */}
           <div className="hidden md:flex md:items-center md:space-x-1">
             {navRoutes.map((route) => {
               const Icon = route.icon;
@@ -83,14 +111,68 @@ export default function HomeNavbar() {
           <div className="flex items-center space-x-2">
             <ModeToggle />
             
-            {/* Desktop Auth */}
+            {/* Desktop Auth - Profile Avatar or Sign In Button */}
             <div className="hidden md:block">
-              {session?.user ? (
-                <Link href="/dashboard">
-                  <Button className="gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700">
-                    Go to Dashboard
-                  </Button>
-                </Link>
+              {isLoading ? (
+                <div className="h-10 w-10 animate-pulse rounded-full bg-muted" />
+              ) : session?.user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                      <Avatar className="h-10 w-10 ring-2 ring-amber-500/20">
+                        <AvatarImage 
+                          src={session.user.image || ''} 
+                          alt={session.user.name || 'User'} 
+                        />
+                        <AvatarFallback className="bg-gradient-to-br from-amber-500 to-amber-600 text-white">
+                          {session.user.name?.charAt(0).toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-64" align="end" forceMount>
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-2">
+                        <p className="text-sm font-medium leading-none">
+                          {session.user.name}
+                        </p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {session.user.email}
+                        </p>
+                        <Badge 
+                          variant={isAdmin ? 'default' : 'secondary'} 
+                          className="w-fit"
+                        >
+                          <Shield className="mr-1 h-3 w-3" />
+                          {userRole.toUpperCase()}
+                        </Badge>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard" className="cursor-pointer">
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    {isAdmin && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin" className="cursor-pointer">
+                            <Shield className="mr-2 h-4 w-4" />
+                            <span>Admin Dashboard</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-red-600 focus:text-red-600">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : (
                 <Button 
                   onClick={handleGoogleSignIn}
@@ -123,6 +205,34 @@ export default function HomeNavbar() {
                   </SheetHeader>
 
                   <div className="mt-8 flex flex-col space-y-4">
+                    {/* User Info in Mobile (only if logged in) */}
+                    {session?.user && (
+                      <div className="rounded-lg border p-4 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900">
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="h-12 w-12 ring-2 ring-amber-500/20">
+                            <AvatarImage 
+                              src={session.user.image || ''} 
+                              alt={session.user.name || 'User'} 
+                            />
+                            <AvatarFallback className="bg-gradient-to-br from-amber-500 to-amber-600 text-white">
+                              {session.user.name?.charAt(0).toUpperCase() || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 space-y-1">
+                            <p className="text-sm font-medium">{session.user.name}</p>
+                            <p className="text-xs text-muted-foreground">{session.user.email}</p>
+                            <Badge 
+                              variant={isAdmin ? 'default' : 'secondary'} 
+                              className="w-fit"
+                            >
+                              <Shield className="mr-1 h-3 w-3" />
+                              {userRole.toUpperCase()}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Navigation Links */}
                     <div className="space-y-1">
                       {navRoutes.map((route) => {
@@ -143,19 +253,36 @@ export default function HomeNavbar() {
                           </Link>
                         );
                       })}
+
+                      {session?.user && isAdmin && (
+                        <>
+                          <div className="my-2 border-t" />
+                          <Link
+                            href="/admin"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex items-center space-x-3 rounded-md px-3 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                          >
+                            <Shield className="h-5 w-5" />
+                            <span>Admin Dashboard</span>
+                          </Link>
+                        </>
+                      )}
                     </div>
 
                     {/* Auth Actions */}
                     <div className="space-y-2 pt-4 border-t">
                       {session?.user ? (
-                        <Link href="/dashboard">
-                          <Button 
-                            onClick={() => setMobileMenuOpen(false)}
-                            className="w-full gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700"
-                          >
-                            Go to Dashboard
-                          </Button>
-                        </Link>
+                        <Button 
+                          onClick={() => {
+                            handleSignOut();
+                            setMobileMenuOpen(false);
+                          }}
+                          variant="destructive"
+                          className="w-full gap-2"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Sign Out
+                        </Button>
                       ) : (
                         <Button 
                           onClick={() => {
