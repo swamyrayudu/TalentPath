@@ -4,6 +4,7 @@ import { auth } from '../lib/auth';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { revalidatePath } from 'next/cache';
 
 export async function getCurrentUser() {
   const session = await auth();
@@ -19,7 +20,7 @@ export async function getCurrentUser() {
   return user;
 }
 
-export async function updateUserRole(userId: string, newRole: 'user' | 'admin' | 'moderator') {
+export async function updateUserRole(userId: string, newRole: 'user' | 'admin') {
   const session = await auth();
   
   if ((session?.user as any)?.role !== 'admin') {
@@ -31,6 +32,9 @@ export async function updateUserRole(userId: string, newRole: 'user' | 'admin' |
     .set({ role: newRole })
     .where(eq(users.id, userId))
     .returning();
+
+  // Revalidate all paths to refresh server components
+  revalidatePath('/', 'layout');
 
   return updatedUser[0];
 }

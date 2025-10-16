@@ -1,6 +1,7 @@
-import { pgTable, text, timestamp, boolean, pgEnum, primaryKey, integer } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, pgEnum, primaryKey, integer } from 'drizzle-orm/pg-core';
 
-export const roleEnum = pgEnum('role', ['user', 'admin', 'moderator']);
+// Only user and admin roles
+export const roleEnum = pgEnum('role', ['user', 'admin']);
 
 export const users = pgTable('user', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),

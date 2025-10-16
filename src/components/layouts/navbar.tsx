@@ -1,6 +1,6 @@
 'use client';
 
-import { useSession, signIn, signOut } from 'next-auth/react';
+import { signIn, signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -37,6 +37,7 @@ import { ModeToggle } from './mode-toggle';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { useSessionRefresh } from '../../lib/hooks/use-session-refresh';
 
 const navRoutes = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -49,10 +50,11 @@ const navRoutes = [
 ];
 
 export default function Navbar() {
-  const { data: session, status } = useSession();
+  // Use auto-refresh hook instead of useSession
+  const session = useSessionRefresh(5000); // Refresh every 5 seconds
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isLoading = status === 'loading';
+  const isLoading = !session;
 
   const handleGoogleSignIn = async () => {
     try {
@@ -77,12 +79,12 @@ export default function Navbar() {
   };
 
   const userRole = (session?.user as any)?.role || 'user';
+  const isAdmin = userRole === 'admin';
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-amber-600">
               <Code className="h-6 w-6 text-white" />
@@ -92,7 +94,6 @@ export default function Navbar() {
             </h1>
           </Link>
 
-          {/* Desktop Navigation - Always visible */}
           <div className="hidden md:flex md:items-center md:space-x-1">
             {navRoutes.map((route) => {
               const Icon = route.icon;
@@ -113,11 +114,9 @@ export default function Navbar() {
             })}
           </div>
 
-          {/* Right Side Actions */}
           <div className="flex items-center space-x-2">
             <ModeToggle />
 
-            {/* Desktop Auth */}
             <div className="hidden md:block">
               {isLoading ? (
                 <div className="h-10 w-10 animate-pulse rounded-full bg-muted" />
@@ -146,7 +145,7 @@ export default function Navbar() {
                           {session.user.email}
                         </p>
                         <Badge 
-                          variant={userRole === 'admin' ? 'default' : 'secondary'} 
+                          variant={isAdmin ? 'default' : 'secondary'} 
                           className="w-fit"
                         >
                           <Shield className="mr-1 h-3 w-3" />
@@ -161,7 +160,7 @@ export default function Navbar() {
                         <span>Profile</span>
                       </Link>
                     </DropdownMenuItem>
-                    {userRole === 'admin' && (
+                    {isAdmin && (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
@@ -187,7 +186,6 @@ export default function Navbar() {
               )}
             </div>
 
-            {/* Mobile Menu */}
             <div className="md:hidden">
               <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetTrigger asChild>
@@ -208,7 +206,6 @@ export default function Navbar() {
                   </SheetHeader>
 
                   <div className="mt-8 flex flex-col space-y-4">
-                    {/* User Info in Mobile (only if logged in) */}
                     {session?.user && (
                       <div className="rounded-lg border p-4 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900">
                         <div className="flex items-center space-x-3">
@@ -225,7 +222,7 @@ export default function Navbar() {
                             <p className="text-sm font-medium">{session.user.name}</p>
                             <p className="text-xs text-muted-foreground">{session.user.email}</p>
                             <Badge 
-                              variant={userRole === 'admin' ? 'default' : 'secondary'} 
+                              variant={isAdmin ? 'default' : 'secondary'} 
                               className="w-fit"
                             >
                               <Shield className="mr-1 h-3 w-3" />
@@ -236,7 +233,6 @@ export default function Navbar() {
                       </div>
                     )}
 
-                    {/* Navigation Links - Always visible */}
                     <div className="space-y-1">
                       {navRoutes.map((route) => {
                         const Icon = route.icon;
@@ -257,7 +253,7 @@ export default function Navbar() {
                         );
                       })}
                       
-                      {session?.user && userRole === 'admin' && (
+                      {session?.user && isAdmin && (
                         <>
                           <div className="my-2 border-t" />
                           <Link
@@ -272,7 +268,6 @@ export default function Navbar() {
                       )}
                     </div>
 
-                    {/* Auth Actions */}
                     <div className="space-y-2 pt-4 border-t">
                       {session?.user ? (
                         <Button 

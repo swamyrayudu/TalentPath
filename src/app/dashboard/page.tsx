@@ -33,7 +33,7 @@ export default async function Dashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Role: {(session.user as any)?.role || 'user'}
+              Role: {(session.user as any)?.role}
             </p>
           </CardContent>
         </Card>
