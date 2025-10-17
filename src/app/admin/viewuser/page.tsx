@@ -12,6 +12,11 @@ export default async function Viewusers() {
   if (!session?.user) {
     redirect('/');
   }
+  const role = (session.user as any)?.role ?? 'user';
+  if (String(role).toLowerCase() !== 'admin') {
+    // Redirect non-admin users to home (or a 403 page if you prefer)
+    redirect('/');
+  }
 
   // Admin role check removed — allow any logged-in user to view this page.
 
