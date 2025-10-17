@@ -1,14 +1,25 @@
 import { pgTable, text, timestamp, pgEnum, primaryKey, integer, boolean } from 'drizzle-orm/pg-core';
 
-// Only user and admin roles
+// Enums
 export const roleEnum = pgEnum('role', ['user', 'admin']);
 
-// Job type enum
 export const jobTypeEnum = pgEnum('job_type', ['full-time', 'part-time', 'contract', 'internship']);
 
-// Job location type enum
 export const locationTypeEnum = pgEnum('location_type', ['remote', 'onsite', 'hybrid']);
 
+export const roadmapCategoryEnum = pgEnum('roadmap_category', [
+  'frontend',
+  'backend',
+  'fullstack',
+  'devops',
+  'mobile',
+  'data-science',
+  'ai-ml',
+  'cybersecurity',
+  'other'
+]);
+
+// User tables
 export const users = pgTable('user', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: text('name'),
@@ -70,6 +81,44 @@ export const jobs = pgTable('jobs', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// Roadmaps tables
+export const roadmaps = pgTable('roadmaps', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  category: roadmapCategoryEnum('category').notNull(),
+  difficulty: text('difficulty').notNull(),
+  estimatedTime: text('estimated_time'),
+  icon: text('icon'),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdBy: text('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const roadmapSteps = pgTable('roadmap_steps', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  roadmapId: text('roadmap_id').notNull().references(() => roadmaps.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  resources: text('resources'),
+  orderIndex: integer('order_index').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const userRoadmapProgress = pgTable('user_roadmap_progress', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  roadmapId: text('roadmap_id').notNull().references(() => roadmaps.id, { onDelete: 'cascade' }),
+  completedSteps: text('completed_steps').default('[]').notNull(),
+  startedAt: timestamp('started_at').defaultNow().notNull(),
+  lastUpdated: timestamp('last_updated').defaultNow().notNull(),
+});
+
+// Type exports
 export type User = typeof users.$inferSelect;
 export type Job = typeof jobs.$inferSelect;
 export type JobInsert = typeof jobs.$inferInsert;
+export type Roadmap = typeof roadmaps.$inferSelect;
+export type RoadmapStep = typeof roadmapSteps.$inferSelect;
+export type UserRoadmapProgress = typeof userRoadmapProgress.$inferSelect;
