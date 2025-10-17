@@ -13,10 +13,7 @@ export default async function CreateJob() {
     redirect('/');
   }
 
-  const userRole = (session.user as any)?.role;
-  if (userRole !== 'admin') {
-    redirect('/dashboard');
-  }
+  // Admin role check removed — allow any logged-in user to access job creation UI.
 
   return (
     <div className="container mx-auto p-8 max-w-4xl">

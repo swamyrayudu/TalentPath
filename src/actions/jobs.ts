@@ -19,10 +19,9 @@ export async function createJob(formData: {
   companyLogo?: string;
 }) {
   const session = await auth();
-
-  // Check if user is admin
-  if ((session?.user as any)?.role !== 'admin') {
-    throw new Error('Unauthorized: Admin access required');
+  // Require authentication but do not require admin role
+  if (!session?.user) {
+    throw new Error('Unauthorized: Please login');
   }
 
   const newJob = await db.insert(jobs).values({
@@ -72,9 +71,8 @@ export async function updateJob(
   }
 ) {
   const session = await auth();
-
-  if ((session?.user as any)?.role !== 'admin') {
-    throw new Error('Unauthorized: Admin access required');
+  if (!session?.user) {
+    throw new Error('Unauthorized: Please login');
   }
 
   const updatedJob = await db
@@ -94,9 +92,8 @@ export async function updateJob(
 
 export async function deleteJob(jobId: string) {
   const session = await auth();
-
-  if ((session?.user as any)?.role !== 'admin') {
-    throw new Error('Unauthorized: Admin access required');
+  if (!session?.user) {
+    throw new Error('Unauthorized: Please login');
   }
 
   await db.delete(jobs).where(eq(jobs.id, jobId));
@@ -109,9 +106,8 @@ export async function deleteJob(jobId: string) {
 
 export async function toggleJobStatus(jobId: string) {
   const session = await auth();
-
-  if ((session?.user as any)?.role !== 'admin') {
-    throw new Error('Unauthorized: Admin access required');
+  if (!session?.user) {
+    throw new Error('Unauthorized: Please login');
   }
 
   const job = await db.query.jobs.findFirst({

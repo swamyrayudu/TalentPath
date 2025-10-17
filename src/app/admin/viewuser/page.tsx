@@ -13,11 +13,7 @@ export default async function Viewusers() {
     redirect('/');
   }
 
-  // Check if user is admin
-  const userRole = (session.user as any)?.role;
-  if (userRole !== 'admin') {
-    redirect('/dashboard');
-  }
+  // Admin role check removed — allow any logged-in user to view this page.
 
   // Fetch all users
   const users = await getAllUsers();

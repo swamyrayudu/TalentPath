@@ -22,14 +22,9 @@ export async function getCurrentUser() {
 
 export async function getAllUsers() {
   const session = await auth();
-  
+
   if (!session) {
     throw new Error('Unauthorized: Please login');
-  }
-
-  // Only admins can view all users
-  if ((session.user as any)?.role !== 'admin') {
-    throw new Error('Unauthorized: Admin access required');
   }
 
   const allUsers = await db.query.users.findMany({
@@ -50,14 +45,9 @@ export async function getAllUsers() {
 
 export async function updateUserRole(userId: string, newRole: 'user' | 'admin') {
   const session = await auth();
-  
+
   if (!session) {
     throw new Error('Unauthorized: Please login');
-  }
-
-  // Only admins can update roles
-  if ((session.user as any)?.role !== 'admin') {
-    throw new Error('Unauthorized: Admin access required');
   }
 
   // Prevent admin from demoting themselves
@@ -83,21 +73,16 @@ export async function updateUserRole(userId: string, newRole: 'user' | 'admin') 
 
 export async function deleteUser(userId: string) {
   const session = await auth();
-  
+
   if (!session) {
     throw new Error('Unauthorized: Please login');
-  }
-
-  // Only admins can delete users
-  if ((session.user as any)?.role !== 'admin') {
-    throw new Error('Unauthorized: Admin access required');
   }
 
   if (!session.user?.id) {
     throw new Error('User ID not found');
   }
 
-  // Prevent admin from deleting themselves
+  // Prevent users from deleting themselves
   if (session.user.id === userId) {
     throw new Error('Cannot delete your own account');
   }

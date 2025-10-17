@@ -25,12 +25,7 @@ export default async function AdminDashboard() {
   if (!session?.user) {
     redirect('/');
   }
-
-  // Check if user is admin
-  const userRole = (session.user as any)?.role;
-  if (userRole !== 'admin') {
-    redirect('/dashboard');
-  }
+  // Note: admin role check removed — any logged-in user can access this page now.
 
   return (
     <div className="container mx-auto p-8">
