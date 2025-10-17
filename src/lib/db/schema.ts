@@ -1,7 +1,13 @@
-import { pgTable, text, timestamp, pgEnum, primaryKey, integer } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, pgEnum, primaryKey, integer, boolean } from 'drizzle-orm/pg-core';
 
 // Only user and admin roles
 export const roleEnum = pgEnum('role', ['user', 'admin']);
+
+// Job type enum
+export const jobTypeEnum = pgEnum('job_type', ['full-time', 'part-time', 'contract', 'internship']);
+
+// Job location type enum
+export const locationTypeEnum = pgEnum('location_type', ['remote', 'onsite', 'hybrid']);
 
 export const users = pgTable('user', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -45,4 +51,25 @@ export const verificationTokens = pgTable('verificationToken', {
   compoundKey: primaryKey({ columns: [vt.identifier, vt.token] }),
 }));
 
+// Jobs table
+export const jobs = pgTable('jobs', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  title: text('title').notNull(),
+  company: text('company').notNull(),
+  location: text('location').notNull(),
+  locationType: locationTypeEnum('location_type').notNull(),
+  jobType: jobTypeEnum('job_type').notNull(),
+  description: text('description').notNull(),
+  requirements: text('requirements').notNull(),
+  salary: text('salary'),
+  applyUrl: text('apply_url').notNull(),
+  companyLogo: text('company_logo'),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdBy: text('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
+export type Job = typeof jobs.$inferSelect;
+export type JobInsert = typeof jobs.$inferInsert;
