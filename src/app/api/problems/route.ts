@@ -20,7 +20,16 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10000');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    console.log('📊 Fetching problems:', { difficulty, platform, topic, search, limit, offset });
+    console.log('📊 Fetching problems:', { 
+      difficulty, 
+      platform, 
+      topic, 
+      search, 
+      sortBy, 
+      sortOrder, 
+      limit, 
+      offset 
+    });
 
     const baseQuery = db.select().from(problems);
     const conditions = [];
@@ -35,7 +44,7 @@ export async function GET(request: NextRequest) {
       conditions.push(eq(problems.platform, normalizedPlatform as any));
     }
 
-    if (topic && topic !== 'all') {
+    if (topic && topic !== 'all' && topic !== 'undefined') {
       // Use PostgreSQL array overlap operator to check if topicSlugs contains the topic
       console.log('🔍 Filtering by topic:', topic);
       conditions.push(sql`${problems.topicSlugs} && ARRAY[${topic}]`);
