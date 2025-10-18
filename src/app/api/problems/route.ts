@@ -15,10 +15,12 @@ export async function GET(request: NextRequest) {
     const platform = searchParams.get('platform');
     const topic = searchParams.get('topic');
     const search = searchParams.get('search');
+    const sortBy = searchParams.get('sortBy') || 'likes';
+    const sortOrder = searchParams.get('sortOrder') || 'desc';
     const limit = parseInt(searchParams.get('limit') || '10000');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    console.log('📊 Fetching problems:', { difficulty, platform, topic, search });
+    console.log('📊 Fetching problems:', { difficulty, platform, topic, search, limit, offset });
 
     const baseQuery = db.select().from(problems);
     const conditions = [];
@@ -34,7 +36,9 @@ export async function GET(request: NextRequest) {
     }
 
     if (topic && topic !== 'all') {
-      conditions.push(sql`${topic} = ANY(${problems.topicTags})`);
+      // Use PostgreSQL array overlap operator to check if topicSlugs contains the topic
+      console.log('🔍 Filtering by topic:', topic);
+      conditions.push(sql`${problems.topicSlugs} && ARRAY[${topic}]`);
     }
 
     if (search) {
@@ -50,8 +54,27 @@ export async function GET(request: NextRequest) {
       ? baseQuery.where(and(...conditions))
       : baseQuery;
 
+    // Dynamic sorting
+    let orderByClause;
+    switch (sortBy) {
+      case 'likes':
+        orderByClause = sortOrder === 'asc' ? problems.likes : desc(problems.likes);
+        break;
+      case 'acceptance':
+        orderByClause = sortOrder === 'asc' ? problems.acceptanceRate : desc(problems.acceptanceRate);
+        break;
+      case 'title':
+        orderByClause = sortOrder === 'asc' ? problems.title : desc(problems.title);
+        break;
+      case 'difficulty':
+        orderByClause = sortOrder === 'asc' ? problems.difficulty : desc(problems.difficulty);
+        break;
+      default:
+        orderByClause = desc(problems.likes);
+    }
+
     const result = await query
-      .orderBy(desc(problems.likes))
+      .orderBy(orderByClause)
       .limit(limit)
       .offset(offset);
 
