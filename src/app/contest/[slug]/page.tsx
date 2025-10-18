@@ -1,0 +1,96 @@
+import { notFound } from 'next/navigation';
+import { getContest, getContestQuestions, getLeaderboard, checkParticipation } from '@/actions/contest.actions';
+import { ContestHeader } from '@/components/contest/contest-header';
+import { ContestTimer } from '@/components/contest/contest-timer';
+import { QuestionsList } from '@/components/contest/questions-list';
+import { ContestLeaderboard } from '@/components/contest/leaderboard';
+import { JoinContestButton } from '@/components/contest/join-contest-button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Settings } from 'lucide-react';
+import Link from 'next/link';
+import { auth } from '@/lib/auth';
+
+export default async function ContestDetailPage({ params }: { params: { slug: string } }) {
+  const session = await auth();
+  const contestResult = await getContest(params.slug);
+  
+  if (!contestResult.success || !contestResult.data) {
+    notFound();
+  }
+
+  const contest = contestResult.data;
+  const questionsResult = await getContestQuestions(contest.id);
+  const questions = questionsResult.success && questionsResult.data ? questionsResult.data : [];
+  
+  const leaderboardResult = await getLeaderboard(contest.id);
+  const leaderboard = leaderboardResult.success && leaderboardResult.data ? leaderboardResult.data : [];
+
+  const isParticipant = session?.user?.id ? 
+    (await checkParticipation(contest.id, session.user.id)).isParticipant : false;
+
+  const isCreator = session?.user?.id === contest.createdBy;
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <ContestHeader contest={{
+        ...contest,
+        creatorName: contest.creatorName || undefined
+      }} />
+      
+      {/* Manage Contest Button - Only for Creator */}
+      {isCreator && (
+        <div className="mt-4">
+          <Link href={`/contest/${params.slug}/manage`}>
+            <Button size="lg" variant="outline" className="w-full md:w-auto">
+              <Settings className="h-5 w-5 mr-2" />
+              Manage Contest
+            </Button>
+          </Link>
+        </div>
+      )}
+      
+      <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <ContestTimer contest={contest} />
+          
+          {!isParticipant && session?.user && (
+            <div className="mb-6">
+              <JoinContestButton contestId={contest.id} visibility={contest.visibility} />
+            </div>
+          )}
+
+          <Tabs defaultValue="problems" className="w-full">
+            <TabsList className="w-full">
+              <TabsTrigger value="problems" className="flex-1">Problems</TabsTrigger>
+              <TabsTrigger value="leaderboard" className="flex-1">Leaderboard</TabsTrigger>
+              <TabsTrigger value="submissions" className="flex-1">My Submissions</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="problems" className="mt-6">
+              <QuestionsList 
+                questions={questions} 
+                contestId={contest.id}
+                contestSlug={params.slug}
+                isParticipant={isParticipant}
+              />
+            </TabsContent>
+
+            <TabsContent value="leaderboard" className="mt-6">
+              <ContestLeaderboard leaderboard={leaderboard} />
+            </TabsContent>
+
+            <TabsContent value="submissions" className="mt-6">
+              {/* Submissions list will be here */}
+              <p className="text-muted-foreground">Your submissions will appear here</p>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        <div className="lg:col-span-1">
+          <ContestLeaderboard leaderboard={leaderboard} compact />
+        </div>
+      </div>
+    </div>
+  );
+}

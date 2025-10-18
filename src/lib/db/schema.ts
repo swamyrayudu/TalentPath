@@ -1,23 +1,55 @@
-import { pgTable, text, timestamp, pgEnum, primaryKey, integer, boolean } from 'drizzle-orm/pg-core';
-import { bigserial, bigint, decimal, jsonb, index } from 'drizzle-orm/pg-core';
-
 // ============================================
-// ENUMS
+// MERGED SCHEMA: TalentPath + Contest System
+// schema.ts - Complete Database Schema
 // ============================================
 
+import { 
+  pgTable, 
+  text, 
+  timestamp, 
+  pgEnum, 
+  primaryKey, 
+  integer, 
+  boolean,
+  bigserial,
+  bigint,
+  decimal,
+  jsonb,
+  index 
+} from 'drizzle-orm/pg-core';
+
+// ============================================
+// ENUM DEFINITIONS
+// ============================================
+
+// Auth & User Enums
 export const roleEnum = pgEnum('role', ['user', 'admin']);
+
+// Jobs System Enums
 export const jobTypeEnum = pgEnum('job_type', ['full-time', 'part-time', 'contract', 'internship']);
 export const locationTypeEnum = pgEnum('location_type', ['remote', 'onsite', 'hybrid']);
+
+// Problems System Enums
 export const difficultyEnum = pgEnum('difficulty', ['EASY', 'MEDIUM', 'HARD']);
 export const platformEnum = pgEnum('platform', ['LEETCODE', 'CODEFORCES', 'HACKERRANK', 'GEEKSFORGEEKS']);
 export const progressStatusEnum = pgEnum('progress_status', ['solved', 'attempted', 'bookmarked']);
+
+// Roadmaps System Enums
 export const roadmapCategoryEnum = pgEnum('roadmap_category', [
   'frontend', 'backend', 'fullstack', 'devops', 'mobile', 
   'data-science', 'ai-ml', 'cybersecurity', 'other'
 ]);
 
+// Contest System Enums
+export const contestStatusEnum = pgEnum('contest_status', ['draft', 'upcoming', 'live', 'ended']);
+export const contestVisibilityEnum = pgEnum('contest_visibility', ['public', 'private']);
+export const submissionVerdictEnum = pgEnum('submission_verdict', [
+  'pending', 'accepted', 'wrong_answer', 'runtime_error', 
+  'time_limit_exceeded', 'compilation_error'
+]);
+
 // ============================================
-// AUTH TABLES
+// AUTH & USER TABLES
 // ============================================
 
 export const users = pgTable('user', {
@@ -63,7 +95,7 @@ export const verificationTokens = pgTable('verificationToken', {
 }));
 
 // ============================================
-// JOBS TABLE
+// JOBS SYSTEM TABLES
 // ============================================
 
 export const jobs = pgTable('jobs', {
@@ -82,10 +114,17 @@ export const jobs = pgTable('jobs', {
   createdBy: text('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (table) => ({
+  createdByIdx: index('idx_jobs_created_by').on(table.createdBy),
+  isActiveIdx: index('idx_jobs_is_active').on(table.isActive),
+  createdAtIdx: index('idx_jobs_created_at').on(table.createdAt),
+  companyIdx: index('idx_jobs_company').on(table.company),
+  locationTypeIdx: index('idx_jobs_location_type').on(table.locationType),
+  jobTypeIdx: index('idx_jobs_job_type').on(table.jobType),
+}));
 
 // ============================================
-// PROBLEMS TABLES
+// PROBLEMS SYSTEM TABLES
 // ============================================
 
 export const problems = pgTable('problems', {
@@ -113,6 +152,8 @@ export const problems = pgTable('problems', {
   difficultyIdx: index('problems_difficulty_idx').on(table.difficulty),
   createdAtIdx: index('problems_created_at_idx').on(table.createdAt),
   platformIdx: index('problems_platform_idx').on(table.platform),
+  companyTagsIdx: index('problems_company_tags_idx').on(table.companyTags),
+  topicTagsIdx: index('problems_topic_tags_idx').on(table.topicTags),
 }));
 
 export const userProgress = pgTable('user_progress', {
@@ -129,6 +170,7 @@ export const userProgress = pgTable('user_progress', {
   userIdIdx: index('user_progress_user_id_idx').on(table.userId),
   problemIdIdx: index('user_progress_problem_id_idx').on(table.problemId),
   userProblemIdx: index('user_progress_user_problem_idx').on(table.userId, table.problemId),
+  statusIdx: index('user_progress_status_idx').on(table.status),
   uniqueUserProblem: index('unique_user_problem').on(table.userId, table.problemId),
 }));
 
@@ -149,7 +191,7 @@ export const topics = pgTable('topics', {
 });
 
 // ============================================
-// ROADMAPS TABLES
+// ROADMAPS SYSTEM TABLES
 // ============================================
 
 export const roadmaps = pgTable('roadmaps', {
@@ -164,7 +206,11 @@ export const roadmaps = pgTable('roadmaps', {
   createdBy: text('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (table) => ({
+  categoryIdx: index('idx_roadmaps_category').on(table.category),
+  isActiveIdx: index('idx_roadmaps_is_active').on(table.isActive),
+  createdByIdx: index('idx_roadmaps_created_by').on(table.createdBy),
+}));
 
 export const roadmapSteps = pgTable('roadmap_steps', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -174,7 +220,10 @@ export const roadmapSteps = pgTable('roadmap_steps', {
   resources: text('resources'),
   orderIndex: integer('order_index').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (table) => ({
+  roadmapIdIdx: index('idx_roadmap_steps_roadmap_id').on(table.roadmapId),
+  orderIdx: index('idx_roadmap_steps_order').on(table.roadmapId, table.orderIndex),
+}));
 
 export const userRoadmapProgress = pgTable('user_roadmap_progress', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -183,22 +232,151 @@ export const userRoadmapProgress = pgTable('user_roadmap_progress', {
   completedSteps: text('completed_steps').default('[]').notNull(),
   startedAt: timestamp('started_at').defaultNow().notNull(),
   lastUpdated: timestamp('last_updated').defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index('idx_user_roadmap_progress_user_id').on(table.userId),
+  roadmapIdIdx: index('idx_user_roadmap_progress_roadmap_id').on(table.roadmapId),
+  uniqueUserRoadmap: index('unique_user_roadmap').on(table.userId, table.roadmapId),
+}));
 
 // ============================================
-// TYPE EXPORTS
+// CONTEST SYSTEM TABLES
+// ============================================
+
+export const contests = pgTable('contests', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  slug: text('slug').notNull().unique(),
+  startTime: timestamp('start_time').notNull(),
+  endTime: timestamp('end_time').notNull(),
+  durationMinutes: integer('duration_minutes').notNull(),
+  status: contestStatusEnum('status').default('draft').notNull(),
+  visibility: contestVisibilityEnum('visibility').default('public').notNull(),
+  accessCode: text('access_code'),
+  createdBy: text('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  slugIdx: index('idx_contests_slug').on(table.slug),
+  statusIdx: index('idx_contests_status').on(table.status),
+  createdByIdx: index('idx_contests_created_by').on(table.createdBy),
+  startTimeIdx: index('idx_contests_start_time').on(table.startTime),
+}));
+
+export const contestQuestions = pgTable('contest_questions', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  contestId: text('contest_id').notNull().references(() => contests.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  difficulty: difficultyEnum('difficulty').notNull(),
+  points: integer('points').default(100).notNull(),
+  orderIndex: integer('order_index').notNull(),
+  timeLimitSeconds: integer('time_limit_seconds').default(2),
+  memoryLimitMb: integer('memory_limit_mb').default(256),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  contestIdIdx: index('idx_contest_questions_contest_id').on(table.contestId),
+  orderIdx: index('idx_contest_questions_order').on(table.contestId, table.orderIndex),
+}));
+
+export const contestTestCases = pgTable('contest_test_cases', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  questionId: text('question_id').notNull().references(() => contestQuestions.id, { onDelete: 'cascade' }),
+  input: text('input').notNull(),
+  expectedOutput: text('expected_output').notNull(),
+  isSample: boolean('is_sample').default(false).notNull(),
+  isHidden: boolean('is_hidden').default(false).notNull(),
+  points: integer('points').default(10).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  questionIdIdx: index('idx_contest_test_cases_question_id').on(table.questionId),
+  sampleIdx: index('idx_contest_test_cases_sample').on(table.isSample),
+}));
+
+export const contestParticipants = pgTable('contest_participants', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  contestId: text('contest_id').notNull().references(() => contests.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  joinedAt: timestamp('joined_at').defaultNow().notNull(),
+}, (table) => ({
+  contestIdIdx: index('idx_contest_participants_contest_id').on(table.contestId),
+  userIdIdx: index('idx_contest_participants_user_id').on(table.userId),
+  uniqueParticipant: index('unique_participant').on(table.contestId, table.userId),
+}));
+
+export const contestSubmissions = pgTable('contest_submissions', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  contestId: text('contest_id').notNull().references(() => contests.id, { onDelete: 'cascade' }),
+  questionId: text('question_id').notNull().references(() => contestQuestions.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  code: text('code').notNull(),
+  language: text('language').notNull(),
+  verdict: submissionVerdictEnum('verdict').default('pending').notNull(),
+  score: integer('score').default(0).notNull(),
+  passedTestCases: integer('passed_test_cases').default(0).notNull(),
+  totalTestCases: integer('total_test_cases').default(0).notNull(),
+  executionTimeMs: integer('execution_time_ms'),
+  memoryUsedKb: integer('memory_used_kb'),
+  errorMessage: text('error_message'),
+  submittedAt: timestamp('submitted_at').defaultNow().notNull(),
+}, (table) => ({
+  contestIdIdx: index('idx_contest_submissions_contest_id').on(table.contestId),
+  userIdIdx: index('idx_contest_submissions_user_id').on(table.userId),
+  questionIdIdx: index('idx_contest_submissions_question_id').on(table.questionId),
+  verdictIdx: index('idx_contest_submissions_verdict').on(table.verdict),
+  submittedAtIdx: index('idx_contest_submissions_submitted_at').on(table.submittedAt),
+}));
+
+export const contestLeaderboard = pgTable('contest_leaderboard', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  contestId: text('contest_id').notNull().references(() => contests.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  totalScore: integer('total_score').default(0).notNull(),
+  totalTimeMinutes: integer('total_time_minutes').default(0).notNull(),
+  problemsSolved: integer('problems_solved').default(0).notNull(),
+  lastSubmissionTime: timestamp('last_submission_time'),
+  rank: integer('rank'),
+}, (table) => ({
+  contestIdIdx: index('idx_contest_leaderboard_contest_id').on(table.contestId),
+  rankIdx: index('idx_contest_leaderboard_rank').on(table.contestId, table.rank),
+  uniqueUserContest: index('unique_user_contest').on(table.contestId, table.userId),
+}));
+
+// ============================================
+// TYPE EXPORTS - AUTH & USER
 // ============================================
 
 export type User = typeof users.$inferSelect;
 export type UserInsert = typeof users.$inferInsert;
 
+export type Account = typeof accounts.$inferSelect;
+export type AccountInsert = typeof accounts.$inferInsert;
+
+export type Session = typeof sessions.$inferSelect;
+export type SessionInsert = typeof sessions.$inferInsert;
+
+export type VerificationToken = typeof verificationTokens.$inferSelect;
+export type VerificationTokenInsert = typeof verificationTokens.$inferInsert;
+
+// ============================================
+// TYPE EXPORTS - JOBS SYSTEM
+// ============================================
+
 export type Job = typeof jobs.$inferSelect;
 export type JobInsert = typeof jobs.$inferInsert;
 
+// ============================================
+// TYPE EXPORTS - PROBLEMS SYSTEM
+// ============================================
+
 export type Problem = typeof problems.$inferSelect;
+export type ProblemInsert = typeof problems.$inferInsert;
+// Alias for backward compatibility
 export type NewProblem = typeof problems.$inferInsert;
 
 export type UserProgress = typeof userProgress.$inferSelect;
+export type UserProgressInsert = typeof userProgress.$inferInsert;
+// Alias for backward compatibility
 export type NewUserProgress = typeof userProgress.$inferInsert;
 
 export type Company = typeof companies.$inferSelect;
@@ -206,6 +384,10 @@ export type CompanyInsert = typeof companies.$inferInsert;
 
 export type Topic = typeof topics.$inferSelect;
 export type TopicInsert = typeof topics.$inferInsert;
+
+// ============================================
+// TYPE EXPORTS - ROADMAPS SYSTEM
+// ============================================
 
 export type Roadmap = typeof roadmaps.$inferSelect;
 export type RoadmapInsert = typeof roadmaps.$inferInsert;
@@ -215,3 +397,25 @@ export type RoadmapStepInsert = typeof roadmapSteps.$inferInsert;
 
 export type UserRoadmapProgress = typeof userRoadmapProgress.$inferSelect;
 export type UserRoadmapProgressInsert = typeof userRoadmapProgress.$inferInsert;
+
+// ============================================
+// TYPE EXPORTS - CONTEST SYSTEM
+// ============================================
+
+export type Contest = typeof contests.$inferSelect;
+export type ContestInsert = typeof contests.$inferInsert;
+
+export type ContestQuestion = typeof contestQuestions.$inferSelect;
+export type ContestQuestionInsert = typeof contestQuestions.$inferInsert;
+
+export type ContestTestCase = typeof contestTestCases.$inferSelect;
+export type ContestTestCaseInsert = typeof contestTestCases.$inferInsert;
+
+export type ContestParticipant = typeof contestParticipants.$inferSelect;
+export type ContestParticipantInsert = typeof contestParticipants.$inferInsert;
+
+export type ContestSubmission = typeof contestSubmissions.$inferSelect;
+export type ContestSubmissionInsert = typeof contestSubmissions.$inferInsert;
+
+export type ContestLeaderboard = typeof contestLeaderboard.$inferSelect;
+export type ContestLeaderboardInsert = typeof contestLeaderboard.$inferInsert;
