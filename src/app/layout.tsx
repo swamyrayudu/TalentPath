@@ -4,6 +4,7 @@ import './globals.css';
 import { ThemeProvider } from '../components/layouts/theme-provider';
 import ConditionalNavbar from '../components/layouts/conditional-navbar';
 import AuthProvider from '@/components/providers/session-provider';
+import { DsaProblemsCacheProvider } from '@/components/context/DsaProblemsCacheContext';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -29,15 +30,17 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <ConditionalNavbar />
-            <main className="min-h-screen">{children}</main>
-          </ThemeProvider>
+          <DsaProblemsCacheProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <ConditionalNavbar />
+              <main className="min-h-screen">{children}</main>
+            </ThemeProvider>
+          </DsaProblemsCacheProvider>
         </AuthProvider>
       </body>
     </html>
