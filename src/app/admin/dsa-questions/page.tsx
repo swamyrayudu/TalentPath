@@ -177,6 +177,8 @@ export default function AdminProblemsPage() {
         body: JSON.stringify(payload)
       });
       const data = await response.json();
+      console.log('API Response:', data); // Debug log
+      
       if (response.ok && data.success) {
         setSuccess(editingProblem ? 'Problem updated successfully!' : 'Problem created successfully!');
         setIsDialogOpen(false);
@@ -189,6 +191,7 @@ export default function AdminProblemsPage() {
         }
         setTimeout(() => setSuccess(''), 3000);
       } else {
+        console.error('API Error:', data); // Debug log
         setError(data.error || 'Failed to save problem');
       }
     } catch {
@@ -223,14 +226,18 @@ export default function AdminProblemsPage() {
     try {
       const response = await fetch(`/api/problems/${id}`, { method: 'DELETE' });
       const data = await response.json();
+      console.log('Delete Response:', data); // Debug log
+      
       if (response.ok && data.success) {
         setSuccess('Problem deleted successfully!');
         setAllProblems(allProblems.filter(p => p.id !== id));
         setTimeout(() => setSuccess(''), 3000);
       } else {
+        console.error('Delete Error:', data); // Debug log
         setError(data.error || 'Failed to delete problem');
       }
-    } catch {
+    } catch (error) {
+      console.error('Delete Exception:', error); // Debug log
       setError('Failed to delete problem');
     }
   };

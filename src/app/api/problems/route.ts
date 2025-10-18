@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { userProgress, problems } from '@/lib/db/schema';
+import { userProgress, problems, users } from '@/lib/db/schema';
 import { eq, and, desc, sql, or, ilike } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-  const session = await auth();
+    const session = await auth();
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -122,59 +122,104 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if this is a progress update or problem creation
     const data = await request.json();
-    const { problemId, status, code, language, solvedAt } = data;
+    
+    // If it has problemId, it's a progress update
+    if (data.problemId) {
+      const { problemId, status, code, language, solvedAt } = data;
 
-    // Check if progress exists
-    const existing = await db
-      .select()
-      .from(userProgress)
-      .where(
-        and(
-          eq(userProgress.userId, session.user.id),
-          eq(userProgress.problemId, problemId)
+      // Check if progress exists
+      const existing = await db
+        .select()
+        .from(userProgress)
+        .where(
+          and(
+            eq(userProgress.userId, session.user.id),
+            eq(userProgress.problemId, problemId)
+          )
         )
-      )
-      .limit(1);
+        .limit(1);
 
-    let result;
+      let result;
 
-    if (existing.length > 0) {
-      // Update existing progress
-      result = await db
-        .update(userProgress)
-        .set({
-          status,
-          code,
-          language,
-          solvedAt: solvedAt ? new Date(solvedAt) : null,
-          updatedAt: new Date(),
-        })
-        .where(eq(userProgress.id, existing[0].id))
-        .returning();
+      if (existing.length > 0) {
+        // Update existing progress
+        result = await db
+          .update(userProgress)
+          .set({
+            status,
+            code,
+            language,
+            solvedAt: solvedAt ? new Date(solvedAt) : null,
+            updatedAt: new Date(),
+          })
+          .where(eq(userProgress.id, existing[0].id))
+          .returning();
+      } else {
+        // Create new progress
+        result = await db
+          .insert(userProgress)
+          .values({
+            userId: session.user.id,
+            problemId,
+            status,
+            code,
+            language,
+            solvedAt: solvedAt ? new Date(solvedAt) : null,
+          })
+          .returning();
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: result[0],
+      });
     } else {
-      // Create new progress
-      result = await db
-        .insert(userProgress)
-        .values({
-          userId: session.user.id,
-          problemId,
-          status,
-          code,
-          language,
-          solvedAt: solvedAt ? new Date(solvedAt) : null,
-        })
-        .returning();
-    }
+      // It's a problem creation - check admin permissions
+      const user = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, session.user.id))
+        .limit(1);
 
-    return NextResponse.json({
-      success: true,
-      data: result[0],
-    });
+      if (user[0]?.role !== 'admin') {
+        return NextResponse.json(
+          { success: false, error: 'Admin access required' },
+          { status: 403 }
+        );
+      }
+
+      const problemData = {
+        title: data.title,
+        slug: data.slug,
+        isPremium: data.isPremium || false,
+        difficulty: data.difficulty,
+        platform: data.platform || 'LEETCODE',
+        likes: data.likes || 0,
+        dislikes: data.dislikes || 0,
+        acceptanceRate: data.acceptanceRate?.toString(),
+        url: data.url,
+        topicTags: data.topicTags || [],
+        companyTags: data.companyTags || [],
+        mainTopics: data.mainTopics || [],
+        topicSlugs: data.topicSlugs || [],
+        accepted: data.accepted || 0,
+        submissions: data.submissions || 0,
+        similarQuestions: data.similarQuestions || [],
+      };
+
+      const result = await db.insert(problems).values(problemData).returning();
+
+      return NextResponse.json({
+        success: true,
+        data: result[0],
+      });
+    }
   } catch (error) {
-    console.error('Error updating progress:', error);
+    console.error('Error in POST:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to update progress' },
+      { success: false, error: 'Failed to process request' },
       { status: 500 }
     );
   }
