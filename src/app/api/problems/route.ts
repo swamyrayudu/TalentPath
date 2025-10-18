@@ -4,6 +4,9 @@ import { db } from '@/lib/db';
 import { userProgress, problems } from '@/lib/db/schema';
 import { eq, and, desc, sql, or, ilike } from 'drizzle-orm';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -12,25 +15,25 @@ export async function GET(request: NextRequest) {
     const platform = searchParams.get('platform');
     const topic = searchParams.get('topic');
     const search = searchParams.get('search');
-    const limit = parseInt(searchParams.get('limit') || '1000');
+    const limit = parseInt(searchParams.get('limit') || '10000');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    console.log('📊 Fetching problems with filters:', { difficulty, platform, topic, search, limit, offset });
+    console.log('📊 Fetching problems:', { difficulty, platform, topic, search });
 
-    let baseQuery = db.select().from(problems);
-    
+    const baseQuery = db.select().from(problems);
     const conditions = [];
 
     if (difficulty && difficulty !== 'all') {
       conditions.push(eq(problems.difficulty, difficulty as any));
     }
 
+    // Fixed GEEKSFORGEEKS filtering
     if (platform && platform !== 'all') {
-      conditions.push(eq(problems.platform, platform as any));
+      const normalizedPlatform = platform.toUpperCase().trim();
+      conditions.push(eq(problems.platform, normalizedPlatform as any));
     }
 
     if (topic && topic !== 'all') {
-      // Check if topic exists in topic_tags array
       conditions.push(sql`${topic} = ANY(${problems.topicTags})`);
     }
 
@@ -58,6 +61,10 @@ export async function GET(request: NextRequest) {
       success: true,
       data: result,
       count: result.length,
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, max-age=0',
+      },
     });
   } catch (error) {
     console.error('❌ Error fetching problems:', error);
