@@ -61,7 +61,7 @@ type UserProgress = {
   solvedAt?: Date;
 };
 
-const ITEMS_PER_PAGE = 50;
+const ITEMS_PER_PAGE = 10;
 const DS_TOPICS = [
   'Array', 'String', 'Linked List', 'Stack', 'Queue', 'Hash Table',
   'Tree', 'Binary Tree', 'Binary Search Tree', 'Heap (Priority Queue)',
