@@ -507,6 +507,18 @@ export async function runTestCases(data: {
       return { success: false, error: 'Unauthorized' };
     }
 
+    // Helper function to normalize output for comparison
+    const normalizeOutput = (str: string) => {
+      return str
+        .trim()
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .join('\n');
+    };
+
     // Get test cases
     const testCases = await db
       .select()
@@ -520,7 +532,12 @@ export async function runTestCases(data: {
       if (!data.testCaseIds.includes(testCase.id)) continue;
 
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/compile`, {
+        // Get the base URL - use multiple fallbacks
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                       process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
+                       'http://localhost:3000';
+
+        const response = await fetch(`${baseUrl}/api/compile`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -530,25 +547,45 @@ export async function runTestCases(data: {
           }),
         });
 
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}: ${response.statusText}`);
+        }
+
         const result = await response.json();
 
-        const passed = result.success && 
-          result.output.trim() === testCase.expectedOutput.trim();
+        // Check for errors first
+        if (!result.success || result.stderr || result.exitCode !== 0) {
+          results.push({
+            testCaseId: testCase.id,
+            passed: false,
+            expected: testCase.expectedOutput,
+            actual: result.stderr || result.error || result.output || 'Runtime Error',
+            executionTime: result.executionTime || 0,
+            error: result.stderr || result.error || 'Runtime Error',
+          });
+          continue;
+        }
+
+        const normalizedExpected = normalizeOutput(testCase.expectedOutput);
+        const normalizedActual = normalizeOutput(result.output || '');
+        const passed = normalizedExpected === normalizedActual;
 
         results.push({
           testCaseId: testCase.id,
           passed,
           expected: testCase.expectedOutput,
-          actual: result.output || result.error,
+          actual: result.output || 'No output',
           executionTime: result.executionTime || 0,
+          error: passed ? undefined : `Expected: "${testCase.expectedOutput.trim()}", Got: "${(result.output || '').trim()}"`,
         });
-      } catch (error) {
+      } catch (error: any) {
         results.push({
           testCaseId: testCase.id,
           passed: false,
           expected: testCase.expectedOutput,
-          actual: 'Runtime Error',
+          actual: 'Network Error',
           executionTime: 0,
+          error: error.message || 'Failed to execute test',
         });
       }
     }
@@ -572,6 +609,18 @@ export async function submitSolution(data: {
       return { success: false, error: 'Unauthorized' };
     }
 
+    // Helper function to normalize output for comparison
+    const normalizeOutput = (str: string) => {
+      return str
+        .trim()
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .join('\n');
+    };
+
     // Get all test cases (including hidden)
     const testCases = await db
       .select()
@@ -589,7 +638,12 @@ export async function submitSolution(data: {
       try {
         const startTime = Date.now();
         
-        const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/compile`, {
+        // Get the base URL - use multiple fallbacks
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                       process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
+                       'http://localhost:3000';
+        
+        const response = await fetch(`${baseUrl}/api/compile`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -601,6 +655,10 @@ export async function submitSolution(data: {
 
         const endTime = Date.now();
         executionTimeMs = Math.max(executionTimeMs, endTime - startTime);
+
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}: ${response.statusText}`);
+        }
 
         const result = await response.json();
 
@@ -616,13 +674,16 @@ export async function submitSolution(data: {
           break;
         }
 
-        if (result.output.trim() === testCase.expectedOutput.trim()) {
+        const normalizedExpected = normalizeOutput(testCase.expectedOutput);
+        const normalizedActual = normalizeOutput(result.output || '');
+        
+        if (normalizedExpected === normalizedActual) {
           passedTests++;
           totalScore += testCase.points;
         } else {
           if (verdict === 'pending') {
             verdict = 'wrong_answer';
-            errorMessage = `Test case ${testCases.indexOf(testCase) + 1} failed`;
+            errorMessage = `Expected: "${testCase.expectedOutput.trim()}", Got: "${(result.output || '').trim()}"`;
           }
         }
       } catch (error) {

@@ -6,7 +6,7 @@ import { auth } from '@/lib/auth';
 export default async function ProblemPage({
   params,
 }: {
-  params: { slug: string; questionId: string };
+  params: Promise<{ slug: string; questionId: string }>;
 }) {
   const session = await auth();
   
@@ -14,7 +14,9 @@ export default async function ProblemPage({
     redirect('/auth/signin');
   }
 
-  const contestResult = await getContest(params.slug);
+  const { slug, questionId } = await params;
+
+  const contestResult = await getContest(slug);
   if (!contestResult.success || !contestResult.data) {
     notFound();
   }
@@ -24,7 +26,7 @@ export default async function ProblemPage({
   // Check if user is participant
   const participationCheck = await checkParticipation(contest.id, session.user.id);
   if (!participationCheck.isParticipant) {
-    redirect(`/contest/${params.slug}`);
+    redirect(`/contest/${slug}`);
   }
 
   // Check if contest is live
@@ -32,16 +34,16 @@ export default async function ProblemPage({
   const isLive = now >= contest.startTime && now <= contest.endTime;
   
   if (!isLive) {
-    redirect(`/contest/${params.slug}`);
+    redirect(`/contest/${slug}`);
   }
 
-  const questionResult = await getQuestion(params.questionId);
+  const questionResult = await getQuestion(questionId);
   if (!questionResult.success || !questionResult.data) {
     notFound();
   }
 
   const question = questionResult.data;
-  const testCasesResult = await getSampleTestCases(params.questionId);
+  const testCasesResult = await getSampleTestCases(questionId);
   const sampleTestCases = testCasesResult.success && testCasesResult.data ? testCasesResult.data : [];
 
   return (

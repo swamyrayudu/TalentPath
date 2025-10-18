@@ -9,7 +9,7 @@ import Link from 'next/link';
 export default async function TestCasesPage({ 
   params 
 }: { 
-  params: { slug: string; questionId: string } 
+  params: Promise<{ slug: string; questionId: string }> 
 }) {
   const session = await auth();
   
@@ -17,20 +17,22 @@ export default async function TestCasesPage({
     redirect('/auth/signin');
   }
 
-  const questionResult = await getQuestion(params.questionId);
+  const { slug, questionId } = await params;
+
+  const questionResult = await getQuestion(questionId);
   
   if (!questionResult.success || !questionResult.data) {
     redirect('/contest');
   }
 
   const question = questionResult.data;
-  const testCasesResult = await getAllTestCases(params.questionId);
+  const testCasesResult = await getAllTestCases(questionId);
   const testCases = testCasesResult.success && testCasesResult.data ? testCasesResult.data : [];
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <Link href={`/contest/${params.slug}/manage`}>
+        <Link href={`/contest/${slug}/manage`}>
           <Button variant="outline" size="sm" className="mb-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Manage Contest
@@ -40,7 +42,7 @@ export default async function TestCasesPage({
         <p className="text-muted-foreground">{question.title}</p>
       </div>
 
-      <TestCaseManager questionId={params.questionId} testCases={testCases} />
+      <TestCaseManager questionId={questionId} testCases={testCases} />
     </div>
   );
 }

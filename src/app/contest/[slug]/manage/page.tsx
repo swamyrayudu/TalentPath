@@ -3,14 +3,19 @@ import { getContest, getContestQuestions } from '@/actions/contest.actions';
 import { auth } from '@/lib/auth';
 import { ContestManagementTabs } from '@/components/contest/contest-management-tabs';
 
-export default async function ManageContestPage({ params }: { params: { slug: string } }) {
+export default async function ManageContestPage({ 
+  params 
+}: { 
+  params: Promise<{ slug: string }> 
+}) {
   const session = await auth();
   
   if (!session?.user) {
     redirect('/auth/signin');
   }
 
-  const contestResult = await getContest(params.slug);
+  const { slug } = await params;
+  const contestResult = await getContest(slug);
   
   if (!contestResult.success || !contestResult.data) {
     redirect('/contest');
@@ -20,7 +25,7 @@ export default async function ManageContestPage({ params }: { params: { slug: st
 
   // Check if user is the creator
   if (contest.createdBy !== session.user.id) {
-    redirect(`/contest/${params.slug}`);
+    redirect(`/contest/${slug}`);
   }
 
   const questionsResult = await getContestQuestions(contest.id);
@@ -33,7 +38,7 @@ export default async function ManageContestPage({ params }: { params: { slug: st
         <p className="text-muted-foreground">{contest.title}</p>
       </div>
 
-      <ContestManagementTabs contest={contest} questions={questions} contestSlug={params.slug} />
+      <ContestManagementTabs contest={contest} questions={questions} contestSlug={slug} />
     </div>
   );
 }

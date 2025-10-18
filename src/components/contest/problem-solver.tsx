@@ -166,8 +166,8 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="border-b bg-background px-6 py-3">
-        <div className="flex items-center justify-between">
+      <div className="border-b bg-background px-6 py-4 shrink-0">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
             <Link href={`/contest/${contest.slug}`}>
               <Button variant="ghost" size="sm">
@@ -186,7 +186,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 shrink-0">
             <div className="flex items-center gap-2 text-sm">
               <Clock className="h-4 w-4 text-orange-500" />
               <span className="font-mono font-bold">{timeLeft}</span>
@@ -237,140 +237,142 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
       {/* Main Content */}
       <div className="flex-1 grid grid-cols-2 divide-x overflow-hidden">
         {/* Left Panel - Problem Description */}
-        <div className="overflow-y-auto p-6">
-          <Tabs defaultValue="description" className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="description">Description</TabsTrigger>
-              <TabsTrigger value="submissions">Submissions</TabsTrigger>
-            </TabsList>
+        <div className="flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-6">
+            <Tabs defaultValue="description" className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="description">Description</TabsTrigger>
+                <TabsTrigger value="submissions">Submissions</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="description" className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Problem Statement</h3>
-                <div className="prose dark:prose-invert max-w-none">
-                  <pre className="whitespace-pre-wrap text-sm bg-muted p-4 rounded">
-                    {question.description}
-                  </pre>
+              <TabsContent value="description" className="space-y-6 mt-0">
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Problem Statement</h3>
+                  <div className="prose dark:prose-invert max-w-none">
+                    <pre className="whitespace-pre-wrap text-sm bg-muted/50 p-4 rounded-lg border">
+                      {question.description}
+                    </pre>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Sample Test Cases</h3>
-                <div className="space-y-4">
-                  {sampleTestCases.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No sample test cases available</p>
-                  ) : (
-                    sampleTestCases.map((testCase: any, index: number) => (
-                      <Card key={testCase.id}>
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-sm flex items-center justify-between">
-                            <span>Example {index + 1}</span>
-                            <Badge variant="outline">{testCase.points} points</Badge>
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          <div>
-                            <p className="text-xs font-semibold text-muted-foreground mb-1">Input:</p>
-                            <pre className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto">
-                              {testCase.input}
-                            </pre>
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-muted-foreground mb-1">Expected Output:</p>
-                            <pre className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto">
-                              {testCase.expectedOutput}
-                            </pre>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  )}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Sample Test Cases</h3>
+                  <div className="space-y-4">
+                    {sampleTestCases.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No sample test cases available</p>
+                    ) : (
+                      sampleTestCases.map((testCase: any, index: number) => (
+                        <Card key={testCase.id} className="border-2">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-sm flex items-center justify-between">
+                              <span>Example {index + 1}</span>
+                              <Badge variant="outline">{testCase.points} points</Badge>
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <div>
+                              <p className="text-xs font-semibold text-muted-foreground mb-1">Input:</p>
+                              <pre className="bg-muted/50 p-2 rounded text-xs font-mono overflow-x-auto border">
+                                {testCase.input}
+                              </pre>
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-muted-foreground mb-1">Expected Output:</p>
+                              <pre className="bg-muted/50 p-2 rounded text-xs font-mono overflow-x-auto border">
+                                {testCase.expectedOutput}
+                              </pre>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Constraints</h3>
-                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                  <li>Time Limit: {question.timeLimitSeconds} second(s)</li>
-                  <li>Memory Limit: {question.memoryLimitMb} MB</li>
-                </ul>
-              </div>
-            </TabsContent>
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Constraints</h3>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                    <li>Time Limit: {question.timeLimitSeconds} second(s)</li>
+                    <li>Memory Limit: {question.memoryLimitMb} MB</li>
+                  </ul>
+                </div>
+              </TabsContent>
 
-            <TabsContent value="submissions" className="space-y-4">
-              {submissionResult ? (
-                <Card className={submissionResult.verdict === 'accepted' ? 'border-green-500' : 'border-red-500'}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm">Latest Submission</CardTitle>
-                      <Badge 
-                        variant={submissionResult.verdict === 'accepted' ? 'default' : 'destructive'}
-                        className="font-semibold"
-                      >
-                        {submissionResult.verdict === 'accepted' ? (
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                        ) : (
-                          <XCircle className="h-3 w-3 mr-1" />
-                        )}
-                        {submissionResult.verdict.replace(/_/g, ' ').toUpperCase()}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground mb-1">Score</p>
-                        <p className="font-bold text-lg">
-                          {submissionResult.score} / {question.points}
-                        </p>
+              <TabsContent value="submissions" className="space-y-4 mt-0">
+                {submissionResult ? (
+                  <Card className={submissionResult.verdict === 'accepted' ? 'border-green-500 border-2' : 'border-red-500 border-2'}>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm">Latest Submission</CardTitle>
+                        <Badge 
+                          variant={submissionResult.verdict === 'accepted' ? 'default' : 'destructive'}
+                          className="font-semibold"
+                        >
+                          {submissionResult.verdict === 'accepted' ? (
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                          ) : (
+                            <XCircle className="h-3 w-3 mr-1" />
+                          )}
+                          {submissionResult.verdict.replace(/_/g, ' ').toUpperCase()}
+                        </Badge>
                       </div>
-                      <div>
-                        <p className="text-muted-foreground mb-1">Test Cases</p>
-                        <p className="font-bold text-lg">
-                          {submissionResult.passedTestCases} / {submissionResult.totalTestCases}
-                        </p>
-                      </div>
-                    </div>
-
-                    {submissionResult.executionTimeMs && (
-                      <div className="text-sm">
-                        <p className="text-muted-foreground mb-1">Execution Time</p>
-                        <p className="font-mono">{submissionResult.executionTimeMs}ms</p>
-                      </div>
-                    )}
-
-                    {submissionResult.errorMessage && (
-                      <div>
-                        <p className="text-sm font-medium text-red-500 mb-2">Error Message:</p>
-                        <pre className="bg-red-50 dark:bg-red-950 p-3 rounded text-xs overflow-x-auto text-red-700 dark:text-red-300">
-                          {submissionResult.errorMessage}
-                        </pre>
-                      </div>
-                    )}
-
-                    {submissionResult.verdict === 'accepted' && (
-                      <div className="bg-green-50 dark:bg-green-950 p-4 rounded border border-green-200 dark:border-green-800">
-                        <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
-                          <Award className="h-5 w-5" />
-                          <p className="font-semibold">Congratulations! Your solution has been accepted!</p>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground mb-1">Score</p>
+                          <p className="font-bold text-lg">
+                            {submissionResult.score} / {question.points}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground mb-1">Test Cases</p>
+                          <p className="font-bold text-lg">
+                            {submissionResult.passedTestCases} / {submissionResult.totalTestCases}
+                          </p>
                         </div>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card>
-                  <CardContent className="py-16 text-center">
-                    <p className="text-muted-foreground">No submissions yet. Submit your solution to see results.</p>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-          </Tabs>
+
+                      {submissionResult.executionTimeMs && (
+                        <div className="text-sm">
+                          <p className="text-muted-foreground mb-1">Execution Time</p>
+                          <p className="font-mono">{submissionResult.executionTimeMs}ms</p>
+                        </div>
+                      )}
+
+                      {submissionResult.errorMessage && (
+                        <div>
+                          <p className="text-sm font-medium text-red-500 mb-2">Error Message:</p>
+                          <pre className="bg-red-50 dark:bg-red-950 p-3 rounded text-xs overflow-x-auto text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
+                            {submissionResult.errorMessage}
+                          </pre>
+                        </div>
+                      )}
+
+                      {submissionResult.verdict === 'accepted' && (
+                        <div className="bg-green-50 dark:bg-green-950 p-4 rounded border border-green-200 dark:border-green-800">
+                          <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                            <Award className="h-5 w-5" />
+                            <p className="font-semibold">Congratulations! Your solution has been accepted!</p>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card>
+                    <CardContent className="py-16 text-center">
+                      <p className="text-muted-foreground">No submissions yet. Submit your solution to see results.</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
         </div>
 
         {/* Right Panel - Code Editor */}
-        <div className="flex flex-col">
+        <div className="flex flex-col overflow-hidden">
           <div className="flex-1 overflow-hidden">
             <Editor
               height="100%"
@@ -392,7 +394,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
 
           {/* Test Results Panel */}
           {testResults.length > 0 && (
-            <div className="border-t bg-background p-4 max-h-64 overflow-y-auto">
+            <div className="border-t bg-background p-4 max-h-64 overflow-y-auto shrink-0">
               <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
                 <Award className="h-4 w-4" />
                 Test Results ({testResults.filter(r => r.passed).length}/{testResults.length} Passed)
@@ -401,7 +403,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
                 {testResults.map((result: any, index: number) => (
                   <Card 
                     key={index} 
-                    className={`border-2 ${result.passed ? 'border-green-500' : 'border-red-500'}`}
+                    className={`border-2 ${result.passed ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 'border-red-500 bg-red-50 dark:bg-red-950/20'}`}
                   >
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between mb-2">
@@ -410,14 +412,14 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
                           {result.passed ? (
                             <>
                               <CheckCircle2 className="h-4 w-4 text-green-500" />
-                              <Badge variant="outline" className="text-green-700 border-green-500">
+                              <Badge variant="outline" className="text-green-700 border-green-500 bg-green-100 dark:bg-green-900">
                                 Passed
                               </Badge>
                             </>
                           ) : (
                             <>
                               <XCircle className="h-4 w-4 text-red-500" />
-                              <Badge variant="outline" className="text-red-700 border-red-500">
+                              <Badge variant="outline" className="text-red-700 border-red-500 bg-red-100 dark:bg-red-900">
                                 Failed
                               </Badge>
                             </>
@@ -425,15 +427,31 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
                         </div>
                       </div>
                       {!result.passed && (
-                        <div className="space-y-1 text-xs">
-                          <div>
-                            <p className="text-muted-foreground">Expected:</p>
-                            <pre className="bg-muted p-1 rounded font-mono">{result.expected}</pre>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Got:</p>
-                            <pre className="bg-muted p-1 rounded font-mono">{result.actual}</pre>
-                          </div>
+                        <div className="space-y-2 text-xs mt-3">
+                          {result.error && result.error.includes('Runtime Error') && (
+                            <div className="bg-red-100 dark:bg-red-900/30 p-2 rounded border border-red-300 dark:border-red-700">
+                              <p className="text-red-700 dark:text-red-300 font-semibold mb-1">⚠️ Runtime Error</p>
+                              <pre className="text-red-600 dark:text-red-400 whitespace-pre-wrap text-[10px]">{result.actual}</pre>
+                            </div>
+                          )}
+                          {result.error && result.error.includes('Timeout') && (
+                            <div className="bg-orange-100 dark:bg-orange-900/30 p-2 rounded border border-orange-300 dark:border-orange-700">
+                              <p className="text-orange-700 dark:text-orange-300 font-semibold mb-1">⏱️ Timeout</p>
+                              <pre className="text-orange-600 dark:text-orange-400 whitespace-pre-wrap text-[10px]">{result.actual}</pre>
+                            </div>
+                          )}
+                          {!result.error || (!result.error.includes('Runtime Error') && !result.error.includes('Timeout')) && (
+                            <>
+                              <div>
+                                <p className="text-muted-foreground font-semibold mb-1">Expected:</p>
+                                <pre className="bg-muted p-2 rounded font-mono overflow-x-auto border">{result.expected}</pre>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground font-semibold mb-1">Got:</p>
+                                <pre className="bg-muted p-2 rounded font-mono overflow-x-auto border">{result.actual}</pre>
+                              </div>
+                            </>
+                          )}
                         </div>
                       )}
                     </CardContent>

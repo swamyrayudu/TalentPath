@@ -11,9 +11,14 @@ import { Settings } from 'lucide-react';
 import Link from 'next/link';
 import { auth } from '@/lib/auth';
 
-export default async function ContestDetailPage({ params }: { params: { slug: string } }) {
+export default async function ContestDetailPage({ 
+  params 
+}: { 
+  params: Promise<{ slug: string }> 
+}) {
   const session = await auth();
-  const contestResult = await getContest(params.slug);
+  const { slug } = await params;
+  const contestResult = await getContest(slug);
   
   if (!contestResult.success || !contestResult.data) {
     notFound();
@@ -41,7 +46,7 @@ export default async function ContestDetailPage({ params }: { params: { slug: st
       {/* Manage Contest Button - Only for Creator */}
       {isCreator && (
         <div className="mt-4">
-          <Link href={`/contest/${params.slug}/manage`}>
+          <Link href={`/contest/${slug}/manage`}>
             <Button size="lg" variant="outline" className="w-full md:w-auto">
               <Settings className="h-5 w-5 mr-2" />
               Manage Contest
@@ -71,7 +76,7 @@ export default async function ContestDetailPage({ params }: { params: { slug: st
               <QuestionsList 
                 questions={questions} 
                 contestId={contest.id}
-                contestSlug={params.slug}
+                contestSlug={slug}
                 isParticipant={isParticipant}
               />
             </TabsContent>
