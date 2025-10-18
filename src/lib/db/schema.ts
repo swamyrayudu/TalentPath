@@ -1,25 +1,25 @@
 import { pgTable, text, timestamp, pgEnum, primaryKey, integer, boolean } from 'drizzle-orm/pg-core';
+import { bigserial, bigint, decimal, jsonb, index } from 'drizzle-orm/pg-core';
 
-// Enums
+// ============================================
+// ENUMS
+// ============================================
+
 export const roleEnum = pgEnum('role', ['user', 'admin']);
-
 export const jobTypeEnum = pgEnum('job_type', ['full-time', 'part-time', 'contract', 'internship']);
-
 export const locationTypeEnum = pgEnum('location_type', ['remote', 'onsite', 'hybrid']);
-
+export const difficultyEnum = pgEnum('difficulty', ['EASY', 'MEDIUM', 'HARD']);
+export const platformEnum = pgEnum('platform', ['LEETCODE', 'CODEFORCES', 'HACKERRANK', 'GEEKSFORGEEKS']);
+export const progressStatusEnum = pgEnum('progress_status', ['solved', 'attempted', 'bookmarked']);
 export const roadmapCategoryEnum = pgEnum('roadmap_category', [
-  'frontend',
-  'backend',
-  'fullstack',
-  'devops',
-  'mobile',
-  'data-science',
-  'ai-ml',
-  'cybersecurity',
-  'other'
+  'frontend', 'backend', 'fullstack', 'devops', 'mobile', 
+  'data-science', 'ai-ml', 'cybersecurity', 'other'
 ]);
 
-// User tables
+// ============================================
+// AUTH TABLES
+// ============================================
+
 export const users = pgTable('user', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: text('name'),
@@ -62,7 +62,10 @@ export const verificationTokens = pgTable('verificationToken', {
   compoundKey: primaryKey({ columns: [vt.identifier, vt.token] }),
 }));
 
-// Jobs table
+// ============================================
+// JOBS TABLE
+// ============================================
+
 export const jobs = pgTable('jobs', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   title: text('title').notNull(),
@@ -81,7 +84,74 @@ export const jobs = pgTable('jobs', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// Roadmaps tables
+// ============================================
+// PROBLEMS TABLES
+// ============================================
+
+export const problems = pgTable('problems', {
+  id: bigserial('id', { mode: 'number' }).primaryKey(),
+  title: text('title').notNull(),
+  slug: text('slug').notNull().unique(),
+  isPremium: boolean('is_premium').default(false).notNull(),
+  difficulty: difficultyEnum('difficulty').notNull(),
+  platform: platformEnum('platform').default('LEETCODE').notNull(),
+  likes: integer('likes').default(0).notNull(),
+  dislikes: integer('dislikes').default(0).notNull(),
+  acceptanceRate: decimal('acceptance_rate', { precision: 5, scale: 2 }),
+  url: text('url'),
+  topicTags: text('topic_tags').array().default([]).notNull(),
+  companyTags: text('company_tags').array().default([]).notNull(),
+  mainTopics: text('main_topics').array().default([]).notNull(),
+  topicSlugs: text('topic_slugs').array().default([]).notNull(),
+  accepted: bigint('accepted', { mode: 'number' }).default(0),
+  submissions: bigint('submissions', { mode: 'number' }).default(0),
+  similarQuestions: jsonb('similar_questions').default([]),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  slugIdx: index('problems_slug_idx').on(table.slug),
+  difficultyIdx: index('problems_difficulty_idx').on(table.difficulty),
+  createdAtIdx: index('problems_created_at_idx').on(table.createdAt),
+  platformIdx: index('problems_platform_idx').on(table.platform),
+}));
+
+export const userProgress = pgTable('user_progress', {
+  id: bigserial('id', { mode: 'number' }).primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  problemId: bigint('problem_id', { mode: 'number' }).notNull().references(() => problems.id, { onDelete: 'cascade' }),
+  status: progressStatusEnum('status').notNull(),
+  code: text('code'),
+  language: text('language'),
+  solvedAt: timestamp('solved_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index('user_progress_user_id_idx').on(table.userId),
+  problemIdIdx: index('user_progress_problem_id_idx').on(table.problemId),
+  userProblemIdx: index('user_progress_user_problem_idx').on(table.userId, table.problemId),
+  uniqueUserProblem: index('unique_user_problem').on(table.userId, table.problemId),
+}));
+
+export const companies = pgTable('companies', {
+  id: bigserial('id', { mode: 'number' }).primaryKey(),
+  name: text('name').notNull().unique(),
+  slug: text('slug').notNull().unique(),
+  logo: text('logo'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const topics = pgTable('topics', {
+  id: bigserial('id', { mode: 'number' }).primaryKey(),
+  name: text('name').notNull().unique(),
+  slug: text('slug').notNull().unique(),
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// ============================================
+// ROADMAPS TABLES
+// ============================================
+
 export const roadmaps = pgTable('roadmaps', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   title: text('title').notNull(),
@@ -115,10 +185,33 @@ export const userRoadmapProgress = pgTable('user_roadmap_progress', {
   lastUpdated: timestamp('last_updated').defaultNow().notNull(),
 });
 
-// Type exports
+// ============================================
+// TYPE EXPORTS
+// ============================================
+
 export type User = typeof users.$inferSelect;
+export type UserInsert = typeof users.$inferInsert;
+
 export type Job = typeof jobs.$inferSelect;
 export type JobInsert = typeof jobs.$inferInsert;
+
+export type Problem = typeof problems.$inferSelect;
+export type NewProblem = typeof problems.$inferInsert;
+
+export type UserProgress = typeof userProgress.$inferSelect;
+export type NewUserProgress = typeof userProgress.$inferInsert;
+
+export type Company = typeof companies.$inferSelect;
+export type CompanyInsert = typeof companies.$inferInsert;
+
+export type Topic = typeof topics.$inferSelect;
+export type TopicInsert = typeof topics.$inferInsert;
+
 export type Roadmap = typeof roadmaps.$inferSelect;
+export type RoadmapInsert = typeof roadmaps.$inferInsert;
+
 export type RoadmapStep = typeof roadmapSteps.$inferSelect;
+export type RoadmapStepInsert = typeof roadmapSteps.$inferInsert;
+
 export type UserRoadmapProgress = typeof userRoadmapProgress.$inferSelect;
+export type UserRoadmapProgressInsert = typeof userRoadmapProgress.$inferInsert;
