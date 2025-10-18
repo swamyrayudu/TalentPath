@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LANGUAGE_SNIPPETS } from './snippets';
+import { registerCompletionProviders } from './intellisense';
 
 const LANGUAGES = [
   { 
@@ -504,6 +505,10 @@ export function CodeEditor() {
     editorRef.current = editor;
     monacoRef.current = monaco;
     
+    // Register IntelliSense completion providers for all languages
+    registerCompletionProviders(monaco);
+    
+    // Register code snippets
     registerSnippets();
     
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
