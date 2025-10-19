@@ -3,9 +3,9 @@ import React, { createContext, useContext, useState } from 'react';
 
 export interface DsaProblemsCache {
   allProblems: any[];
-  setAllProblems: (problems: any[]) => void;
+  setAllProblems: React.Dispatch<React.SetStateAction<any[]>>;
   userProgress: Map<number, any>;
-  setUserProgress: (progress: Map<number, any>) => void;
+  setUserProgress: React.Dispatch<React.SetStateAction<Map<number, any>>>;
 }
 
 const DsaProblemsCacheContext = createContext<DsaProblemsCache | null>(null);

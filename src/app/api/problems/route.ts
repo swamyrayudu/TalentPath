@@ -5,7 +5,7 @@ import { userProgress, problems, users } from '@/lib/db/schema';
 import { eq, and, desc, sql, or, ilike } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const revalidate = 300; // Cache for 5 minutes
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
     const sortBy = searchParams.get('sortBy') || 'likes';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
-    const limit = parseInt(searchParams.get('limit') || '10000');
+    const limit = parseInt(searchParams.get('limit') || '200');
     const offset = parseInt(searchParams.get('offset') || '0');
 
     console.log('📊 Fetching problems:', { 
@@ -63,6 +63,13 @@ export async function GET(request: NextRequest) {
       ? baseQuery.where(and(...conditions))
       : baseQuery;
 
+    // Get total count before applying limit/offset
+    const totalCountResult = await (conditions.length > 0 
+      ? db.select({ count: sql<number>`count(*)::int` }).from(problems).where(and(...conditions))
+      : db.select({ count: sql<number>`count(*)::int` }).from(problems));
+    
+    const totalCount = totalCountResult[0]?.count || 0;
+
     // Dynamic sorting
     let orderByClause;
     switch (sortBy) {
@@ -87,15 +94,16 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .offset(offset);
 
-    console.log(`✅ Fetched ${result.length} problems`);
+    console.log(`✅ Fetched ${result.length} problems out of ${totalCount} total`);
 
     return NextResponse.json({
       success: true,
       data: result,
       count: result.length,
+      total: totalCount, // Total count in database
     }, {
       headers: {
-        'Cache-Control': 'no-store, max-age=0',
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
       },
     });
   } catch (error) {
