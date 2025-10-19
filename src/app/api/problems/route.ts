@@ -10,25 +10,27 @@ export const revalidate = 300; // Cache for 5 minutes
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    
+
     const difficulty = searchParams.get('difficulty');
     const platform = searchParams.get('platform');
     const topic = searchParams.get('topic');
+    const company = searchParams.get('company'); // <── new param
     const search = searchParams.get('search');
     const sortBy = searchParams.get('sortBy') || 'likes';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
     const limit = parseInt(searchParams.get('limit') || '200');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    console.log('📊 Fetching problems:', { 
-      difficulty, 
-      platform, 
-      topic, 
-      search, 
-      sortBy, 
-      sortOrder, 
-      limit, 
-      offset 
+    console.log('📊 Fetching problems with filters:', {
+      difficulty,
+      platform,
+      topic,
+      company,
+      search,
+      sortBy,
+      sortOrder,
+      limit,
+      offset,
     });
 
     const baseQuery = db.select().from(problems);
@@ -38,17 +40,17 @@ export async function GET(request: NextRequest) {
       conditions.push(eq(problems.difficulty, difficulty as any));
     }
 
-    // Fixed GEEKSFORGEEKS filtering
     if (platform && platform !== 'all') {
-      const normalizedPlatform = platform.toUpperCase().trim();
-      conditions.push(eq(problems.platform, normalizedPlatform as any));
+      conditions.push(eq(problems.platform, platform.toUpperCase().trim() as any));
     }
 
     if (topic && topic !== 'all' && topic !== 'undefined') {
-      // Use PostgreSQL array overlap operator to check if topicSlugs contains the topic
-      console.log('🔍 Filtering by topic:', topic);
       conditions.push(sql`${problems.topicSlugs} && ARRAY[${topic}]`);
     }
+    if (company && company !== 'all' && company !== 'undefined') {
+  conditions.push(sql`EXISTS (SELECT 1 FROM unnest(${problems.companyTags}) AS tag WHERE lower(tag) = lower(${company}))`);
+}
+
 
     if (search) {
       conditions.push(
@@ -59,16 +61,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const query = conditions.length > 0 
+    const query = conditions.length > 0
       ? baseQuery.where(and(...conditions))
       : baseQuery;
-
-    // Get total count before applying limit/offset
-    const totalCountResult = await (conditions.length > 0 
-      ? db.select({ count: sql<number>`count(*)::int` }).from(problems).where(and(...conditions))
-      : db.select({ count: sql<number>`count(*)::int` }).from(problems));
-    
-    const totalCount = totalCountResult[0]?.count || 0;
 
     // Dynamic sorting
     let orderByClause;
@@ -89,30 +84,31 @@ export async function GET(request: NextRequest) {
         orderByClause = desc(problems.likes);
     }
 
-    const result = await query
-      .orderBy(orderByClause)
-      .limit(limit)
-      .offset(offset);
+    // Total count
+    const countResult = await (conditions.length > 0
+      ? db.select({ count: sql<number>`count(*)::int` }).from(problems).where(and(...conditions))
+      : db.select({ count: sql<number>`count(*)::int` }).from(problems));
 
-    console.log(`✅ Fetched ${result.length} problems out of ${totalCount} total`);
+    const total = countResult[0]?.count || 0;
+
+    // Fetch paginated problems
+    const result = await query.orderBy(orderByClause).limit(limit).offset(offset);
+
+    console.log(`✅ Retrieved ${result.length}/${total} problems`);
 
     return NextResponse.json({
       success: true,
       data: result,
       count: result.length,
-      total: totalCount, // Total count in database
-    }, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-      },
+      total,
     });
   } catch (error) {
     console.error('❌ Error fetching problems:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Failed to fetch problems',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     );

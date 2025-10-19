@@ -1,5 +1,8 @@
 'use client';
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Link from "next/link";
+
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -512,6 +515,18 @@ export default function DsaSheet() {
           </div>
         )}
       </motion.div>
+{/* Tabs (Added) */}
+<div className="w-full mb-8 flex justify-items-end">
+  <Link href="/companies" passHref>
+    <Button
+      as="a"
+      variant="outline"
+      className="px-6 py-2 hover:bg-yellow-500 cursor-pointer transition-colors rounded-md"
+    >
+      Company‑wise Questions
+    </Button>
+  </Link>
+</div>
 
       {/* Topics Section */}
       <Card className="mb-6 border-2">
