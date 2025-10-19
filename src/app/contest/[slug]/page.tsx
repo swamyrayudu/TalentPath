@@ -7,7 +7,7 @@ import { ContestLeaderboard } from '@/components/contest/leaderboard';
 import { JoinContestButton } from '@/components/contest/join-contest-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Settings } from 'lucide-react';
+import { Settings, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { auth } from '@/lib/auth';
 
@@ -50,6 +50,16 @@ export default async function ContestDetailPage({
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Back to Contest Button */}
+      <div className="mb-6">
+        <Link href="/contest">
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Contests
+          </Button>
+        </Link>
+      </div>
+
       <ContestHeader contest={{
         ...contest,
         creatorName: contest.creatorName || undefined

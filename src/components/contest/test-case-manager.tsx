@@ -9,9 +9,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { addTestCase, deleteTestCase } from '@/actions/contest.actions';
+import { addTestCase } from '@/actions/contest.actions';
 import { toast } from 'sonner';
-import { Loader2, Plus, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Plus, Eye, EyeOff } from 'lucide-react';
 
 interface TestCaseManagerProps {
   questionId: string;
@@ -21,7 +21,6 @@ interface TestCaseManagerProps {
 export function TestCaseManager({ questionId, testCases }: TestCaseManagerProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     input: '',
@@ -58,25 +57,6 @@ export function TestCaseManager({ questionId, testCases }: TestCaseManagerProps)
       toast.error(error.message);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleDelete = async (testCaseId: string) => {
-    if (!confirm('Are you sure you want to delete this test case?')) return;
-
-    setDeletingId(testCaseId);
-    try {
-      const result = await deleteTestCase(testCaseId);
-      if (result.success) {
-        toast.success('Test case deleted successfully');
-        router.refresh();
-      } else {
-        toast.error(result.error || 'Failed to delete test case');
-      }
-    } catch (error: any) {
-      toast.error(error.message);
-    } finally {
-      setDeletingId(null);
     }
   };
 
@@ -218,15 +198,6 @@ export function TestCaseManager({ questionId, testCases }: TestCaseManagerProps)
                       </div>
                     </div>
                   </div>
-
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => handleDelete(testCase.id)}
-                    disabled={deletingId === testCase.id}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
                 </div>
               </CardHeader>
             </Card>
