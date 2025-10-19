@@ -1,6 +1,7 @@
 // ============================================
-// MERGED SCHEMA: TalentPath + Contest System
-// schema.ts - Complete Database Schema
+// COMPLETE DRIZZLE SCHEMA
+// TalentPath + Contest + Admin Question System
+// src/db/schema.ts
 // ============================================
 
 import { 
@@ -22,25 +23,16 @@ import {
 // ENUM DEFINITIONS
 // ============================================
 
-// Auth & User Enums
 export const roleEnum = pgEnum('role', ['user', 'admin']);
-
-// Jobs System Enums
 export const jobTypeEnum = pgEnum('job_type', ['full-time', 'part-time', 'contract', 'internship']);
 export const locationTypeEnum = pgEnum('location_type', ['remote', 'onsite', 'hybrid']);
-
-// Problems System Enums
 export const difficultyEnum = pgEnum('difficulty', ['EASY', 'MEDIUM', 'HARD']);
 export const platformEnum = pgEnum('platform', ['LEETCODE', 'CODEFORCES', 'HACKERRANK', 'GEEKSFORGEEKS']);
 export const progressStatusEnum = pgEnum('progress_status', ['solved', 'attempted', 'bookmarked']);
-
-// Roadmaps System Enums
 export const roadmapCategoryEnum = pgEnum('roadmap_category', [
   'frontend', 'backend', 'fullstack', 'devops', 'mobile', 
   'data-science', 'ai-ml', 'cybersecurity', 'other'
 ]);
-
-// Contest System Enums
 export const contestStatusEnum = pgEnum('contest_status', ['draft', 'upcoming', 'live', 'ended']);
 export const contestVisibilityEnum = pgEnum('contest_visibility', ['public', 'private']);
 export const submissionVerdictEnum = pgEnum('submission_verdict', [
@@ -78,13 +70,16 @@ export const accounts = pgTable('account', {
   compoundKey: primaryKey({
     columns: [account.provider, account.providerAccountId],
   }),
+  userIdIdx: index('idx_account_user_id').on(account.userId),
 }));
 
 export const sessions = pgTable('session', {
   sessionToken: text('sessionToken').primaryKey(),
   userId: text('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
   expires: timestamp('expires', { mode: 'date' }).notNull(),
-});
+}, (table) => ({
+  userIdIdx: index('idx_session_user_id').on(table.userId),
+}));
 
 export const verificationTokens = pgTable('verificationToken', {
   identifier: text('identifier').notNull(),
@@ -171,7 +166,6 @@ export const userProgress = pgTable('user_progress', {
   problemIdIdx: index('user_progress_problem_id_idx').on(table.problemId),
   userProblemIdx: index('user_progress_user_problem_idx').on(table.userId, table.problemId),
   statusIdx: index('user_progress_status_idx').on(table.status),
-  uniqueUserProblem: index('unique_user_problem').on(table.userId, table.problemId),
 }));
 
 export const companies = pgTable('companies', {
@@ -235,7 +229,6 @@ export const userRoadmapProgress = pgTable('user_roadmap_progress', {
 }, (table) => ({
   userIdIdx: index('idx_user_roadmap_progress_user_id').on(table.userId),
   roadmapIdIdx: index('idx_user_roadmap_progress_roadmap_id').on(table.roadmapId),
-  uniqueUserRoadmap: index('unique_user_roadmap').on(table.userId, table.roadmapId),
 }));
 
 // ============================================
@@ -301,7 +294,6 @@ export const contestParticipants = pgTable('contest_participants', {
 }, (table) => ({
   contestIdIdx: index('idx_contest_participants_contest_id').on(table.contestId),
   userIdIdx: index('idx_contest_participants_user_id').on(table.userId),
-  uniqueParticipant: index('unique_participant').on(table.contestId, table.userId),
 }));
 
 export const contestSubmissions = pgTable('contest_submissions', {
@@ -339,83 +331,134 @@ export const contestLeaderboard = pgTable('contest_leaderboard', {
 }, (table) => ({
   contestIdIdx: index('idx_contest_leaderboard_contest_id').on(table.contestId),
   rankIdx: index('idx_contest_leaderboard_rank').on(table.contestId, table.rank),
-  uniqueUserContest: index('unique_user_contest').on(table.contestId, table.userId),
 }));
 
 // ============================================
-// TYPE EXPORTS - AUTH & USER
+// ADMIN QUESTION MANAGEMENT SYSTEM
 // ============================================
 
+export const adminQuestions = pgTable('admin_questions', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  title: text('title').notNull().unique(),
+  description: text('description').notNull(),
+  difficulty: difficultyEnum('difficulty').notNull(),
+  points: integer('points').default(100).notNull(),
+  timeLimitSeconds: integer('time_limit_seconds').default(2).notNull(),
+  memoryLimitMb: integer('memory_limit_mb').default(256).notNull(),
+  topics: text('topics').array().default([]).notNull(),
+  createdBy: text('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  titleIdx: index('idx_admin_questions_title').on(table.title),
+  difficultyIdx: index('idx_admin_questions_difficulty').on(table.difficulty),
+  createdByIdx: index('idx_admin_questions_created_by').on(table.createdBy),
+  isActiveIdx: index('idx_admin_questions_is_active').on(table.isActive),
+  topicsIdx: index('idx_admin_questions_topics').on(table.topics),
+}));
+
+export const adminTestCases = pgTable('admin_test_cases', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  questionTitle: text('question_title').notNull().references(() => adminQuestions.title, { onDelete: 'cascade' }),
+  input: text('input').notNull(),
+  expectedOutput: text('expected_output').notNull(),
+  isSample: boolean('is_sample').default(false).notNull(),
+  isHidden: boolean('is_hidden').default(false).notNull(),
+  points: integer('points').default(10).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  questionTitleIdx: index('idx_admin_test_cases_question_title').on(table.questionTitle),
+  isSampleIdx: index('idx_admin_test_cases_is_sample').on(table.isSample),
+  isHiddenIdx: index('idx_admin_test_cases_is_hidden').on(table.isHidden),
+}));
+
+// ============================================
+// TYPE EXPORTS
+// ============================================
+
+// Auth Types
 export type User = typeof users.$inferSelect;
 export type UserInsert = typeof users.$inferInsert;
-
 export type Account = typeof accounts.$inferSelect;
 export type AccountInsert = typeof accounts.$inferInsert;
-
 export type Session = typeof sessions.$inferSelect;
 export type SessionInsert = typeof sessions.$inferInsert;
-
 export type VerificationToken = typeof verificationTokens.$inferSelect;
 export type VerificationTokenInsert = typeof verificationTokens.$inferInsert;
 
-// ============================================
-// TYPE EXPORTS - JOBS SYSTEM
-// ============================================
-
+// Jobs Types
 export type Job = typeof jobs.$inferSelect;
 export type JobInsert = typeof jobs.$inferInsert;
 
-// ============================================
-// TYPE EXPORTS - PROBLEMS SYSTEM
-// ============================================
-
+// Problems Types
 export type Problem = typeof problems.$inferSelect;
 export type ProblemInsert = typeof problems.$inferInsert;
-// Alias for backward compatibility
 export type NewProblem = typeof problems.$inferInsert;
-
 export type UserProgress = typeof userProgress.$inferSelect;
 export type UserProgressInsert = typeof userProgress.$inferInsert;
-// Alias for backward compatibility
 export type NewUserProgress = typeof userProgress.$inferInsert;
-
 export type Company = typeof companies.$inferSelect;
 export type CompanyInsert = typeof companies.$inferInsert;
-
 export type Topic = typeof topics.$inferSelect;
 export type TopicInsert = typeof topics.$inferInsert;
 
-// ============================================
-// TYPE EXPORTS - ROADMAPS SYSTEM
-// ============================================
-
+// Roadmaps Types
 export type Roadmap = typeof roadmaps.$inferSelect;
 export type RoadmapInsert = typeof roadmaps.$inferInsert;
-
 export type RoadmapStep = typeof roadmapSteps.$inferSelect;
 export type RoadmapStepInsert = typeof roadmapSteps.$inferInsert;
-
 export type UserRoadmapProgress = typeof userRoadmapProgress.$inferSelect;
 export type UserRoadmapProgressInsert = typeof userRoadmapProgress.$inferInsert;
 
-// ============================================
-// TYPE EXPORTS - CONTEST SYSTEM
-// ============================================
-
+// Contest Types
 export type Contest = typeof contests.$inferSelect;
 export type ContestInsert = typeof contests.$inferInsert;
-
 export type ContestQuestion = typeof contestQuestions.$inferSelect;
 export type ContestQuestionInsert = typeof contestQuestions.$inferInsert;
-
 export type ContestTestCase = typeof contestTestCases.$inferSelect;
 export type ContestTestCaseInsert = typeof contestTestCases.$inferInsert;
-
 export type ContestParticipant = typeof contestParticipants.$inferSelect;
 export type ContestParticipantInsert = typeof contestParticipants.$inferInsert;
-
 export type ContestSubmission = typeof contestSubmissions.$inferSelect;
 export type ContestSubmissionInsert = typeof contestSubmissions.$inferInsert;
-
 export type ContestLeaderboard = typeof contestLeaderboard.$inferSelect;
 export type ContestLeaderboardInsert = typeof contestLeaderboard.$inferInsert;
+
+// Admin Question Types
+export type AdminQuestion = typeof adminQuestions.$inferSelect;
+export type AdminQuestionInsert = typeof adminQuestions.$inferInsert;
+export type AdminTestCase = typeof adminTestCases.$inferSelect;
+export type AdminTestCaseInsert = typeof adminTestCases.$inferInsert;
+
+// ============================================
+// HELPER TYPES
+// ============================================
+
+export type ProblemWithProgress = Problem & {
+  progress?: UserProgress;
+};
+
+export type ContestWithDetails = Contest & {
+  questionCount?: number;
+  participantCount?: number;
+};
+
+export type AdminQuestionWithTestCases = AdminQuestion & {
+  testCases: AdminTestCase[];
+};
+
+// ============================================
+// ENUM VALUE TYPES
+// ============================================
+
+export type Role = 'user' | 'admin';
+export type JobType = 'full-time' | 'part-time' | 'contract' | 'internship';
+export type LocationType = 'remote' | 'onsite' | 'hybrid';
+export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD';
+export type Platform = 'LEETCODE' | 'CODEFORCES' | 'HACKERRANK' | 'GEEKSFORGEEKS';
+export type ProgressStatus = 'solved' | 'attempted' | 'bookmarked';
+export type RoadmapCategory = 'frontend' | 'backend' | 'fullstack' | 'devops' | 'mobile' | 'data-science' | 'ai-ml' | 'cybersecurity' | 'other';
+export type ContestStatus = 'draft' | 'upcoming' | 'live' | 'ended';
+export type ContestVisibility = 'public' | 'private';
+export type SubmissionVerdict = 'pending' | 'accepted' | 'wrong_answer' | 'runtime_error' | 'time_limit_exceeded' | 'compilation_error';

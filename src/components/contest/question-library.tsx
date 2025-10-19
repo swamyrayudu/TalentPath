@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,8 +22,9 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { addExistingQuestionToContest, getAllQuestionsFromLibrary } from '@/actions/contest.actions';
+import { getAllTopics } from '@/actions/admin-questions.actions';
 import { toast } from 'sonner';
-import { Search, Plus, Loader2, BookOpen, TestTube } from 'lucide-react';
+import { Search, Plus, Loader2, BookOpen, TestTube, Tag } from 'lucide-react';
 
 interface Question {
   id: string;
@@ -33,8 +34,8 @@ interface Question {
   points: number;
   timeLimitSeconds: number | null;
   memoryLimitMb: number | null;
+  topics: string[];
   testCaseCount: number;
-  usageCount: number;
   createdAt: Date;
 }
 
@@ -48,28 +49,101 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [filteredQuestions, setFilteredQuestions] = useState<Question[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
+  const [topicFilter, setTopicFilter] = useState<string>('all');
+  const [topics, setTopics] = useState<string[]>([]);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  
+  const observerTarget = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
+  // Load topics on mount
   useEffect(() => {
     if (open) {
-      loadQuestions();
+      loadTopics();
     }
   }, [open]);
 
+  // Reset and reload questions when filters change
   useEffect(() => {
-    filterQuestions();
-  }, [searchQuery, difficultyFilter, questions]);
+    if (open) {
+      setPage(1);
+      setQuestions([]);
+      setHasMore(true);
+      loadQuestions(1);
+    }
+  }, [open, searchQuery, difficultyFilter, topicFilter]);
 
-  const loadQuestions = async () => {
-    setIsLoading(true);
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore && !isLoading) {
+          setPage((prev) => prev + 1);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current);
+      }
+    };
+  }, [hasMore, loadingMore, isLoading]);
+
+  // Load more when page changes
+  useEffect(() => {
+    if (page > 1 && hasMore) {
+      loadQuestions(page);
+    }
+  }, [page]);
+
+  const loadTopics = async () => {
     try {
-      const result = await getAllQuestionsFromLibrary();
+      const topicsList = await getAllTopics();
+      setTopics(topicsList);
+    } catch (error: any) {
+      console.error('Failed to load topics:', error);
+    }
+  };
+
+  const loadQuestions = async (currentPage: number) => {
+    if (currentPage === 1) {
+      setIsLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+
+    try {
+      const result = await getAllQuestionsFromLibrary({
+        page: currentPage,
+        limit: 20,
+        search: searchQuery,
+        difficulty: difficultyFilter,
+        topic: topicFilter,
+      });
+
       if (result.success && result.data) {
-        setQuestions(result.data);
-        setFilteredQuestions(result.data);
+        if (currentPage === 1) {
+          setQuestions(result.data);
+        } else {
+          // Avoid duplicates by filtering out questions that already exist
+          setQuestions((prev) => {
+            const existingIds = new Set(prev.map(q => q.id));
+            const newQuestions = result.data.filter(q => !existingIds.has(q.id));
+            return [...prev, ...newQuestions];
+          });
+        }
+        setHasMore(result.hasMore || false);
       } else {
         toast.error('Failed to load questions');
       }
@@ -77,28 +151,8 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
       toast.error(error.message);
     } finally {
       setIsLoading(false);
+      setLoadingMore(false);
     }
-  };
-
-  const filterQuestions = () => {
-    let filtered = [...questions];
-
-    // Search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (q) =>
-          q.title.toLowerCase().includes(query) ||
-          q.description.toLowerCase().includes(query)
-      );
-    }
-
-    // Difficulty filter
-    if (difficultyFilter !== 'all') {
-      filtered = filtered.filter((q) => q.difficulty === difficultyFilter);
-    }
-
-    setFilteredQuestions(filtered);
   };
 
   const handleAddQuestion = async (question: Question) => {
@@ -162,8 +216,8 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
 
           <div className="space-y-4">
             {/* Filters */}
-            <div className="flex gap-3">
-              <div className="flex-1 relative">
+            <div className="flex gap-3 flex-wrap">
+              <div className="flex-1 min-w-[200px] relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search questions..."
@@ -183,28 +237,39 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
                   <SelectItem value="HARD">Hard</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={topicFilter} onValueChange={setTopicFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Topic" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Topics</SelectItem>
+                  {topics.map((topic) => (
+                    <SelectItem key={topic} value={topic}>
+                      {topic}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Questions List */}
-            {isLoading ? (
+            {isLoading && page === 1 ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-            ) : filteredQuestions.length === 0 ? (
+            ) : questions.length === 0 ? (
               <div className="text-center py-12">
                 <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
                 <p className="text-muted-foreground">
-                  {questions.length === 0
-                    ? 'No questions in library yet'
-                    : 'No questions match your filters'}
+                  No questions match your filters
                 </p>
               </div>
             ) : (
-              <ScrollArea className="h-[500px] pr-4">
+              <ScrollArea className="h-[500px] pr-4" ref={scrollAreaRef}>
                 <div className="space-y-3">
-                  {filteredQuestions.map((question) => (
+                  {questions.map((question, index) => (
                     <Card
-                      key={question.id}
+                      key={`${question.id}-${index}`}
                       className="hover:border-primary/50 transition-colors cursor-pointer"
                       onClick={() => setSelectedQuestion(question)}
                     >
@@ -228,6 +293,17 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
                               {question.description}
                             </p>
                             
+                            {question.topics && question.topics.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {question.topics.map((topic, topicIndex) => (
+                                  <Badge key={`${question.id}-topic-${topicIndex}-${topic}`} variant="outline" className="text-xs">
+                                    <Tag className="h-3 w-3 mr-1" />
+                                    {topic}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                            
                             <div className="flex items-center gap-4 text-xs text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <TestTube className="h-3 w-3" />
@@ -238,9 +314,6 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
                               </span>
                               <span>
                                 Memory: {question.memoryLimitMb || 256}MB
-                              </span>
-                              <span>
-                                Used {question.usageCount}x
                               </span>
                             </div>
                           </div>
@@ -260,6 +333,23 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
                       </CardContent>
                     </Card>
                   ))}
+
+                  {/* Loading more indicator */}
+                  {loadingMore && (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+
+                  {/* Infinite scroll trigger */}
+                  <div ref={observerTarget} className="h-4" />
+
+                  {/* No more results */}
+                  {!hasMore && questions.length > 0 && (
+                    <div className="text-center py-4 text-sm text-muted-foreground">
+                      No more questions
+                    </div>
+                  )}
                 </div>
               </ScrollArea>
             )}
@@ -306,10 +396,24 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
                   {selectedQuestion.testCaseCount}
                 </div>
                 <div>
-                  <span className="font-semibold">Times Used:</span>{' '}
-                  {selectedQuestion.usageCount}
+                  <span className="font-semibold">Points:</span>{' '}
+                  {selectedQuestion.points}
                 </div>
               </div>
+
+              {selectedQuestion.topics && selectedQuestion.topics.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2">Topics</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedQuestion.topics.map((topic, idx) => (
+                      <Badge key={`selected-topic-${idx}-${topic}`} variant="outline">
+                        <Tag className="h-3 w-3 mr-1" />
+                        {topic}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="flex justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={() => setSelectedQuestion(null)}>

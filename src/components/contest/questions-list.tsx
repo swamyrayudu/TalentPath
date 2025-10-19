@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Code2, Trophy, Clock, Lock } from 'lucide-react';
+import { Code2, Trophy, Clock, Lock, CheckCircle2 } from 'lucide-react';
 
 interface QuestionsListProps {
   questions: Array<{
@@ -16,9 +16,10 @@ interface QuestionsListProps {
   contestId: string;
   contestSlug: string;
   isParticipant: boolean;
+  completedQuestionIds?: Set<string>;
 }
 
-export function QuestionsList({ questions, contestId, contestSlug, isParticipant }: QuestionsListProps) {
+export function QuestionsList({ questions, contestId, contestSlug, isParticipant, completedQuestionIds }: QuestionsListProps) {
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'EASY':
@@ -46,16 +47,34 @@ export function QuestionsList({ questions, contestId, contestSlug, isParticipant
 
   return (
     <div className="space-y-4">
-      {questions.map((question, index) => (
-        <Card key={question.id} className="hover:shadow-md transition-shadow">
+      {questions.map((question, index) => {
+        const isCompleted = completedQuestionIds?.has(question.id);
+        
+        return (
+        <Card key={question.id} className={`hover:shadow-md transition-shadow ${isCompleted ? 'border-green-500/50 bg-green-500/5' : ''}`}>
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-4 flex-1">
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary font-bold">
-                  {index + 1}
+                <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold ${
+                  isCompleted 
+                    ? 'bg-green-500/20 text-green-600 dark:text-green-400' 
+                    : 'bg-primary/10 text-primary'
+                }`}>
+                  {isCompleted ? (
+                    <CheckCircle2 className="h-6 w-6" />
+                  ) : (
+                    <span>{index + 1}</span>
+                  )}
                 </div>
                 <div className="flex-1">
-                  <CardTitle className="text-lg mb-2">{question.title}</CardTitle>
+                  <div className="flex items-center gap-2 mb-2">
+                    <CardTitle className="text-lg">{question.title}</CardTitle>
+                    {isCompleted && (
+                      <Badge className="bg-green-500 text-white">
+                        Completed
+                      </Badge>
+                    )}
+                  </div>
                   <div className="flex items-center gap-3 flex-wrap">
                     <Badge className={getDifficultyColor(question.difficulty)}>
                       {question.difficulty}
@@ -74,9 +93,9 @@ export function QuestionsList({ questions, contestId, contestSlug, isParticipant
 
               {isParticipant ? (
                 <Link href={`/contest/${contestSlug}/problem/${question.id}`}>
-                  <Button>
+                  <Button variant={isCompleted ? "outline" : "default"}>
                     <Code2 className="h-4 w-4 mr-2" />
-                    Solve
+                    {isCompleted ? 'View Solution' : 'Solve'}
                   </Button>
                 </Link>
               ) : (
@@ -88,7 +107,7 @@ export function QuestionsList({ questions, contestId, contestSlug, isParticipant
             </div>
           </CardHeader>
         </Card>
-      ))}
+      )})}
     </div>
   );
 }

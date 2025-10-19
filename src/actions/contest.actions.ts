@@ -8,9 +8,11 @@ import {
   contestParticipants,
   contestSubmissions,
   contestLeaderboard,
-  users
+  users,
+  adminQuestions,
+  adminTestCases
 } from '@/lib/db/schema';
-import { eq, and, desc, sql, asc } from 'drizzle-orm';
+import { eq, and, desc, sql, asc, like, or } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 
@@ -174,40 +176,91 @@ export async function deleteContest(contestId: string) {
 // QUESTION MANAGEMENT
 // ============================================
 
-// Get All Questions from Library (for reuse)
-export async function getAllQuestionsFromLibrary() {
+// Get All Questions from Library (for reuse) - Using admin questions
+export async function getAllQuestionsFromLibrary(params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  difficulty?: string;
+  topic?: string;
+}) {
   try {
+    const { page = 1, limit = 50, search = "", difficulty = "all", topic = "all" } = params || {};
+    
+    // Build where conditions
+    const conditions = [];
+    conditions.push(eq(adminQuestions.isActive, true));
+
+    if (search) {
+      conditions.push(
+        or(
+          like(adminQuestions.title, `%${search}%`),
+          like(adminQuestions.description, `%${search}%`)
+        )
+      );
+    }
+
+    if (difficulty !== "all") {
+      const upperDifficulty = difficulty.toUpperCase() as "EASY" | "MEDIUM" | "HARD";
+      conditions.push(eq(adminQuestions.difficulty, upperDifficulty));
+    }
+
+    // Topic filter using array contains
+    if (topic !== "all") {
+      conditions.push(sql`${adminQuestions.topics} @> ARRAY[${topic}]::text[]`);
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Get total count
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(adminQuestions)
+      .where(where);
+
+    const totalCount = countResult?.count || 0;
+
+    // Get paginated questions with test case count
+    const offset = (page - 1) * limit;
     const allQuestions = await db
       .select({
-        id: contestQuestions.id,
-        title: contestQuestions.title,
-        description: contestQuestions.description,
-        difficulty: contestQuestions.difficulty,
-        points: contestQuestions.points,
-        timeLimitSeconds: contestQuestions.timeLimitSeconds,
-        memoryLimitMb: contestQuestions.memoryLimitMb,
-        createdAt: contestQuestions.createdAt,
+        id: adminQuestions.id,
+        title: adminQuestions.title,
+        description: adminQuestions.description,
+        difficulty: adminQuestions.difficulty,
+        points: adminQuestions.points,
+        timeLimitSeconds: adminQuestions.timeLimitSeconds,
+        memoryLimitMb: adminQuestions.memoryLimitMb,
+        topics: adminQuestions.topics,
+        createdAt: adminQuestions.createdAt,
         testCaseCount: sql<number>`(
           SELECT COUNT(*)::int 
-          FROM ${contestTestCases} 
-          WHERE ${contestTestCases.questionId} = ${contestQuestions.id}
-        )`,
-        usageCount: sql<number>`(
-          SELECT COUNT(DISTINCT ${contestQuestions.contestId})::int 
-          FROM ${contestQuestions} q 
-          WHERE q.id = ${contestQuestions.id}
+          FROM ${adminTestCases} 
+          WHERE ${adminTestCases.questionTitle} = ${adminQuestions.title}
         )`,
       })
-      .from(contestQuestions)
-      .orderBy(desc(contestQuestions.createdAt));
+      .from(adminQuestions)
+      .where(where)
+      .orderBy(desc(adminQuestions.createdAt))
+      .limit(limit)
+      .offset(offset);
 
-    return { success: true, data: allQuestions };
+    const hasMore = offset + allQuestions.length < totalCount;
+
+    return {
+      success: true,
+      data: allQuestions,
+      totalCount,
+      hasMore,
+      page,
+      limit,
+    };
   } catch (error: any) {
-    return { success: false, error: error.message };
+    return { success: false, error: error.message, data: [], totalCount: 0, hasMore: false, page: 1, limit: 50 };
   }
 }
 
-// Add Existing Question to Contest (with all test cases)
+// Add Existing Question to Contest (with all test cases) - From Admin Library
 export async function addExistingQuestionToContest(data: {
   contestId: string;
   existingQuestionId: string;
@@ -225,11 +278,11 @@ export async function addExistingQuestionToContest(data: {
       return { success: false, error: 'Unauthorized' };
     }
 
-    // Get the original question
+    // Get the original question from admin library
     const [originalQuestion] = await db
       .select()
-      .from(contestQuestions)
-      .where(eq(contestQuestions.id, data.existingQuestionId))
+      .from(adminQuestions)
+      .where(eq(adminQuestions.id, data.existingQuestionId))
       .limit(1);
 
     if (!originalQuestion) {
@@ -248,11 +301,11 @@ export async function addExistingQuestionToContest(data: {
       memoryLimitMb: originalQuestion.memoryLimitMb,
     }).returning();
 
-    // Copy all test cases
+    // Copy all test cases from admin test cases
     const originalTestCases = await db
       .select()
-      .from(contestTestCases)
-      .where(eq(contestTestCases.questionId, data.existingQuestionId));
+      .from(adminTestCases)
+      .where(eq(adminTestCases.questionTitle, originalQuestion.title));
 
     if (originalTestCases.length > 0) {
       await db.insert(contestTestCases).values(
@@ -854,6 +907,35 @@ export async function getUserSubmissions(contestId: string, userId: string) {
       .orderBy(desc(contestSubmissions.submittedAt));
 
     return { success: true, data: submissions };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// Get Question Completion Status
+export async function getQuestionCompletionStatus(contestId: string, userId: string) {
+  try {
+    // Get all accepted submissions for this user in this contest
+    const acceptedSubmissions = await db
+      .select({
+        questionId: contestSubmissions.questionId,
+      })
+      .from(contestSubmissions)
+      .where(
+        and(
+          eq(contestSubmissions.contestId, contestId),
+          eq(contestSubmissions.userId, userId),
+          eq(contestSubmissions.verdict, 'accepted')
+        )
+      )
+      .groupBy(contestSubmissions.questionId);
+
+    // Create a Set of completed question IDs for fast lookup
+    const completedQuestionIds = new Set(
+      acceptedSubmissions.map(sub => sub.questionId)
+    );
+
+    return { success: true, data: completedQuestionIds };
   } catch (error: any) {
     return { success: false, error: error.message };
   }

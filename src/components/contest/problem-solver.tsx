@@ -7,7 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Play, Loader2, Send, CheckCircle2, XCircle, Clock, Trophy, Award, ArrowLeft } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Play, Loader2, Send, CheckCircle2, XCircle, Clock, Trophy, Award, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { submitSolution, runTestCases } from '@/actions/contest.actions';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -36,6 +46,19 @@ const LANGUAGES = [
   },
 ];
 
+interface Submission {
+  id: string;
+  timestamp: number;
+  code: string;
+  language: string;
+  verdict: string;
+  score: number;
+  passedTestCases: number;
+  totalTestCases: number;
+  executionTimeMs?: number;
+  errorMessage?: string;
+}
+
 export function ProblemSolver({ contest, question, sampleTestCases, userId }: any) {
   const router = useRouter();
   const [language, setLanguage] = useState('python');
@@ -44,8 +67,33 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [testResults, setTestResults] = useState<any[]>([]);
   const [submissionResult, setSubmissionResult] = useState<any>(null);
+  const [allSubmissions, setAllSubmissions] = useState<Submission[]>([]);
+  const [activeTab, setActiveTab] = useState('description');
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const editorRef = useRef<any>(null);
   const [timeLeft, setTimeLeft] = useState<string>('');
+
+  // Load submissions from localStorage on mount
+  useEffect(() => {
+    const storageKey = `submissions_${contest.id}_${question.id}_${userId}`;
+    const stored = localStorage.getItem(storageKey);
+    if (stored) {
+      try {
+        const submissions = JSON.parse(stored);
+        setAllSubmissions(submissions);
+      } catch (error) {
+        console.error('Failed to parse stored submissions:', error);
+      }
+    }
+  }, [contest.id, question.id, userId]);
+
+  // Save submissions to localStorage whenever they change
+  useEffect(() => {
+    if (allSubmissions.length > 0) {
+      const storageKey = `submissions_${contest.id}_${question.id}_${userId}`;
+      localStorage.setItem(storageKey, JSON.stringify(allSubmissions));
+    }
+  }, [allSubmissions, contest.id, question.id, userId]);
 
   // Contest timer
   useEffect(() => {
@@ -115,16 +163,16 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!code.trim()) {
       toast.error('Please write some code first!');
       return;
     }
+    setShowSubmitDialog(true);
+  };
 
-    if (!confirm('Are you sure you want to submit? This will be evaluated against all test cases.')) {
-      return;
-    }
-
+  const confirmSubmit = async () => {
+    setShowSubmitDialog(false);
     setIsSubmitting(true);
     setSubmissionResult(null);
 
@@ -138,6 +186,27 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
 
       if (result.success && result.data) {
         setSubmissionResult(result.data);
+        
+        // Create submission object
+        const newSubmission: Submission = {
+          id: crypto.randomUUID(),
+          timestamp: Date.now(),
+          code,
+          language,
+          verdict: result.data.verdict,
+          score: result.data.score,
+          passedTestCases: result.data.passedTestCases,
+          totalTestCases: result.data.totalTestCases,
+          executionTimeMs: result.data.executionTimeMs || undefined,
+          errorMessage: result.data.errorMessage || undefined,
+        };
+
+        // Add to submissions list (newest first)
+        setAllSubmissions((prev) => [newSubmission, ...prev]);
+
+        // Switch to submissions tab
+        setActiveTab('submissions');
+
         if (result.data.verdict === 'accepted') {
           toast.success(`🎉 Accepted! Score: ${result.data.score}/${question.points}`);
         } else {
@@ -239,10 +308,17 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
         {/* Left Panel - Problem Description */}
         <div className="flex flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto p-6">
-            <Tabs defaultValue="description" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="mb-4">
                 <TabsTrigger value="description">Description</TabsTrigger>
-                <TabsTrigger value="submissions">Submissions</TabsTrigger>
+                <TabsTrigger value="submissions">
+                  Submissions
+                  {allSubmissions.length > 0 && (
+                    <Badge variant="secondary" className="ml-2 text-xs">
+                      {allSubmissions.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="description" className="space-y-6 mt-0">
@@ -299,72 +375,124 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
               </TabsContent>
 
               <TabsContent value="submissions" className="space-y-4 mt-0">
-                {submissionResult ? (
-                  <Card className={submissionResult.verdict === 'accepted' ? 'border-green-500 border-2' : 'border-red-500 border-2'}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm">Latest Submission</CardTitle>
-                        <Badge 
-                          variant={submissionResult.verdict === 'accepted' ? 'default' : 'destructive'}
-                          className="font-semibold"
-                        >
-                          {submissionResult.verdict === 'accepted' ? (
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                          ) : (
-                            <XCircle className="h-3 w-3 mr-1" />
-                          )}
-                          {submissionResult.verdict.replace(/_/g, ' ').toUpperCase()}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p className="text-muted-foreground mb-1">Score</p>
-                          <p className="font-bold text-lg">
-                            {submissionResult.score} / {question.points}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground mb-1">Test Cases</p>
-                          <p className="font-bold text-lg">
-                            {submissionResult.passedTestCases} / {submissionResult.totalTestCases}
-                          </p>
-                        </div>
-                      </div>
-
-                      {submissionResult.executionTimeMs && (
-                        <div className="text-sm">
-                          <p className="text-muted-foreground mb-1">Execution Time</p>
-                          <p className="font-mono">{submissionResult.executionTimeMs}ms</p>
-                        </div>
-                      )}
-
-                      {submissionResult.errorMessage && (
-                        <div>
-                          <p className="text-sm font-medium text-red-500 mb-2">Error Message:</p>
-                          <pre className="bg-red-50 dark:bg-red-950 p-3 rounded text-xs overflow-x-auto text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
-                            {submissionResult.errorMessage}
-                          </pre>
-                        </div>
-                      )}
-
-                      {submissionResult.verdict === 'accepted' && (
-                        <div className="bg-green-50 dark:bg-green-950 p-4 rounded border border-green-200 dark:border-green-800">
-                          <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
-                            <Award className="h-5 w-5" />
-                            <p className="font-semibold">Congratulations! Your solution has been accepted!</p>
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ) : (
+                {allSubmissions.length === 0 ? (
                   <Card>
                     <CardContent className="py-16 text-center">
+                      <Send className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                       <p className="text-muted-foreground">No submissions yet. Submit your solution to see results.</p>
                     </CardContent>
                   </Card>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold">Submission History</h3>
+                      <Badge variant="outline">{allSubmissions.length} submission{allSubmissions.length !== 1 ? 's' : ''}</Badge>
+                    </div>
+
+                    {allSubmissions.map((submission, index) => {
+                      const isLatest = index === 0;
+                      const submissionDate = new Date(submission.timestamp);
+                      
+                      return (
+                        <Card 
+                          key={submission.id}
+                          className={`${
+                            submission.verdict === 'accepted' 
+                              ? 'border-green-500 border-2' 
+                              : 'border-red-500 border-2'
+                          } ${isLatest ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
+                        >
+                          <CardHeader>
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-2">
+                                <CardTitle className="text-sm">
+                                  {isLatest && <Badge variant="secondary" className="mr-2">Latest</Badge>}
+                                  Submission #{allSubmissions.length - index}
+                                </CardTitle>
+                              </div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge variant="outline" className="text-xs">
+                                  {submission.language.toUpperCase()}
+                                </Badge>
+                                <Badge 
+                                  variant={submission.verdict === 'accepted' ? 'default' : 'destructive'}
+                                  className="font-semibold"
+                                >
+                                  {submission.verdict === 'accepted' ? (
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  ) : (
+                                    <XCircle className="h-3 w-3 mr-1" />
+                                  )}
+                                  {submission.verdict.replace(/_/g, ' ').toUpperCase()}
+                                </Badge>
+                              </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {submissionDate.toLocaleString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                              })}
+                            </p>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <p className="text-muted-foreground mb-1">Score</p>
+                                <p className="font-bold text-lg">
+                                  {submission.score} / {question.points}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground mb-1">Test Cases</p>
+                                <p className="font-bold text-lg">
+                                  {submission.passedTestCases} / {submission.totalTestCases}
+                                </p>
+                              </div>
+                            </div>
+
+                            {submission.executionTimeMs && (
+                              <div className="text-sm">
+                                <p className="text-muted-foreground mb-1">Execution Time</p>
+                                <p className="font-mono">{submission.executionTimeMs}ms</p>
+                              </div>
+                            )}
+
+                            {submission.errorMessage && (
+                              <div>
+                                <p className="text-sm font-medium text-red-500 mb-2">Error Message:</p>
+                                <pre className="bg-red-50 dark:bg-red-950 p-3 rounded text-xs overflow-x-auto text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 max-h-32">
+                                  {submission.errorMessage}
+                                </pre>
+                              </div>
+                            )}
+
+                            {submission.verdict === 'accepted' && (
+                              <div className="bg-green-50 dark:bg-green-950 p-4 rounded border border-green-200 dark:border-green-800">
+                                <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                                  <Award className="h-5 w-5" />
+                                  <p className="font-semibold">Congratulations! Your solution has been accepted!</p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Code Preview */}
+                            <details className="mt-4">
+                              <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">
+                                View Code
+                              </summary>
+                              <pre className="mt-2 bg-muted p-3 rounded text-xs overflow-x-auto border max-h-64">
+                                {submission.code}
+                              </pre>
+                            </details>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
                 )}
               </TabsContent>
             </Tabs>
@@ -462,6 +590,26 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
           )}
         </div>
       </div>
+
+      <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              Confirm Submission
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to submit your solution? This will be evaluated against all test cases and cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmSubmit} disabled={isSubmitting}>
+              {isSubmitting ? 'Submitting...' : 'Submit'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

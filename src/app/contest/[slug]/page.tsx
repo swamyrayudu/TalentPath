@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getContest, getContestQuestions, getLeaderboard, checkParticipation } from '@/actions/contest.actions';
+import { getContest, getContestQuestions, getLeaderboard, checkParticipation, getQuestionCompletionStatus } from '@/actions/contest.actions';
 import { ContestHeader } from '@/components/contest/contest-header';
 import { ContestTimer } from '@/components/contest/contest-timer';
 import { QuestionsList } from '@/components/contest/questions-list';
@@ -38,6 +38,15 @@ export default async function ContestDetailPage({
     (await checkParticipation(contest.id, session.user.id)).isParticipant : false;
 
   const isCreator = session?.user?.id === contest.createdBy;
+
+  // Get completion status for questions
+  let completedQuestionIds = new Set<string>();
+  if (session?.user?.id && isParticipant) {
+    const statusResult = await getQuestionCompletionStatus(contest.id, session.user.id);
+    if (statusResult.success && statusResult.data) {
+      completedQuestionIds = statusResult.data;
+    }
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -90,6 +99,7 @@ export default async function ContestDetailPage({
                 contestId={contest.id}
                 contestSlug={slug}
                 isParticipant={isParticipant}
+                completedQuestionIds={completedQuestionIds}
               />
             </TabsContent>
 
