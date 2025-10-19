@@ -470,7 +470,7 @@ export default function DsaSheet() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
+    <div className="container mx-auto py-8 px-4 max-w-8xl">
       {/* Header with Stats */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -479,7 +479,7 @@ export default function DsaSheet() {
         className="mb-8"
       >
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <div>
+          <div >
             <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent mb-2">
               DSA Practice Sheet
             </h1>
