@@ -8,9 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { addContestQuestion } from '@/actions/contest.actions';
+import { QuestionLibrary } from '@/components/contest/question-library';
 import { toast } from 'sonner';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus, BookOpen, FileEdit } from 'lucide-react';
 
 interface AddQuestionFormProps {
   contestId: string;
@@ -65,104 +67,126 @@ export function AddQuestionForm({ contestId, orderIndex }: AddQuestionFormProps)
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Add New Question</CardTitle>
+        <CardTitle>Add Question</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="title">Question Title *</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="e.g., Two Sum"
-              required
-            />
-          </div>
+        <Tabs defaultValue="library" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="library">
+              <BookOpen className="h-4 w-4 mr-2" />
+              Question Library
+            </TabsTrigger>
+            <TabsTrigger value="new">
+              <FileEdit className="h-4 w-4 mr-2" />
+              Create New
+            </TabsTrigger>
+          </TabsList>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Problem Description *</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Describe the problem, input format, output format, and examples..."
-              rows={10}
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="difficulty">Difficulty *</Label>
-              <Select
-                value={formData.difficulty}
-                onValueChange={(value: 'EASY' | 'MEDIUM' | 'HARD') =>
-                  setFormData({ ...formData, difficulty: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="EASY">Easy</SelectItem>
-                  <SelectItem value="MEDIUM">Medium</SelectItem>
-                  <SelectItem value="HARD">Hard</SelectItem>
-                </SelectContent>
-              </Select>
+          <TabsContent value="library" className="space-y-4">
+            <div className="text-sm text-muted-foreground mb-4">
+              Add questions from the library with pre-configured test cases
             </div>
+            <QuestionLibrary contestId={contestId} orderIndex={orderIndex} />
+          </TabsContent>
 
-            <div className="space-y-2">
-              <Label htmlFor="points">Points *</Label>
-              <Input
-                id="points"
-                type="number"
-                value={formData.points}
-                onChange={(e) => setFormData({ ...formData, points: parseInt(e.target.value) })}
-                min={10}
-                max={1000}
-                required
-              />
-            </div>
-          </div>
+          <TabsContent value="new" className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="title">Question Title *</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="e.g., Two Sum"
+                  required
+                />
+              </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="timeLimit">Time Limit (seconds) *</Label>
-              <Input
-                id="timeLimit"
-                type="number"
-                value={formData.timeLimitSeconds}
-                onChange={(e) => setFormData({ ...formData, timeLimitSeconds: parseInt(e.target.value) })}
-                min={1}
-                max={10}
-                required
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Problem Description *</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Describe the problem, input format, output format, and examples..."
+                  rows={10}
+                  required
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="memoryLimit">Memory Limit (MB) *</Label>
-              <Input
-                id="memoryLimit"
-                type="number"
-                value={formData.memoryLimitMb}
-                onChange={(e) => setFormData({ ...formData, memoryLimitMb: parseInt(e.target.value) })}
-                min={128}
-                max={512}
-                required
-              />
-            </div>
-          </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="difficulty">Difficulty *</Label>
+                  <Select
+                    value={formData.difficulty}
+                    onValueChange={(value: 'EASY' | 'MEDIUM' | 'HARD') =>
+                      setFormData({ ...formData, difficulty: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="EASY">Easy</SelectItem>
+                      <SelectItem value="MEDIUM">Medium</SelectItem>
+                      <SelectItem value="HARD">Hard</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          <Button type="submit" disabled={isLoading} className="w-full">
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4 mr-2" />
-            )}
-            Add Question
-          </Button>
-        </form>
+                <div className="space-y-2">
+                  <Label htmlFor="points">Points *</Label>
+                  <Input
+                    id="points"
+                    type="number"
+                    value={formData.points}
+                    onChange={(e) => setFormData({ ...formData, points: parseInt(e.target.value) || 100 })}
+                    min={10}
+                    max={1000}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="timeLimit">Time Limit (seconds) *</Label>
+                  <Input
+                    id="timeLimit"
+                    type="number"
+                    value={formData.timeLimitSeconds}
+                    onChange={(e) => setFormData({ ...formData, timeLimitSeconds: parseInt(e.target.value) || 2 })}
+                    min={1}
+                    max={10}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="memoryLimit">Memory Limit (MB) *</Label>
+                  <Input
+                    id="memoryLimit"
+                    type="number"
+                    value={formData.memoryLimitMb}
+                    onChange={(e) => setFormData({ ...formData, memoryLimitMb: parseInt(e.target.value) || 256 })}
+                    min={128}
+                    max={512}
+                    required
+                  />
+                </div>
+              </div>
+
+              <Button type="submit" disabled={isLoading} className="w-full">
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4 mr-2" />
+                )}
+                Create Question
+              </Button>
+            </form>
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );

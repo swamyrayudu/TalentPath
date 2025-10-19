@@ -101,7 +101,7 @@ export function CreateContestDialog({ children }: { children: React.ReactNode })
                 id="duration"
                 type="number"
                 value={formData.durationMinutes}
-                onChange={(e) => setFormData({ ...formData, durationMinutes: parseInt(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, durationMinutes: parseInt(e.target.value) || 60 })}
                 min={15}
                 max={480}
                 required

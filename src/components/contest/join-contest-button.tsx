@@ -26,6 +26,7 @@ export function JoinContestButton({ contestId, visibility }: JoinContestButtonPr
   const [open, setOpen] = useState(false);
   const [accessCode, setAccessCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [hasJoined, setHasJoined] = useState(false);
   const router = useRouter();
 
   const handleJoin = async () => {
@@ -35,8 +36,12 @@ export function JoinContestButton({ contestId, visibility }: JoinContestButtonPr
       const result = await joinContest(contestId, visibility === 'private' ? accessCode : undefined);
 
       if (result.success) {
-        toast.success('Successfully joined the contest!');
+        const message = result.message === 'Already joined' 
+          ? 'You have already joined this contest!' 
+          : 'Successfully joined the contest!';
+        toast.success(message);
         setOpen(false);
+        setHasJoined(true);
         router.refresh();
       } else {
         toast.error(result.error || 'Failed to join contest');
@@ -47,6 +52,11 @@ export function JoinContestButton({ contestId, visibility }: JoinContestButtonPr
       setIsLoading(false);
     }
   };
+
+  // Don't render if already joined
+  if (hasJoined) {
+    return null;
+  }
 
   if (visibility === 'public') {
     return (

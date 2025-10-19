@@ -174,6 +174,106 @@ export async function deleteContest(contestId: string) {
 // QUESTION MANAGEMENT
 // ============================================
 
+// Get All Questions from Library (for reuse)
+export async function getAllQuestionsFromLibrary() {
+  try {
+    const allQuestions = await db
+      .select({
+        id: contestQuestions.id,
+        title: contestQuestions.title,
+        description: contestQuestions.description,
+        difficulty: contestQuestions.difficulty,
+        points: contestQuestions.points,
+        timeLimitSeconds: contestQuestions.timeLimitSeconds,
+        memoryLimitMb: contestQuestions.memoryLimitMb,
+        createdAt: contestQuestions.createdAt,
+        testCaseCount: sql<number>`(
+          SELECT COUNT(*)::int 
+          FROM ${contestTestCases} 
+          WHERE ${contestTestCases.questionId} = ${contestQuestions.id}
+        )`,
+        usageCount: sql<number>`(
+          SELECT COUNT(DISTINCT ${contestQuestions.contestId})::int 
+          FROM ${contestQuestions} q 
+          WHERE q.id = ${contestQuestions.id}
+        )`,
+      })
+      .from(contestQuestions)
+      .orderBy(desc(contestQuestions.createdAt));
+
+    return { success: true, data: allQuestions };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// Add Existing Question to Contest (with all test cases)
+export async function addExistingQuestionToContest(data: {
+  contestId: string;
+  existingQuestionId: string;
+  orderIndex: number;
+}) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    // Verify user is contest creator
+    const [contest] = await db.select().from(contests).where(eq(contests.id, data.contestId)).limit(1);
+    if (!contest || contest.createdBy !== session.user.id) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    // Get the original question
+    const [originalQuestion] = await db
+      .select()
+      .from(contestQuestions)
+      .where(eq(contestQuestions.id, data.existingQuestionId))
+      .limit(1);
+
+    if (!originalQuestion) {
+      return { success: false, error: 'Question not found' };
+    }
+
+    // Create a copy of the question for this contest
+    const [newQuestion] = await db.insert(contestQuestions).values({
+      contestId: data.contestId,
+      title: originalQuestion.title,
+      description: originalQuestion.description,
+      difficulty: originalQuestion.difficulty,
+      points: originalQuestion.points,
+      orderIndex: data.orderIndex,
+      timeLimitSeconds: originalQuestion.timeLimitSeconds,
+      memoryLimitMb: originalQuestion.memoryLimitMb,
+    }).returning();
+
+    // Copy all test cases
+    const originalTestCases = await db
+      .select()
+      .from(contestTestCases)
+      .where(eq(contestTestCases.questionId, data.existingQuestionId));
+
+    if (originalTestCases.length > 0) {
+      await db.insert(contestTestCases).values(
+        originalTestCases.map((tc) => ({
+          questionId: newQuestion.id,
+          input: tc.input,
+          expectedOutput: tc.expectedOutput,
+          isSample: tc.isSample,
+          isHidden: tc.isHidden,
+          points: tc.points,
+        }))
+      );
+    }
+
+    revalidatePath(`/contest/${contest.slug}`);
+    return { success: true, data: newQuestion };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
 // Add Question to Contest
 export async function addContestQuestion(data: {
   contestId: string;
@@ -442,6 +542,7 @@ export async function joinContest(contestId: string, accessCode?: string) {
       totalTimeMinutes: 0,
     });
 
+    revalidatePath('/contest');
     revalidatePath(`/contest/${contest.slug}`);
     return { success: true };
   } catch (error: any) {

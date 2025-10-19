@@ -11,6 +11,9 @@ import { Settings } from 'lucide-react';
 import Link from 'next/link';
 import { auth } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function ContestDetailPage({ 
   params 
 }: { 
@@ -62,6 +65,15 @@ export default async function ContestDetailPage({
           {!isParticipant && session?.user && (
             <div className="mb-6">
               <JoinContestButton contestId={contest.id} visibility={contest.visibility} />
+            </div>
+          )}
+
+          {isParticipant && session?.user && (
+            <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+              <p className="text-green-600 dark:text-green-400 font-medium flex items-center gap-2">
+                <span className="text-xl">✓</span>
+                You are registered for this contest
+              </p>
             </div>
           )}
 
