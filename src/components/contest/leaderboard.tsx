@@ -17,6 +17,18 @@ interface LeaderboardProps {
 }
 
 export function ContestLeaderboard({ leaderboard, compact = false }: LeaderboardProps) {
+  const formatTime = (minutes: number) => {
+    if (minutes < 0) return '0 min';
+    
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
+    return `${mins} min`;
+  };
+
   const getRankIcon = (rank: number | null) => {
     if (!rank) return null;
     
@@ -133,7 +145,7 @@ export function ContestLeaderboard({ leaderboard, compact = false }: Leaderboard
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock className="h-4 w-4" />
-                        <span>{entry.totalTimeMinutes} min</span>
+                        <span>{formatTime(entry.totalTimeMinutes)}</span>
                       </div>
                     </div>
                   </div>

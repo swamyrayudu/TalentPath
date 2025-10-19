@@ -948,37 +948,58 @@ export async function getQuestionCompletionStatus(contestId: string, userId: str
 // Update Leaderboard
 async function updateLeaderboard(contestId: string, userId: string) {
   try {
-    // Calculate user's total score and problems solved
-    const stats = await db
+    // Get contest start time
+    const [contest] = await db.select().from(contests).where(eq(contests.id, contestId)).limit(1);
+    if (!contest) return;
+
+    // Get all accepted submissions for this user, ordered by time
+    // We only count the FIRST accepted submission for each question
+    const acceptedSubmissions = await db
       .select({
-        totalScore: sql<number>`COALESCE(SUM(CASE WHEN ${contestSubmissions.verdict} = 'accepted' THEN ${contestSubmissions.score} ELSE 0 END), 0)`,
-        problemsSolved: sql<number>`COUNT(DISTINCT CASE WHEN ${contestSubmissions.verdict} = 'accepted' THEN ${contestSubmissions.questionId} END)`,
-        lastSubmission: sql<Date>`MAX(${contestSubmissions.submittedAt})`,
+        questionId: contestSubmissions.questionId,
+        score: contestSubmissions.score,
+        submittedAt: contestSubmissions.submittedAt,
       })
       .from(contestSubmissions)
       .where(
         and(
           eq(contestSubmissions.contestId, contestId),
-          eq(contestSubmissions.userId, userId)
+          eq(contestSubmissions.userId, userId),
+          eq(contestSubmissions.verdict, 'accepted')
         )
-      );
+      )
+      .orderBy(contestSubmissions.submittedAt);
 
-    if (stats.length > 0 && stats[0].lastSubmission) {
-      const stat = stats[0];
+    if (acceptedSubmissions.length > 0) {
+      // Calculate total score
+      const totalScore = acceptedSubmissions.reduce((sum, sub) => sum + (sub.score || 0), 0);
       
-      // Get contest start time to calculate total time
-      const [contest] = await db.select().from(contests).where(eq(contests.id, contestId)).limit(1);
-      const timeInMinutes = Math.floor(
-        (new Date(stat.lastSubmission).getTime() - new Date(contest.startTime).getTime()) / 60000
-      );
+      // Calculate cumulative time: sum of time taken for each problem
+      // Time is calculated from contest start to when each problem was first solved
+      let totalTimeMinutes = 0;
+      const solvedQuestions = new Set<string>();
+      
+      for (const submission of acceptedSubmissions) {
+        // Only count first accepted submission for each question
+        if (!solvedQuestions.has(submission.questionId)) {
+          solvedQuestions.add(submission.questionId);
+          const timeForThisProblem = Math.floor(
+            (new Date(submission.submittedAt).getTime() - new Date(contest.startTime).getTime()) / 60000
+          );
+          totalTimeMinutes += timeForThisProblem;
+        }
+      }
+
+      const problemsSolved = solvedQuestions.size;
+      const lastSubmission = acceptedSubmissions[acceptedSubmissions.length - 1].submittedAt;
 
       await db
         .update(contestLeaderboard)
         .set({
-          totalScore: Number(stat.totalScore),
-          problemsSolved: Number(stat.problemsSolved),
-          totalTimeMinutes: timeInMinutes,
-          lastSubmissionTime: new Date(stat.lastSubmission),
+          totalScore,
+          problemsSolved,
+          totalTimeMinutes,
+          lastSubmissionTime: new Date(lastSubmission),
         })
         .where(
           and(
