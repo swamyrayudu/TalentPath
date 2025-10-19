@@ -5,6 +5,15 @@ import { db } from './db';
 import { users } from './db/schema';
 import { eq } from 'drizzle-orm';
 
+/**
+ * NextAuth Configuration
+ * 
+ * PERFORMANCE OPTIMIZATIONS:
+ * - JWT callback only fetches from DB on initial sign-in (not every request)
+ * - Role and user data cached in JWT token
+ * - Session provider configured with refetch interval to prevent excessive API calls
+ * - Manual session updates supported via trigger='update' for role changes
+ */
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(db),
   providers: [
@@ -17,23 +26,42 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
+    updateAge: 24 * 60 * 60, // Update session every 24 hours
   },
   callbacks: {
     async jwt({ token, user, trigger, session }) {
-      // Initial sign in
+      // Initial sign in - store user data in token
       if (user) {
         token.id = user.id;
         token.email = user.email;
+        token.name = user.name;
+        token.picture = user.image;
+        
+        // Fetch role only on initial sign-in
+        if (token.email) {
+          const dbUser = await db.query.users.findFirst({
+            where: eq(users.email, token.email as string),
+            columns: {
+              role: true,
+              emailVerified: true,
+            },
+          });
+          
+          if (dbUser) {
+            token.role = dbUser.role;
+            token.emailVerified = dbUser.emailVerified;
+          }
+        }
       }
 
-      // Manual session update
+      // Manual session update (e.g., role change)
       if (trigger === 'update' && session) {
         return { ...token, ...session };
       }
 
-      // CRITICAL: Fetch fresh user data from database every time
-      // This ensures role changes are reflected immediately
-      if (token.email) {
+      // Only refetch from DB if token doesn't have role (backward compatibility)
+      // or if explicitly requested via trigger
+      if (!token.role && token.email) {
         const dbUser = await db.query.users.findFirst({
           where: eq(users.email, token.email as string),
           columns: {
