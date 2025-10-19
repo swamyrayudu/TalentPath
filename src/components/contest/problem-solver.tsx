@@ -72,6 +72,12 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const editorRef = useRef<any>(null);
   const [timeLeft, setTimeLeft] = useState<string>('');
+  const [isContestEnded, setIsContestEnded] = useState(() => {
+    // Check if contest has already ended on mount
+    const now = new Date().getTime();
+    const end = new Date(contest.endTime).getTime();
+    return now > end;
+  });
 
   // Load submissions from localStorage on mount
   useEffect(() => {
@@ -104,6 +110,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
 
       if (diff <= 0) {
         setTimeLeft('Contest Ended');
+        setIsContestEnded(true);
         return;
       }
 
@@ -129,6 +136,11 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
   };
 
   const handleRunTests = async () => {
+    if (isContestEnded) {
+      toast.error('Contest has ended. You can no longer run tests.');
+      return;
+    }
+
     if (!code.trim()) {
       toast.error('Please write some code first!');
       return;
@@ -164,6 +176,11 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
   };
 
   const handleSubmit = () => {
+    if (isContestEnded) {
+      toast.error('Contest has ended. You can no longer submit solutions.');
+      return;
+    }
+
     if (!code.trim()) {
       toast.error('Please write some code first!');
       return;
@@ -233,9 +250,9 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-screen">
       {/* Header */}
-      <div className="border-b bg-background px-6 py-4 shrink-0">
+      <div className="border-b bg-background px-6 py-3 shrink-0 sticky top-0 z-10">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
             <Link href={`/contest/${contest.slug}`}>
@@ -277,7 +294,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
             <Button 
               variant="outline" 
               onClick={handleRunTests} 
-              disabled={isRunning || isSubmitting}
+              disabled={isRunning || isSubmitting || isContestEnded}
             >
               {isRunning ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -289,7 +306,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
 
             <Button 
               onClick={handleSubmit} 
-              disabled={isSubmitting || isRunning}
+              disabled={isSubmitting || isRunning || isContestEnded}
               className="bg-green-600 hover:bg-green-700"
             >
               {isSubmitting ? (
@@ -303,11 +320,21 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
         </div>
       </div>
 
+      {/* Contest Ended Banner */}
+      {isContestEnded && (
+        <div className="bg-red-500/10 border-b border-red-500/20 px-6 py-3">
+          <p className="text-red-600 dark:text-red-400 font-medium text-center flex items-center justify-center gap-2">
+            <AlertTriangle className="h-5 w-5" />
+            Contest has ended. You can view solutions but cannot submit or run tests.
+          </p>
+        </div>
+      )}
+
       {/* Main Content */}
-      <div className="flex-1 grid grid-cols-2 divide-x overflow-hidden">
+      <div className="flex-1 grid grid-cols-2 divide-x min-h-0">
         {/* Left Panel - Problem Description */}
-        <div className="flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex flex-col h-full overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="mb-4">
                 <TabsTrigger value="description">Description</TabsTrigger>
@@ -508,8 +535,8 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
         </div>
 
         {/* Right Panel - Code Editor */}
-        <div className="flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-hidden">
+        <div className="flex flex-col h-full overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden">
             <Editor
               height="100%"
               language={language}
@@ -530,7 +557,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
 
           {/* Test Results Panel */}
           {testResults.length > 0 && (
-            <div className="border-t bg-background p-4 max-h-64 overflow-y-auto shrink-0">
+            <div className="border-t bg-background p-4 max-h-72 overflow-y-auto shrink-0 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
               <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
                 <Award className="h-4 w-4" />
                 Test Results ({testResults.filter(r => r.passed).length}/{testResults.length} Passed)

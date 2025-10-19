@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,9 +20,25 @@ interface QuestionsListProps {
   contestSlug: string;
   isParticipant: boolean;
   completedQuestionIds?: Set<string>;
+  contestStatus: 'draft' | 'upcoming' | 'live' | 'ended';
+  contestEndTime: Date;
 }
 
-export function QuestionsList({ questions, contestId, contestSlug, isParticipant, completedQuestionIds }: QuestionsListProps) {
+export function QuestionsList({ questions, contestId, contestSlug, isParticipant, completedQuestionIds, contestStatus, contestEndTime }: QuestionsListProps) {
+  const [isContestEnded, setIsContestEnded] = useState(false);
+
+  useEffect(() => {
+    const checkContestStatus = () => {
+      const now = new Date().getTime();
+      const end = new Date(contestEndTime).getTime();
+      setIsContestEnded(now > end || contestStatus === 'ended');
+    };
+
+    checkContestStatus();
+    const interval = setInterval(checkContestStatus, 1000);
+
+    return () => clearInterval(interval);
+  }, [contestEndTime, contestStatus]);
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'EASY':
@@ -92,12 +111,19 @@ export function QuestionsList({ questions, contestId, contestSlug, isParticipant
               </div>
 
               {isParticipant ? (
-                <Link href={`/contest/${contestSlug}/problem/${question.id}`}>
-                  <Button variant={isCompleted ? "outline" : "default"}>
+                isContestEnded ? (
+                  <Button disabled variant="outline">
                     <Code2 className="h-4 w-4 mr-2" />
-                    {isCompleted ? 'View Solution' : 'Solve'}
+                    Contest Ended
                   </Button>
-                </Link>
+                ) : (
+                  <Link href={`/contest/${contestSlug}/problem/${question.id}`}>
+                    <Button variant={isCompleted ? "outline" : "default"}>
+                      <Code2 className="h-4 w-4 mr-2" />
+                      {isCompleted ? 'View Solution' : 'Solve'}
+                    </Button>
+                  </Link>
+                )
               ) : (
                 <Button disabled variant="outline">
                   <Lock className="h-4 w-4 mr-2" />

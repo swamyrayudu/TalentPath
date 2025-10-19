@@ -100,6 +100,8 @@ export default async function ContestDetailPage({
                 contestSlug={slug}
                 isParticipant={isParticipant}
                 completedQuestionIds={completedQuestionIds}
+                contestStatus={contest.status}
+                contestEndTime={contest.endTime}
               />
             </TabsContent>
 
