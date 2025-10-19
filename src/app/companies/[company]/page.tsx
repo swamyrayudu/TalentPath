@@ -1,18 +1,25 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ExternalLink, Bookmark, CheckCircle2, Circle, ArrowLeft, Lock, TrendingUp, Filter } from 'lucide-react';
+import { Loader2, ExternalLink, Bookmark, CheckCircle2, Circle, ArrowLeft, Lock, TrendingUp, Filter, Tags, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useSession } from 'next-auth/react';
+import Image from 'next/image';
 
 const ITEMS_PER_PAGE = 20;
+const CACHE_EXPIRY = 10 * 60 * 1000; // 10 minutes
+
+type TopicData = {
+  name: string;
+  count: number;
+};
 
 type Problem = {
   id: number;
@@ -40,6 +47,11 @@ type UserProgress = {
   solvedAt?: Date;
 };
 
+type CacheData = {
+  data: any;
+  timestamp: number;
+};
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -61,11 +73,111 @@ const itemVariants = {
   }
 };
 
+// Utility functions for localStorage cache
+const getCachedData = (key: string): any | null => {
+  if (typeof window === 'undefined') return null;
+  
+  try {
+    const cached = localStorage.getItem(key);
+    if (!cached) return null;
+    
+    const { data, timestamp }: CacheData = JSON.parse(cached);
+    const now = Date.now();
+    
+    // Check if cache is expired
+    if (now - timestamp > CACHE_EXPIRY) {
+      localStorage.removeItem(key);
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error reading from cache:', error);
+    return null;
+  }
+};
+
+const setCachedData = (key: string, data: any): void => {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    const cacheData: CacheData = {
+      data,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(key, JSON.stringify(cacheData));
+  } catch (error) {
+    console.error('Error writing to cache:', error);
+  }
+};
+
+// Company Logo Component with fallback
+const CompanyLogo = React.memo(({ companyName, className = "w-8 h-8" }: { companyName: string; className?: string }) => {
+  const [logoError, setLogoError] = useState(false);
+  const [logoLoading, setLogoLoading] = useState(true);
+  
+  // Convert company name to domain format
+  const companyDomain = useMemo(() => {
+    return companyName.toLowerCase().replace(/\s+/g, '') + '.com';
+  }, [companyName]);
+  
+  // Try multiple logo sources
+  const logoSources = useMemo(() => [
+    `https://logo.clearbit.com/${companyDomain}`,
+    `https://img.logo.dev/${companyDomain}?token=pk_X-yFQbLvSf6D9V0wXd1yEQ`, // Logo.dev as backup
+    `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128`,
+  ], [companyDomain]);
+  
+  const [currentSourceIndex, setCurrentSourceIndex] = useState(0);
+  
+  const handleError = () => {
+    if (currentSourceIndex < logoSources.length - 1) {
+      setCurrentSourceIndex(prev => prev + 1);
+    } else {
+      setLogoError(true);
+      setLogoLoading(false);
+    }
+  };
+  
+  if (logoError) {
+    return (
+      <div className={cn("flex items-center justify-center bg-gradient-to-br from-primary/20 to-purple-600/20 rounded-lg", className)}>
+        <Building2 className="w-1/2 h-1/2 text-primary" />
+      </div>
+    );
+  }
+  
+  return (
+    <div className={cn("relative overflow-hidden rounded-lg bg-white", className)}>
+      {logoLoading && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+        </div>
+      )}
+      <img
+        src={logoSources[currentSourceIndex]}
+        alt={`${companyName} logo`}
+        className={cn("w-full h-full object-contain p-1", logoLoading ? "opacity-0" : "opacity-100")}
+        onLoad={() => setLogoLoading(false)}
+        onError={handleError}
+        loading="lazy"
+      />
+    </div>
+  );
+});
+
+CompanyLogo.displayName = 'CompanyLogo';
+
 export default function CompanyPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const companySlug = params.company as string;
+  const selectedTopic = searchParams.get('topic');
+  const platformFromUrl = searchParams.get('platform') as 'LEETCODE' | 'GEEKSFORGEEKS' | null;
   const { data: session } = useSession();
 
+  const [topics, setTopics] = useState<TopicData[]>([]);
   const [problems, setProblems] = useState<Problem[]>([]);
   const [displayedProblems, setDisplayedProblems] = useState<Problem[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
@@ -76,16 +188,89 @@ export default function CompanyPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showTopics, setShowTopics] = useState(true);
+  const [selectedPlatform, setSelectedPlatform] = useState<'LEETCODE' | 'GEEKSFORGEEKS'>(
+    platformFromUrl || 'LEETCODE'
+  );
+  const [switchingPlatform, setSwitchingPlatform] = useState(false);
+  const [loadingTopics, setLoadingTopics] = useState(true);
 
   const observerTarget = useRef<HTMLDivElement>(null);
   const isFetchingRef = useRef(false);
+  const prefetchedRef = useRef<Set<string>>(new Set());
 
-  const prettyCompanyName = companySlug
-    ?.replace(/-/g, ' ')
-    ?.replace(/\b\w/g, char => char.toUpperCase());
+  const prettyCompanyName = useMemo(() => 
+    companySlug
+      ?.replace(/-/g, ' ')
+      ?.replace(/\b\w/g, char => char.toUpperCase()),
+    [companySlug]
+  );
+
+  // Update URL when platform changes (KEY FEATURE FOR PERSISTENCE)
+  const updatePlatformInUrl = useCallback((platform: 'LEETCODE' | 'GEEKSFORGEEKS') => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('platform', platform);
+    
+    if (selectedTopic) {
+      router.replace(`/companies/${companySlug}?${params.toString()}`, { scroll: false });
+    } else {
+      router.replace(`/companies/${companySlug}?${params.toString()}`, { scroll: false });
+    }
+  }, [companySlug, router, searchParams, selectedTopic]);
+
+  // Fetch topics with caching
+  const fetchTopics = useCallback(async (platform: string, forceRefresh = false) => {
+    if (!companySlug) return;
+    
+    setSwitchingPlatform(true);
+    setLoadingTopics(true);
+    
+    const cacheKey = `topics_${companySlug}_${platform}`;
+    
+    if (!forceRefresh) {
+      const cached = getCachedData(cacheKey);
+      if (cached) {
+        console.log('✅ Loading topics from cache');
+        setTopics(cached);
+        setSwitchingPlatform(false);
+        setLoadingTopics(false);
+        return;
+      }
+    }
+    
+    try {
+      console.log('🔄 Fetching topics for platform:', platform);
+      const res = await fetch(`/api/companies/${companySlug}/topics?platform=${platform}`);
+      const data = await res.json();
+      
+      if (data.success) {
+        setTopics(data.data);
+        setCachedData(cacheKey, data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching topics:', err);
+    } finally {
+      setSwitchingPlatform(false);
+      setLoadingTopics(false);
+    }
+  }, [companySlug]);
 
   const fetchUserProgress = useCallback(async () => {
     if (!session?.user) return;
+    
+    const cacheKey = 'user_progress';
+    const cached = getCachedData(cacheKey);
+    
+    if (cached) {
+      const progressMap = new Map();
+      cached.forEach((item: any) => {
+        if (item.progress && item.progress.problemId) {
+          progressMap.set(Number(item.progress.problemId), item.progress);
+        }
+      });
+      setUserProgress(progressMap);
+    }
+    
     try {
       const res = await fetch('/api/progress');
       const data = await res.json();
@@ -97,14 +282,32 @@ export default function CompanyPage() {
           }
         });
         setUserProgress(progressMap);
+        setCachedData(cacheKey, data.data);
       }
     } catch (e) {
       console.error('Error fetching progress:', e);
     }
   }, [session]);
 
-  const fetchProblems = useCallback(async (pageNum = 1, sortBy = 'likes') => {
+  const fetchProblems = useCallback(async (pageNum = 1, sortBy = 'likes', topic?: string, platform?: string) => {
     if (!companySlug) return;
+    if (isFetchingRef.current) return;
+    
+    const cacheKey = `problems_${companySlug}_${topic}_${platform}_${sortBy}_${pageNum}`;
+    
+    if (pageNum === 1) {
+      const cached = getCachedData(cacheKey);
+      if (cached) {
+        console.log('✅ Loading problems from cache');
+        setProblems(cached.data);
+        setDisplayedProblems(cached.data);
+        setTotalCount(cached.total);
+        setLoading(false);
+        return;
+      }
+    }
+    
+    isFetchingRef.current = true;
     if (pageNum === 1) setLoading(true);
     else setLoadingMore(true);
 
@@ -112,10 +315,15 @@ export default function CompanyPage() {
       const limit = ITEMS_PER_PAGE;
       const offset = (pageNum - 1) * ITEMS_PER_PAGE;
       const sortParam = sortBy === 'acceptance' ? 'acceptanceRate' : sortBy;
+      const topicParam = topic ? `&topic=${encodeURIComponent(topic)}` : '';
+      const platformParam = platform && platform !== 'ALL' ? `&platform=${platform}` : '';
 
       const res = await fetch(
-        `/api/problems?company=${companySlug}&sortBy=${sortParam}&sortOrder=desc&limit=${limit}&offset=${offset}`
+        `/api/problems?company=${companySlug}&sortBy=${sortParam}&sortOrder=desc&limit=${limit}&offset=${offset}${topicParam}${platformParam}`
       );
+      
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      
       const data = await res.json();
 
       if (data.success) {
@@ -123,18 +331,20 @@ export default function CompanyPage() {
           setProblems(data.data);
           setDisplayedProblems(data.data);
           if (data.total !== undefined) setTotalCount(data.total);
+          setCachedData(cacheKey, { data: data.data, total: data.total });
         } else {
           setProblems(prev => [...prev, ...data.data]);
           setDisplayedProblems(prev => [...prev, ...data.data]);
         }
         setHasMore(data.data.length === limit);
         setPage(pageNum);
+        setError(null);
       } else {
         setError(data.error || 'Failed to fetch problems');
       }
     } catch (err) {
       console.error('Failed to fetch company problems:', err);
-      setError('Failed to fetch problems');
+      setError('Failed to fetch problems. Please try again.');
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -142,15 +352,65 @@ export default function CompanyPage() {
     }
   }, [companySlug]);
 
+  // Prefetch both platforms data
   useEffect(() => {
-    fetchProblems(1, sortKey);
-    if (session?.user) fetchUserProgress();
-  }, [companySlug, sortKey, fetchProblems, fetchUserProgress]);
+    if (!companySlug) return;
+    
+    const prefetchData = () => {
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => {
+          const platforms = ['LEETCODE', 'GEEKSFORGEEKS'];
+          platforms.forEach(async (platform) => {
+            const cacheKey = `topics_${companySlug}_${platform}`;
+            if (!prefetchedRef.current.has(cacheKey) && !getCachedData(cacheKey)) {
+              try {
+                const res = await fetch(`/api/companies/${companySlug}/topics?platform=${platform}`);
+                const data = await res.json();
+                if (data.success) {
+                  setCachedData(cacheKey, data.data);
+                  prefetchedRef.current.add(cacheKey);
+                }
+              } catch (err) {
+                console.error(`Error prefetching ${platform}:`, err);
+              }
+            }
+          });
+        });
+      }
+    };
+    
+    prefetchData();
+  }, [companySlug]);
+
+  // Initialize platform from URL
+  useEffect(() => {
+    if (platformFromUrl && platformFromUrl !== selectedPlatform) {
+      setSelectedPlatform(platformFromUrl);
+    }
+  }, [platformFromUrl]);
 
   useEffect(() => {
+    if (!selectedTopic) {
+      fetchTopics(selectedPlatform);
+      setShowTopics(true);
+    }
+    
+    if (selectedTopic) {
+      setShowTopics(false);
+      fetchProblems(1, sortKey, selectedTopic, selectedPlatform);
+    } else {
+      setLoading(false);
+    }
+    
+    if (session?.user) fetchUserProgress();
+  }, [companySlug, sortKey, selectedTopic, selectedPlatform, fetchTopics, fetchProblems, fetchUserProgress, session]);
+
+  useEffect(() => {
+    if (!selectedTopic) return;
+    
     const observer = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting && hasMore && !loadingMore && !loading && !isFetchingRef.current) {
-        fetchProblems(page + 1, sortKey);
+        fetchProblems(page + 1, sortKey, selectedTopic, selectedPlatform);
       }
     }, {threshold: 0.1, rootMargin: '200px'});
 
@@ -160,7 +420,7 @@ export default function CompanyPage() {
       if (observerTarget.current) observer.unobserve(observerTarget.current);
       observer.disconnect();
     };
-  }, [hasMore, loadingMore, loading, fetchProblems, page, sortKey]);
+  }, [hasMore, loadingMore, loading, fetchProblems, page, sortKey, selectedTopic, selectedPlatform]);
 
   const updateProgress = async (problemId: number, status: 'solved' | 'attempted' | 'bookmarked') => {
     if (!session?.user) {
@@ -185,6 +445,7 @@ export default function CompanyPage() {
           solvedAt: status === 'solved' ? new Date().toISOString() : null,
         }),
       });
+      localStorage.removeItem('user_progress');
     } catch (err) {
       console.error('Error updating progress:', err);
       setUserProgress(userProgress);
@@ -198,6 +459,25 @@ export default function CompanyPage() {
       case 'HARD': return 'bg-rose-500/10 text-rose-500 border-rose-500/20';
       default: return 'bg-gray-500/10 text-gray-500';
     }
+  };
+
+  const handleTopicClick = (topic: string) => {
+    const params = new URLSearchParams();
+    params.set('topic', topic);
+    params.set('platform', selectedPlatform);
+    router.push(`/companies/${companySlug}?${params.toString()}`);
+  };
+
+  const handleBackToTopics = () => {
+    const params = new URLSearchParams();
+    params.set('platform', selectedPlatform);
+    router.push(`/companies/${companySlug}?${params.toString()}`);
+  };
+
+  const handlePlatformChange = (platform: 'LEETCODE' | 'GEEKSFORGEEKS') => {
+    if (platform === selectedPlatform) return;
+    setSelectedPlatform(platform);
+    updatePlatformInUrl(platform);
   };
 
   const getStatusIcon = (problemId: number) => {
@@ -218,23 +498,261 @@ export default function CompanyPage() {
     if (progress.status === 'attempted') return <Circle className="h-5 w-5 text-amber-500 fill-amber-500" />;
     if (progress.status === 'bookmarked') return <Bookmark className="h-5 w-5 text-blue-500 fill-blue-500" />;
   };
+
+  if (loading && !showTopics) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading {prettyCompanyName} problems...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-8xl">
+        <div className="flex items-center gap-4 mb-6">
+          <Link href="/companies" className="flex items-center gap-2 text-sm font-medium text-primary hover:underline">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Companies
+          </Link>
+        </div>
+        <Card className="border-2 border-destructive">
+          <CardContent className="pt-6">
+            <div className="text-center py-12">
+              <p className="text-destructive font-semibold mb-2">Error loading problems</p>
+              <p className="text-muted-foreground mb-4">{error}</p>
+              <Button onClick={() => fetchProblems(1, sortKey, selectedTopic || undefined)}>
+                Try Again
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Topics View
+  if (showTopics && !selectedTopic) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-8xl">
+        <div className="flex items-center gap-4 mb-6">
+          <Link href="/companies" className="flex items-center gap-2 text-sm font-medium text-primary hover:underline">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Companies
+          </Link>
+        </div>
+
+        <div className="flex items-center gap-4 mb-2">
+          <CompanyLogo companyName={prettyCompanyName || ''} className="w-12 h-12" />
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent capitalize">
+            {prettyCompanyName} Topics
+          </h1>
+        </div>
+        <p className="text-muted-foreground mb-6">Select a topic to view related interview problems</p>
+
+        <div className="mb-6">
+          <div className="border-b border-border">
+            <div className="flex gap-1">
+              <button
+                onClick={() => handlePlatformChange('LEETCODE')}
+                disabled={switchingPlatform}
+                className={cn(
+                  "relative px-6 py-3 font-semibold transition-all duration-200 border-b-2",
+                  selectedPlatform === 'LEETCODE'
+                    ? "border-orange-500 text-orange-500"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border",
+                  switchingPlatform && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                <span className="flex items-center gap-2">
+                  {switchingPlatform && selectedPlatform === 'LEETCODE' && (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  )}
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M13.483 0a1.374 1.374 0 0 0-.961.438L7.116 6.226l-3.854 4.126a5.266 5.266 0 0 0-1.209 2.104 5.35 5.35 0 0 0-.125.513 5.527 5.527 0 0 0 .062 2.362 5.83 5.83 0 0 0 .349 1.017 5.938 5.938 0 0 0 1.271 1.818l4.277 4.193.039.038c2.248 2.165 5.852 2.133 8.063-.074l2.396-2.392c.54-.54.54-1.414.003-1.955a1.378 1.378 0 0 0-1.951-.003l-2.396 2.392a3.021 3.021 0 0 1-4.205.038l-.02-.019-4.276-4.193c-.652-.64-.972-1.469-.948-2.263a2.68 2.68 0 0 1 .066-.523 2.545 2.545 0 0 1 .619-1.164L9.13 8.114c1.058-1.134 3.204-1.27 4.43-.278l3.501 2.831c.593.48 1.461.387 1.94-.207a1.384 1.384 0 0 0-.207-1.943l-3.5-2.831c-.8-.647-1.766-1.045-2.774-1.202l2.015-2.158A1.384 1.384 0 0 0 13.483 0zm-2.866 12.815a1.38 1.38 0 0 0-1.38 1.382 1.38 1.38 0 0 0 1.38 1.382H20.79a1.38 1.38 0 0 0 1.38-1.382 1.38 1.38 0 0 0-1.38-1.382z"/>
+                  </svg>
+                  LeetCode
+                </span>
+                {selectedPlatform === 'LEETCODE' && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500"
+                    initial={false}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  />
+                )}
+              </button>
+              <button
+                onClick={() => handlePlatformChange('GEEKSFORGEEKS')}
+                disabled={switchingPlatform}
+                className={cn(
+                  "relative px-6 py-3 font-semibold transition-all duration-200 border-b-2",
+                  selectedPlatform === 'GEEKSFORGEEKS'
+                    ? "border-green-600 text-green-600"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border",
+                  switchingPlatform && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                <span className="flex items-center gap-2">
+                  {switchingPlatform && selectedPlatform === 'GEEKSFORGEEKS' && (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  )}
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  </svg>
+                  GeeksforGeeks
+                </span>
+                {selectedPlatform === 'GEEKSFORGEEKS' && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600"
+                    initial={false}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <Card className="border-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Tags className="h-5 w-5" /> All Topics
+              <Badge variant="secondary" className="ml-2">
+                {selectedPlatform === 'LEETCODE' ? 'LeetCode' : 'GeeksforGeeks'}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingTopics ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="text-center">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+                  <p className="text-muted-foreground font-medium">Loading topics...</p>
+                  <p className="text-sm text-muted-foreground/60 mt-1">
+                    {selectedPlatform === 'LEETCODE' ? 'LeetCode' : 'GeeksforGeeks'} problems
+                  </p>
+                </div>
+              </div>
+            ) : topics.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                No topics found for this company.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {topics.map((topic) => (
+                  <Button
+                    key={topic.name}
+                    variant="outline"
+                    className="w-full h-auto py-4 px-4 flex flex-col items-start justify-between gap-2 hover:border-primary hover:bg-primary/5 transition-all group"
+                    onClick={() => handleTopicClick(topic.name)}
+                  >
+                    <span className="font-semibold text-left group-hover:text-primary transition-colors">
+                      {topic.name}
+                    </span>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <TrendingUp className="h-3 w-3" />
+                      <span>{topic.count} problems</span>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Problems View
   return (
     <div className="container mx-auto py-8 px-4 max-w-8xl">
-      {/* Back Button */}
-      <div className="flex items-center gap-4 mb-6">
-        <Link href="/companies" className="flex items-center gap-2 text-sm font-medium text-primary hover:underline">
+      <div className="flex items-center gap-4 mb-6 flex-wrap">
+        <button
+          onClick={handleBackToTopics}
+          className="flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+        >
           <ArrowLeft className="h-4 w-4" />
-          Back to Companies
+          Back to Topics
+        </button>
+        <span className="text-muted-foreground">|</span>
+        <Link href="/companies" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary hover:underline">
+          All Companies
         </Link>
       </div>
 
-      {/* Header */}
-      <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent mb-2 capitalize">
-        {prettyCompanyName} Interview Problems
-      </h1>
+      <div className="flex items-center gap-4 mb-2">
+        <CompanyLogo companyName={prettyCompanyName || ''} className="w-12 h-12" />
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent capitalize">
+          {prettyCompanyName} - {selectedTopic}
+        </h1>
+      </div>
       <p className="text-muted-foreground mb-6">{totalCount} problems found</p>
 
-      {/* Sort controls */}
+      <div className="mb-6">
+        <div className="border-b border-border">
+          <div className="flex gap-1">
+            <button
+              onClick={() => handlePlatformChange('LEETCODE')}
+              className={cn(
+                "relative px-6 py-3 font-semibold transition-all duration-200 border-b-2",
+                selectedPlatform === 'LEETCODE'
+                  ? "border-orange-500 text-orange-500"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+              )}
+            >
+              <span className="flex items-center gap-2">
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M13.483 0a1.374 1.374 0 0 0-.961.438L7.116 6.226l-3.854 4.126a5.266 5.266 0 0 0-1.209 2.104 5.35 5.35 0 0 0-.125.513 5.527 5.527 0 0 0 .062 2.362 5.83 5.83 0 0 0 .349 1.017 5.938 5.938 0 0 0 1.271 1.818l4.277 4.193.039.038c2.248 2.165 5.852 2.133 8.063-.074l2.396-2.392c.54-.54.54-1.414.003-1.955a1.378 1.378 0 0 0-1.951-.003l-2.396 2.392a3.021 3.021 0 0 1-4.205.038l-.02-.019-4.276-4.193c-.652-.64-.972-1.469-.948-2.263a2.68 2.68 0 0 1 .066-.523 2.545 2.545 0 0 1 .619-1.164L9.13 8.114c1.058-1.134 3.204-1.27 4.43-.278l3.501 2.831c.593.48 1.461.387 1.94-.207a1.384 1.384 0 0 0-.207-1.943l-3.5-2.831c-.8-.647-1.766-1.045-2.774-1.202l2.015-2.158A1.384 1.384 0 0 0 13.483 0zm-2.866 12.815a1.38 1.38 0 0 0-1.38 1.382 1.38 1.38 0 0 0 1.38 1.382H20.79a1.38 1.38 0 0 0 1.38-1.382 1.38 1.38 0 0 0-1.38-1.382z"/>
+                </svg>
+                LeetCode
+              </span>
+              {selectedPlatform === 'LEETCODE' && (
+                <motion.div
+                  layoutId="problemsActiveTab"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500"
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                />
+              )}
+            </button>
+            <button
+              onClick={() => handlePlatformChange('GEEKSFORGEEKS')}
+              disabled={switchingPlatform}
+              className={cn(
+                "relative px-6 py-3 font-semibold transition-all duration-200 border-b-2",
+                selectedPlatform === 'GEEKSFORGEEKS'
+                  ? "border-green-600 text-green-600"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border",
+                switchingPlatform && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              <span className="flex items-center gap-2">
+                {switchingPlatform && selectedPlatform === 'GEEKSFORGEEKS' && (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                )}
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+                GeeksforGeeks
+              </span>
+              {selectedPlatform === 'GEEKSFORGEEKS' && (
+                <motion.div
+                  layoutId="problemsActiveTab"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600"
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                />
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <Card className="mb-6 border-2">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -259,12 +777,12 @@ export default function CompanyPage() {
             </div>
             <div className="text-sm text-muted-foreground">
               Showing {displayedProblems.length} of {totalCount} problems
+              <span className="font-semibold"> ({selectedPlatform === 'LEETCODE' ? 'LeetCode' : 'GeeksforGeeks'})</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Problems List */}
       <motion.div initial="hidden" animate="visible" variants={containerVariants} className="space-y-3">
         {displayedProblems.length === 0 ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12 text-muted-foreground">
