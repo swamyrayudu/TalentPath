@@ -96,8 +96,9 @@ export default function AptitudePage() {
                   </CardContent>
                 </Card>
               ) : (
-                questions.map(q => (
-                  <Card key={q.id}>
+                questions.map((q, qi) => (
+                  // Use s_no from DB as stable key; fallback to id, then index
+                  <Card key={q.s_no ?? q.id ?? qi}>
                     <CardContent>
                       <CardTitle className="mb-3">{q.question}</CardTitle>
                       <Separator className="mb-4" />
