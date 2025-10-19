@@ -739,9 +739,23 @@ export async function runTestCases(data: {
         .trim()
         .replace(/\r\n/g, '\n')
         .replace(/\r/g, '\n')
+        .replace(/\\n/g, '\n')  // Handle escaped newlines like \n in strings
         .split('\n')
         .map(line => line.trim())
         .filter(line => line.length > 0)
+        .map(line => {
+          // Normalize spaces in arrays, objects, etc.
+          return line
+            .replace(/\s*,\s*/g, ',')  // Remove spaces around commas: "1, 2" -> "1,2"
+            .replace(/\s*:\s*/g, ':')  // Remove spaces around colons
+            .replace(/\s*\[\s*/g, '[') // Remove spaces after opening brackets
+            .replace(/\s*\]\s*/g, ']') // Remove spaces before closing brackets
+            .replace(/\s*\{\s*/g, '{') // Remove spaces after opening braces
+            .replace(/\s*\}\s*/g, '}') // Remove spaces before closing braces
+            .replace(/\s*\(\s*/g, '(') // Remove spaces after opening parentheses
+            .replace(/\s*\)\s*/g, ')') // Remove spaces before closing parentheses
+            .replace(/\s+/g, ' ');     // Normalize multiple spaces to single space
+        })
         .join('\n');
     };
 
@@ -841,9 +855,23 @@ export async function submitSolution(data: {
         .trim()
         .replace(/\r\n/g, '\n')
         .replace(/\r/g, '\n')
+        .replace(/\\n/g, '\n')  // Handle escaped newlines like \n in strings
         .split('\n')
         .map(line => line.trim())
         .filter(line => line.length > 0)
+        .map(line => {
+          // Normalize spaces in arrays, objects, etc.
+          return line
+            .replace(/\s*,\s*/g, ',')  // Remove spaces around commas: "1, 2" -> "1,2"
+            .replace(/\s*:\s*/g, ':')  // Remove spaces around colons
+            .replace(/\s*\[\s*/g, '[') // Remove spaces after opening brackets
+            .replace(/\s*\]\s*/g, ']') // Remove spaces before closing brackets
+            .replace(/\s*\{\s*/g, '{') // Remove spaces after opening braces
+            .replace(/\s*\}\s*/g, '}') // Remove spaces before closing braces
+            .replace(/\s*\(\s*/g, '(') // Remove spaces after opening parentheses
+            .replace(/\s*\)\s*/g, ')') // Remove spaces before closing parentheses
+            .replace(/\s+/g, ' ');     // Normalize multiple spaces to single space
+        })
         .join('\n');
     };
 
