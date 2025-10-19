@@ -517,11 +517,11 @@ export default function DsaSheet() {
       </motion.div>
 {/* Tabs (Added) */}
 <div className="w-full mb-8 flex justify-items-end">
-  <Link href="/companies" passHref>
-    <Button asChild variant="outline" className="px-6 py-2 hover:bg-yellow-500 cursor-pointer transition-colors rounded-md">
-      <a>Company‑wise Questions</a>
-    </Button>
-  </Link>
+  <Button asChild variant="outline" className="px-6 py-2 hover:bg-yellow-500 cursor-pointer transition-colors rounded-md">
+    <Link href="/companies">
+      Company‑wise Questions
+    </Link>
+  </Button>
 </div>
 
       {/* Topics Section */}
