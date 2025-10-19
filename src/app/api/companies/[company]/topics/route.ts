@@ -11,8 +11,8 @@ export const revalidate = 600; // Cache for 10 minutes
  * Returns all topics/tags for a specific company with problem counts
  */
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { company: string } }
+  request: Request,
+  { params }: { params: any }
 ) {
   try {
     const { searchParams } = new URL(request.url);

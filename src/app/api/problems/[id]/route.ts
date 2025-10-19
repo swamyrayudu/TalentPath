@@ -17,7 +17,7 @@ async function isAdmin(userId: string) {
   return user[0]?.role === 'admin';
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: any }) {
   try {
     const session = await auth();
 
@@ -79,7 +79,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: any }) {
   try {
     const session = await auth();
 

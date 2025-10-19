@@ -23,7 +23,8 @@ export async function GET(request: NextRequest) {
     const questionsList = await db.select().from(questions).where(eq(questions.topic, topic));
     return NextResponse.json({ success: true, questions: questionsList });
     
-  } catch (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const msg = (error as any)?.message ?? String(error);
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }

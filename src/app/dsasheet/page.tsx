@@ -518,12 +518,8 @@ export default function DsaSheet() {
 {/* Tabs (Added) */}
 <div className="w-full mb-8 flex justify-items-end">
   <Link href="/companies" passHref>
-    <Button
-      as="a"
-      variant="outline"
-      className="px-6 py-2 hover:bg-yellow-500 cursor-pointer transition-colors rounded-md"
-    >
-      Company‑wise Questions
+    <Button asChild variant="outline" className="px-6 py-2 hover:bg-yellow-500 cursor-pointer transition-colors rounded-md">
+      <a>Company‑wise Questions</a>
     </Button>
   </Link>
 </div>
