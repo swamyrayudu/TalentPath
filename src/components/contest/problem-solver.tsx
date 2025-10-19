@@ -337,30 +337,38 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
                     {sampleTestCases.length === 0 ? (
                       <p className="text-sm text-muted-foreground">No sample test cases available</p>
                     ) : (
-                      sampleTestCases.map((testCase: any, index: number) => (
-                        <Card key={testCase.id} className="border-2">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm flex items-center justify-between">
-                              <span>Example {index + 1}</span>
-                              <Badge variant="outline">{testCase.points} points</Badge>
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            <div>
-                              <p className="text-xs font-semibold text-muted-foreground mb-1">Input:</p>
-                              <pre className="bg-muted/50 p-2 rounded text-xs font-mono overflow-x-auto border">
-                                {testCase.input}
-                              </pre>
-                            </div>
-                            <div>
-                              <p className="text-xs font-semibold text-muted-foreground mb-1">Expected Output:</p>
-                              <pre className="bg-muted/50 p-2 rounded text-xs font-mono overflow-x-auto border">
-                                {testCase.expectedOutput}
-                              </pre>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))
+                      <>
+                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                          <p className="text-xs text-blue-700 dark:text-blue-300">
+                            💡 <strong>Automatic Input Processing:</strong> Arrays like <code className="bg-blue-500/20 px-1 rounded">[1,2,3]</code> are automatically converted to space-separated format <code className="bg-blue-500/20 px-1 rounded">1 2 3</code>. 
+                            Just use <code className="bg-blue-500/20 px-1 rounded">input().split()</code> in Python or <code className="bg-blue-500/20 px-1 rounded">Scanner</code> in Java. No manual parsing needed!
+                          </p>
+                        </div>
+                        {sampleTestCases.map((testCase: any, index: number) => (
+                          <Card key={testCase.id} className="border-2">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-sm flex items-center justify-between">
+                                <span>Example {index + 1}</span>
+                                <Badge variant="outline">{testCase.points} points</Badge>
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                              <div>
+                                <p className="text-xs font-semibold text-muted-foreground mb-1">Input:</p>
+                                <pre className="bg-muted/50 p-2 rounded text-xs font-mono overflow-x-auto border whitespace-pre-wrap">
+                                  {testCase.input.replace(/\\n/g, '\n')}
+                                </pre>
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold text-muted-foreground mb-1">Expected Output:</p>
+                                <pre className="bg-muted/50 p-2 rounded text-xs font-mono overflow-x-auto border whitespace-pre-wrap">
+                                  {testCase.expectedOutput.replace(/\\n/g, '\n')}
+                                </pre>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </>
                     )}
                   </div>
                 </div>

@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     const formattedCode = formatCode(code, language);
-    const formattedStdin = stdin ? stdin.trim() : '';
+    const formattedStdin = preprocessInput(stdin || '', language);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), EXECUTION_TIMEOUT);
@@ -182,6 +182,82 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
+  }
+}
+
+function preprocessInput(input: string, language: string): string {
+  if (!input) return '';
+  
+  try {
+    // Convert escaped newlines to actual newlines
+    let processed = input.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\r/g, '\r');
+    
+    // Smart array/object format detection and conversion
+    const lines = processed.split('\n').map((line, index, array) => {
+      const originalLine = line;
+      line = line.trim();
+      
+      // Keep empty lines as-is (they're intentional)
+      if (!line) return '';
+      
+      // Detect array format: [1,2,3] or [1, 2, 3] or []
+      if (line.match(/^\[.*\]$/)) {
+        try {
+          // Try to parse as JSON
+          const parsed = JSON.parse(line);
+          // Convert array to space-separated values for easier parsing
+          if (Array.isArray(parsed)) {
+            // For empty arrays, return a space (so split() returns [] but input() doesn't fail)
+            if (parsed.length === 0) {
+              return ' ';  // Single space - when split() is called, it returns [''] which can be filtered
+            }
+            return parsed.join(' ');
+          }
+          // Keep objects as JSON for manual parsing
+          return line;
+        } catch {
+          // If JSON parse fails, try comma-separated extraction
+          const content = line.slice(1, -1).trim(); // Remove [ and ]
+          // Handle empty brackets
+          if (!content) {
+            return ' ';  // Single space for empty arrays
+          }
+          const values = content.split(',').map(v => v.trim()).filter(v => v);
+          return values.length > 0 ? values.join(' ') : ' ';
+        }
+      }
+      
+      // Detect object format: {key: value}
+      if (line.match(/^\{.*\}$/)) {
+        // Keep as-is for manual JSON parsing
+        return line;
+      }
+      
+      // Detect tuple/parentheses format: (1,2,3) or ()
+      if (line.match(/^\(.*\)$/)) {
+        try {
+          // Extract content and convert to space-separated
+          const content = line.slice(1, -1).trim();
+          if (!content) {
+            return ' ';  // Single space for empty tuples
+          }
+          const values = content.split(',').map(v => v.trim()).filter(v => v);
+          return values.length > 0 ? values.join(' ') : ' ';
+        } catch {
+          return line;
+        }
+      }
+      
+      return line;
+    });
+    
+    // Join lines - preserve the structure
+    const result = lines.join('\n');
+    
+    return result;
+  } catch (error) {
+    // If preprocessing fails, return original input
+    return input;
   }
 }
 

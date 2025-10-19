@@ -759,6 +759,11 @@ export async function runTestCases(data: {
         .join('\n');
     };
 
+    // Helper function to convert escaped newlines to actual newlines in input
+    const processInput = (input: string) => {
+      return input.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\r/g, '\r');
+    };
+
     // Get test cases
     const testCases = await db
       .select()
@@ -783,7 +788,7 @@ export async function runTestCases(data: {
           body: JSON.stringify({
             language: data.language,
             code: data.code,
-            stdin: testCase.input,
+            stdin: processInput(testCase.input),
           }),
         });
 
@@ -875,6 +880,11 @@ export async function submitSolution(data: {
         .join('\n');
     };
 
+    // Helper function to convert escaped newlines to actual newlines in input
+    const processInput = (input: string) => {
+      return input.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\r/g, '\r');
+    };
+
     // Get all test cases (including hidden)
     const testCases = await db
       .select()
@@ -903,7 +913,7 @@ export async function submitSolution(data: {
           body: JSON.stringify({
             language: data.language,
             code: data.code,
-            stdin: testCase.input,
+            stdin: processInput(testCase.input),
           }),
         });
 
