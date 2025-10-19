@@ -73,7 +73,7 @@ export default async function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      <div className="container mx-auto p-4 md:p-8 space-y-8 max-w-7xl">
+      <div className="container mx-auto p-4 md:p-8 space-y-8 max-w-8xl">
         {/* Header Section */}
         <div className="space-y-2">
           <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
