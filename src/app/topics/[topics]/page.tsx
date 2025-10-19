@@ -334,7 +334,7 @@ export default function TopicPage() {
 
   if (!topicSlug) {
     return (
-      <div className="container mx-auto py-8 px-4 max-w-7xl">
+      <div className="container mx-auto py-8 px-4 max-w-8xl">
         <Card className="border-2">
           <CardHeader>
             <CardTitle>Topic Not Found</CardTitle>
@@ -355,7 +355,7 @@ export default function TopicPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto py-8 px-4 max-w-7xl">
+      <div className="container mx-auto py-8 px-4 max-w-8xl">
         <Card className="border-2">
           <CardHeader>
             <CardTitle>Error</CardTitle>
@@ -386,7 +386,7 @@ export default function TopicPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
+    <div className="container mx-auto py-8 px-4 max-w-8xl">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -394,11 +394,11 @@ export default function TopicPage() {
         transition={{ duration: 0.3 }}
         className="mb-8"
       >
-        <div className="flex items-center gap-4 mb-4">
+        <div className="flex items-center gap-4 mb-4 ">
           <Link href="/dsasheet">
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button variant="ghost" size="sm" className="gap-2">
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="h-4 w-4 " />
                 Back to DSA Sheet
               </Button>
             </motion.div>
@@ -413,7 +413,7 @@ export default function TopicPage() {
         </p>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 max-w-8xl mt-6">
           {[
             { label: 'Total', value: stats.total, color: 'text-purple-500', bg: 'bg-purple-500/10' },
             { label: 'Easy', value: stats.easy, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
