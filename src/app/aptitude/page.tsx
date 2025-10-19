@@ -54,13 +54,7 @@ export default function AptitudePage({}) {
         >
           <ArrowLeft className="h-4 w-4" /> Back to Topics
         </Button>
-        <span className="text-muted-foreground hidden sm:inline">|</span>
-        <Link
-          href="/companies"
-          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary hover:underline"
-        >
-          All Companies
-        </Link>
+ 
       </div>
 
       {/* Title with gradient and stats/description */}
