@@ -20,35 +20,7 @@ export default function Compiler() {
         </div>
 
         {/* Features */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <Zap className="h-8 w-8 text-amber-600" />
-              <div>
-                <h3 className="font-semibold">Fast Execution</h3>
-                <p className="text-sm text-muted-foreground">Instant compilation</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <Shield className="h-8 w-8 text-green-600" />
-              <div>
-                <h3 className="font-semibold">Secure Sandbox</h3>
-                <p className="text-sm text-muted-foreground">Isolated environment</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <Cpu className="h-8 w-8 text-blue-600" />
-              <div>
-                <h3 className="font-semibold">Multiple Languages</h3>
-                <p className="text-sm text-muted-foreground">6+ languages supported</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+
 
         {/* Code Editor */}
         <CodeEditor />
