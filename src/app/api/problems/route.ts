@@ -33,6 +33,11 @@ export async function GET(request: NextRequest) {
       offset,
     });
 
+    // Decode company name if it's a slug
+    const decodedCompany = company ? decodeURIComponent(company).replace(/-/g, ' ') : null;
+    
+    console.log('🔍 Decoded company:', decodedCompany);
+
     const baseQuery = db.select().from(problems);
     const conditions = [];
 
@@ -45,11 +50,27 @@ export async function GET(request: NextRequest) {
     }
 
     if (topic && topic !== 'all' && topic !== 'undefined') {
-      conditions.push(sql`${problems.topicSlugs} && ARRAY[${topic}]`);
+      // Check both topicTags (for exact match, case-insensitive) and topicSlugs (for slug match)
+      const topicSlug = topic.toLowerCase().replace(/\s+/g, '-');
+      console.log('🏷️ Filtering by topic:', topic, '(slug:', topicSlug, ')');
+      conditions.push(
+        sql`EXISTS (
+          SELECT 1 FROM unnest(${problems.topicTags}) AS tag 
+          WHERE LOWER(tag) = LOWER(${topic})
+        ) OR ${problems.topicSlugs} && ARRAY[${topicSlug}]`
+      );
     }
     if (company && company !== 'all' && company !== 'undefined') {
-  conditions.push(sql`EXISTS (SELECT 1 FROM unnest(${problems.companyTags}) AS tag WHERE lower(tag) = lower(${company}))`);
-}
+      // Decode and handle company name properly (convert slug to name)
+      const companyName = decodeURIComponent(company).replace(/-/g, ' ');
+      console.log('🏢 Filtering by company:', companyName);
+      conditions.push(
+        sql`EXISTS (
+          SELECT 1 FROM unnest(${problems.companyTags}) AS tag 
+          WHERE LOWER(tag) = LOWER(${companyName})
+        )`
+      );
+    }
 
 
     if (search) {

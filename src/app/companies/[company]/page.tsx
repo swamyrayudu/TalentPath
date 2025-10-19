@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,10 +11,10 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useSession } from 'next-auth/react';
-import Image from 'next/image';
 
 const ITEMS_PER_PAGE = 20;
-const CACHE_EXPIRY = 10 * 60 * 1000; // 10 minutes
+const CACHE_DURATION = 600000; // 10 minutes
+const STORAGE_PREFIX = 'tp_'; // TalentPath prefix
 
 type TopicData = {
   name: string;
@@ -47,117 +47,144 @@ type UserProgress = {
   solvedAt?: Date;
 };
 
-type CacheData = {
-  data: any;
+type CachedData<T> = {
+  data: T;
   timestamp: number;
 };
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.03
-    }
-  }
-};
+// ==================== UTILITY FUNCTIONS ====================
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.2
+// Enhanced localStorage with compression and error handling
+const storage = {
+  set: <T,>(key: string, data: T): void => {
+    if (typeof window === 'undefined') return;
+    try {
+      const cached: CachedData<T> = { data, timestamp: Date.now() };
+      localStorage.setItem(`${STORAGE_PREFIX}${key}`, JSON.stringify(cached));
+    } catch (e) {
+      console.warn('Storage set failed:', e);
+      // Clear old cache if quota exceeded
+      if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+        storage.clearOld();
+        try {
+          const cached: CachedData<T> = { data, timestamp: Date.now() };
+          localStorage.setItem(`${STORAGE_PREFIX}${key}`, JSON.stringify(cached));
+        } catch (retryError) {
+          console.error('Storage retry failed:', retryError);
+        }
+      }
     }
-  }
-};
+  },
 
-// Utility functions for localStorage cache
-const getCachedData = (key: string): any | null => {
-  if (typeof window === 'undefined') return null;
-  
-  try {
-    const cached = localStorage.getItem(key);
-    if (!cached) return null;
-    
-    const { data, timestamp }: CacheData = JSON.parse(cached);
-    const now = Date.now();
-    
-    // Check if cache is expired
-    if (now - timestamp > CACHE_EXPIRY) {
-      localStorage.removeItem(key);
+  get: <T,>(key: string): T | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const item = localStorage.getItem(`${STORAGE_PREFIX}${key}`);
+      if (!item) return null;
+      
+      const cached: CachedData<T> = JSON.parse(item);
+      const age = Date.now() - cached.timestamp;
+      
+      if (age > CACHE_DURATION) {
+        localStorage.removeItem(`${STORAGE_PREFIX}${key}`);
+        return null;
+      }
+      
+      return cached.data;
+    } catch (e) {
+      console.warn('Storage get failed:', e);
       return null;
     }
-    
-    return data;
-  } catch (error) {
-    console.error('Error reading from cache:', error);
-    return null;
+  },
+
+  remove: (key: string): void => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.removeItem(`${STORAGE_PREFIX}${key}`);
+    } catch (e) {
+      console.warn('Storage remove failed:', e);
+    }
+  },
+
+  clearOld: (): void => {
+    if (typeof window === 'undefined') return;
+    try {
+      const keys = Object.keys(localStorage);
+      const now = Date.now();
+      keys.forEach(key => {
+        if (key.startsWith(STORAGE_PREFIX)) {
+          try {
+            const item = localStorage.getItem(key);
+            if (item) {
+              const cached = JSON.parse(item);
+              if (now - cached.timestamp > CACHE_DURATION) {
+                localStorage.removeItem(key);
+              }
+            }
+          } catch (e) {
+            localStorage.removeItem(key);
+          }
+        }
+      });
+    } catch (e) {
+      console.warn('Storage clearOld failed:', e);
+    }
   }
 };
 
-const setCachedData = (key: string, data: any): void => {
-  if (typeof window === 'undefined') return;
-  
-  try {
-    const cacheData: CacheData = {
-      data,
-      timestamp: Date.now()
-    };
-    localStorage.setItem(key, JSON.stringify(cacheData));
-  } catch (error) {
-    console.error('Error writing to cache:', error);
-  }
+// Debounce function for URL updates
+const debounce = <T extends (...args: any[]) => any>(func: T, wait: number) => {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
 };
 
-// Company Logo Component with fallback
-const CompanyLogo = React.memo(({ companyName, className = "w-8 h-8" }: { companyName: string; className?: string }) => {
+// ==================== MEMOIZED COMPONENTS ====================
+
+const CompanyLogo = memo(({ companyName }: { companyName: string }) => {
   const [logoError, setLogoError] = useState(false);
   const [logoLoading, setLogoLoading] = useState(true);
-  
-  // Convert company name to domain format
-  const companyDomain = useMemo(() => {
-    return companyName.toLowerCase().replace(/\s+/g, '') + '.com';
-  }, [companyName]);
-  
-  // Try multiple logo sources
-  const logoSources = useMemo(() => [
-    `https://logo.clearbit.com/${companyDomain}`,
-    `https://img.logo.dev/${companyDomain}?token=pk_X-yFQbLvSf6D9V0wXd1yEQ`, // Logo.dev as backup
-    `https://www.google.com/s2/favicons?domain=${companyDomain}&sz=128`,
-  ], [companyDomain]);
-  
   const [currentSourceIndex, setCurrentSourceIndex] = useState(0);
   
-  const handleError = () => {
+  const logoSources = useMemo(() => {
+    const domain = companyName.toLowerCase().replace(/\s+/g, '') + '.com';
+    return [
+      `https://logo.clearbit.com/${domain}`,
+      `https://img.logo.dev/${domain}?token=pk_X-yFQbLvSf6D9V0wXd1yEQ`,
+      `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+    ];
+  }, [companyName]);
+  
+  const handleError = useCallback(() => {
     if (currentSourceIndex < logoSources.length - 1) {
       setCurrentSourceIndex(prev => prev + 1);
     } else {
       setLogoError(true);
       setLogoLoading(false);
     }
-  };
+  }, [currentSourceIndex, logoSources.length]);
   
   if (logoError) {
     return (
-      <div className={cn("flex items-center justify-center bg-gradient-to-br from-primary/20 to-purple-600/20 rounded-lg", className)}>
-        <Building2 className="w-1/2 h-1/2 text-primary" />
+      <div className="w-12 h-12 flex items-center justify-center bg-gradient-to-br from-primary/20 to-purple-600/20 rounded-xl">
+        <Building2 className="w-6 h-6 text-primary" />
       </div>
     );
   }
   
   return (
-    <div className={cn("relative overflow-hidden rounded-lg bg-white", className)}>
+    <div className="w-12 h-12 relative overflow-hidden rounded-xl bg-white/50 backdrop-blur-sm border border-white/20 shadow-lg">
       {logoLoading && (
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center bg-white/50">
           <Loader2 className="w-4 h-4 animate-spin text-primary" />
         </div>
       )}
       <img
         src={logoSources[currentSourceIndex]}
         alt={`${companyName} logo`}
-        className={cn("w-full h-full object-contain p-1", logoLoading ? "opacity-0" : "opacity-100")}
+        className={cn("w-full h-full object-contain p-1.5", logoLoading ? "opacity-0" : "opacity-100")}
         onLoad={() => setLogoLoading(false)}
         onError={handleError}
         loading="lazy"
@@ -167,6 +194,125 @@ const CompanyLogo = React.memo(({ companyName, className = "w-8 h-8" }: { compan
 });
 
 CompanyLogo.displayName = 'CompanyLogo';
+
+// Memoized Topic Card
+const TopicCard = memo(({ topic, onClick }: { topic: TopicData; onClick: () => void }) => (
+  <Button
+    variant="outline"
+    className="w-full h-auto py-4 px-4 flex flex-col items-start justify-between gap-2 hover:border-primary hover:bg-primary/5 transition-all group"
+    onClick={onClick}
+  >
+    <span className="font-semibold text-left group-hover:text-primary transition-colors">
+      {topic.name}
+    </span>
+    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+      <TrendingUp className="h-3 w-3" />
+      <span>{topic.count} problems</span>
+    </div>
+  </Button>
+));
+
+TopicCard.displayName = 'TopicCard';
+
+// Memoized Problem Card
+const ProblemCard = memo(({ 
+  problem, 
+  userProgress, 
+  session, 
+  onUpdateProgress,
+  getDifficultyColor,
+  getStatusIcon
+}: { 
+  problem: Problem;
+  userProgress: Map<number, UserProgress>;
+  session: any;
+  onUpdateProgress: (id: number, status: 'solved' | 'attempted' | 'bookmarked') => void;
+  getDifficultyColor: (difficulty: string) => string;
+  getStatusIcon: (problemId: number) => React.ReactNode;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.2 }}
+    className="flex items-center gap-4 p-4 rounded-xl border-2 bg-card hover:bg-accent/50 transition-colors hover:border-primary/50 hover:shadow-md"
+  >
+    <div className="flex-shrink-0">
+      <button
+        onClick={() => {
+          if (!session?.user) {
+            alert('Please login to track progress');
+            return;
+          }
+          const currentStatus = userProgress.get(problem.id)?.status;
+          const nextStatus = currentStatus === 'solved' ? 'attempted' : 'solved';
+          onUpdateProgress(problem.id, nextStatus);
+        }}
+        className="hover:scale-110 transition-transform disabled:cursor-not-allowed"
+        disabled={!session}
+      >
+        {getStatusIcon(problem.id)}
+      </button>
+    </div>
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center gap-2 mb-2">
+        <h3 className="font-semibold truncate text-lg">{problem.title}</h3>
+        {problem.isPremium && (
+          <Badge variant="outline" className="text-xs border-amber-500 text-amber-500">
+            Premium
+          </Badge>
+        )}
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <Badge className={cn('font-medium', getDifficultyColor(problem.difficulty))}>
+          {problem.difficulty}
+        </Badge>
+        <Badge variant="outline" className="border-2">{problem.platform}</Badge>
+        {problem.topicTags.slice(0, 2).map(tag => (
+          <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+        ))}
+        {problem.topicTags.length > 2 && (
+          <span className="text-xs text-muted-foreground font-medium">
+            +{problem.topicTags.length - 2} more
+          </span>
+        )}
+      </div>
+    </div>
+    <div className="hidden lg:flex items-center gap-6 text-sm">
+      <div className="text-center">
+        <p className="font-bold text-lg text-emerald-500">{problem.acceptanceRate}%</p>
+        <p className="text-xs text-muted-foreground">Accepted</p>
+      </div>
+      <div className="text-center">
+        <p className="font-bold text-lg">{problem.likes}</p>
+        <p className="text-xs text-muted-foreground">Likes</p>
+      </div>
+    </div>
+    <div className="flex items-center gap-2">
+      <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => onUpdateProgress(problem.id, 'bookmarked')}
+          disabled={!session}
+          className="hover:text-blue-500"
+        >
+          <Bookmark className="h-4 w-4" />
+        </Button>
+      </motion.div>
+      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+        <Button size="sm" className="gap-2 font-medium" asChild>
+          <a href={problem.url} target="_blank" rel="noopener noreferrer">
+            Solve <ExternalLink className="h-3 w-3" />
+          </a>
+        </Button>
+      </motion.div>
+    </div>
+  </motion.div>
+));
+
+ProblemCard.displayName = 'ProblemCard';
+
+// ==================== MAIN COMPONENT ====================
 
 export default function CompanyPage() {
   const params = useParams();
@@ -200,52 +346,45 @@ export default function CompanyPage() {
   const prefetchedRef = useRef<Set<string>>(new Set());
 
   const prettyCompanyName = useMemo(() => 
-    companySlug
-      ?.replace(/-/g, ' ')
-      ?.replace(/\b\w/g, char => char.toUpperCase()),
+    companySlug?.replace(/-/g, ' ')?.replace(/\b\w/g, char => char.toUpperCase()),
     [companySlug]
   );
 
-  // Update URL when platform changes (KEY FEATURE FOR PERSISTENCE)
-  const updatePlatformInUrl = useCallback((platform: 'LEETCODE' | 'GEEKSFORGEEKS') => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('platform', platform);
-    
-    if (selectedTopic) {
+  // Debounced URL update
+  const updateUrlDebounced = useMemo(
+    () => debounce((platform: string, topic?: string) => {
+      const params = new URLSearchParams();
+      params.set('platform', platform);
+      if (topic) params.set('topic', topic);
       router.replace(`/companies/${companySlug}?${params.toString()}`, { scroll: false });
-    } else {
-      router.replace(`/companies/${companySlug}?${params.toString()}`, { scroll: false });
-    }
-  }, [companySlug, router, searchParams, selectedTopic]);
+    }, 300),
+    [companySlug, router]
+  );
 
-  // Fetch topics with caching
-  const fetchTopics = useCallback(async (platform: string, forceRefresh = false) => {
+  // Fetch topics with aggressive caching
+  const fetchTopics = useCallback(async (platform: string) => {
     if (!companySlug) return;
+    
+    const cacheKey = `topics_${companySlug}_${platform}`;
+    const cached = storage.get<TopicData[]>(cacheKey);
+    
+    if (cached) {
+      setTopics(cached);
+      setLoadingTopics(false);
+      setSwitchingPlatform(false);
+      return;
+    }
     
     setSwitchingPlatform(true);
     setLoadingTopics(true);
     
-    const cacheKey = `topics_${companySlug}_${platform}`;
-    
-    if (!forceRefresh) {
-      const cached = getCachedData(cacheKey);
-      if (cached) {
-        console.log('✅ Loading topics from cache');
-        setTopics(cached);
-        setSwitchingPlatform(false);
-        setLoadingTopics(false);
-        return;
-      }
-    }
-    
     try {
-      console.log('🔄 Fetching topics for platform:', platform);
       const res = await fetch(`/api/companies/${companySlug}/topics?platform=${platform}`);
       const data = await res.json();
       
       if (data.success) {
         setTopics(data.data);
-        setCachedData(cacheKey, data.data);
+        storage.set(cacheKey, data.data);
       }
     } catch (err) {
       console.error('Error fetching topics:', err);
@@ -255,16 +394,17 @@ export default function CompanyPage() {
     }
   }, [companySlug]);
 
+  // Fetch user progress with caching
   const fetchUserProgress = useCallback(async () => {
     if (!session?.user) return;
     
     const cacheKey = 'user_progress';
-    const cached = getCachedData(cacheKey);
+    const cached = storage.get<any[]>(cacheKey);
     
     if (cached) {
       const progressMap = new Map();
       cached.forEach((item: any) => {
-        if (item.progress && item.progress.problemId) {
+        if (item.progress?.problemId) {
           progressMap.set(Number(item.progress.problemId), item.progress);
         }
       });
@@ -277,28 +417,32 @@ export default function CompanyPage() {
       if (data.success) {
         const progressMap = new Map();
         data.data.forEach((item: any) => {
-          if (item.progress && item.progress.problemId) {
+          if (item.progress?.problemId) {
             progressMap.set(Number(item.progress.problemId), item.progress);
           }
         });
         setUserProgress(progressMap);
-        setCachedData(cacheKey, data.data);
+        storage.set(cacheKey, data.data);
       }
     } catch (e) {
       console.error('Error fetching progress:', e);
     }
   }, [session]);
 
-  const fetchProblems = useCallback(async (pageNum = 1, sortBy = 'likes', topic?: string, platform?: string) => {
-    if (!companySlug) return;
-    if (isFetchingRef.current) return;
+  // Fetch problems with caching
+  const fetchProblems = useCallback(async (
+    pageNum = 1, 
+    sortBy = 'likes', 
+    topic?: string, 
+    platform?: string
+  ) => {
+    if (!companySlug || isFetchingRef.current) return;
     
     const cacheKey = `problems_${companySlug}_${topic}_${platform}_${sortBy}_${pageNum}`;
     
     if (pageNum === 1) {
-      const cached = getCachedData(cacheKey);
+      const cached = storage.get<{ data: Problem[]; total: number }>(cacheKey);
       if (cached) {
-        console.log('✅ Loading problems from cache');
         setProblems(cached.data);
         setDisplayedProblems(cached.data);
         setTotalCount(cached.total);
@@ -331,7 +475,7 @@ export default function CompanyPage() {
           setProblems(data.data);
           setDisplayedProblems(data.data);
           if (data.total !== undefined) setTotalCount(data.total);
-          setCachedData(cacheKey, { data: data.data, total: data.total });
+          storage.set(cacheKey, { data: data.data, total: data.total });
         } else {
           setProblems(prev => [...prev, ...data.data]);
           setDisplayedProblems(prev => [...prev, ...data.data]);
@@ -343,7 +487,7 @@ export default function CompanyPage() {
         setError(data.error || 'Failed to fetch problems');
       }
     } catch (err) {
-      console.error('Failed to fetch company problems:', err);
+      console.error('Failed to fetch problems:', err);
       setError('Failed to fetch problems. Please try again.');
     } finally {
       setLoading(false);
@@ -352,59 +496,57 @@ export default function CompanyPage() {
     }
   }, [companySlug]);
 
-  // Prefetch both platforms data
+  // Prefetch both platforms
   useEffect(() => {
-    if (!companySlug) return;
+    if (!companySlug || typeof window === 'undefined') return;
     
-    const prefetchData = () => {
+    const prefetch = () => {
       if ('requestIdleCallback' in window) {
         requestIdleCallback(() => {
-          const platforms = ['LEETCODE', 'GEEKSFORGEEKS'];
-          platforms.forEach(async (platform) => {
+          ['LEETCODE', 'GEEKSFORGEEKS'].forEach(async (platform) => {
             const cacheKey = `topics_${companySlug}_${platform}`;
-            if (!prefetchedRef.current.has(cacheKey) && !getCachedData(cacheKey)) {
+            if (!prefetchedRef.current.has(cacheKey) && !storage.get(cacheKey)) {
               try {
                 const res = await fetch(`/api/companies/${companySlug}/topics?platform=${platform}`);
                 const data = await res.json();
                 if (data.success) {
-                  setCachedData(cacheKey, data.data);
+                  storage.set(cacheKey, data.data);
                   prefetchedRef.current.add(cacheKey);
                 }
               } catch (err) {
-                console.error(`Error prefetching ${platform}:`, err);
+                console.error(`Prefetch error for ${platform}:`, err);
               }
             }
           });
-        });
+        }, { timeout: 2000 });
       }
     };
     
-    prefetchData();
+    prefetch();
   }, [companySlug]);
 
-  // Initialize platform from URL
+  // Initialize from URL
   useEffect(() => {
     if (platformFromUrl && platformFromUrl !== selectedPlatform) {
       setSelectedPlatform(platformFromUrl);
     }
-  }, [platformFromUrl]);
+  }, [platformFromUrl, selectedPlatform]);
 
+  // Main data fetching effect
   useEffect(() => {
     if (!selectedTopic) {
       fetchTopics(selectedPlatform);
       setShowTopics(true);
-    }
-    
-    if (selectedTopic) {
+      setLoading(false);
+    } else {
       setShowTopics(false);
       fetchProblems(1, sortKey, selectedTopic, selectedPlatform);
-    } else {
-      setLoading(false);
     }
     
     if (session?.user) fetchUserProgress();
   }, [companySlug, sortKey, selectedTopic, selectedPlatform, fetchTopics, fetchProblems, fetchUserProgress, session]);
 
+  // Intersection observer for infinite scroll
   useEffect(() => {
     if (!selectedTopic) return;
     
@@ -412,7 +554,7 @@ export default function CompanyPage() {
       if (entries[0].isIntersecting && hasMore && !loadingMore && !loading && !isFetchingRef.current) {
         fetchProblems(page + 1, sortKey, selectedTopic, selectedPlatform);
       }
-    }, {threshold: 0.1, rootMargin: '200px'});
+    }, { threshold: 0.1, rootMargin: '200px' });
 
     if (observerTarget.current) observer.observe(observerTarget.current);
 
@@ -422,11 +564,13 @@ export default function CompanyPage() {
     };
   }, [hasMore, loadingMore, loading, fetchProblems, page, sortKey, selectedTopic, selectedPlatform]);
 
-  const updateProgress = async (problemId: number, status: 'solved' | 'attempted' | 'bookmarked') => {
+  // Update progress
+  const updateProgress = useCallback(async (problemId: number, status: 'solved' | 'attempted' | 'bookmarked') => {
     if (!session?.user) {
       alert('Please login to track progress');
       return;
     }
+    
     const newProgress = new Map(userProgress);
     newProgress.set(problemId, {
       problemId,
@@ -445,42 +589,42 @@ export default function CompanyPage() {
           solvedAt: status === 'solved' ? new Date().toISOString() : null,
         }),
       });
-      localStorage.removeItem('user_progress');
+      storage.remove('user_progress');
     } catch (err) {
       console.error('Error updating progress:', err);
       setUserProgress(userProgress);
     }
-  };
+  }, [session, userProgress]);
 
-  const getDifficultyColor = (difficulty: string) => {
+  const getDifficultyColor = useCallback((difficulty: string) => {
     switch (difficulty) {
       case 'EASY': return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
       case 'MEDIUM': return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
       case 'HARD': return 'bg-rose-500/10 text-rose-500 border-rose-500/20';
       default: return 'bg-gray-500/10 text-gray-500';
     }
-  };
+  }, []);
 
-  const handleTopicClick = (topic: string) => {
+  const handleTopicClick = useCallback((topic: string) => {
     const params = new URLSearchParams();
     params.set('topic', topic);
     params.set('platform', selectedPlatform);
     router.push(`/companies/${companySlug}?${params.toString()}`);
-  };
+  }, [companySlug, router, selectedPlatform]);
 
-  const handleBackToTopics = () => {
+  const handleBackToTopics = useCallback(() => {
     const params = new URLSearchParams();
     params.set('platform', selectedPlatform);
     router.push(`/companies/${companySlug}?${params.toString()}`);
-  };
+  }, [companySlug, router, selectedPlatform]);
 
-  const handlePlatformChange = (platform: 'LEETCODE' | 'GEEKSFORGEEKS') => {
+  const handlePlatformChange = useCallback((platform: 'LEETCODE' | 'GEEKSFORGEEKS') => {
     if (platform === selectedPlatform) return;
     setSelectedPlatform(platform);
-    updatePlatformInUrl(platform);
-  };
+    updateUrlDebounced(platform, selectedTopic || undefined);
+  }, [selectedPlatform, selectedTopic, updateUrlDebounced]);
 
-  const getStatusIcon = (problemId: number) => {
+  const getStatusIcon = useCallback((problemId: number) => {
     if (!session?.user) {
       return (
         <div className="relative group">
@@ -497,7 +641,9 @@ export default function CompanyPage() {
     if (progress.status === 'solved') return <CheckCircle2 className="h-5 w-5 text-emerald-500" />;
     if (progress.status === 'attempted') return <Circle className="h-5 w-5 text-amber-500 fill-amber-500" />;
     if (progress.status === 'bookmarked') return <Bookmark className="h-5 w-5 text-blue-500 fill-blue-500" />;
-  };
+  }, [session, userProgress]);
+
+  // ==================== RENDER ====================
 
   if (loading && !showTopics) {
     return (
@@ -546,13 +692,14 @@ export default function CompanyPage() {
         </div>
 
         <div className="flex items-center gap-4 mb-2">
-          <CompanyLogo companyName={prettyCompanyName || ''} className="w-12 h-12" />
+          <CompanyLogo companyName={prettyCompanyName || ''} />
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent capitalize">
             {prettyCompanyName} Topics
           </h1>
         </div>
         <p className="text-muted-foreground mb-6">Select a topic to view related interview problems</p>
 
+        {/* Platform Tabs */}
         <div className="mb-6">
           <div className="border-b border-border">
             <div className="flex gap-1">
@@ -618,6 +765,7 @@ export default function CompanyPage() {
           </div>
         </div>
 
+        {/* Topics Grid */}
         <Card className="border-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -633,9 +781,6 @@ export default function CompanyPage() {
                 <div className="text-center">
                   <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
                   <p className="text-muted-foreground font-medium">Loading topics...</p>
-                  <p className="text-sm text-muted-foreground/60 mt-1">
-                    {selectedPlatform === 'LEETCODE' ? 'LeetCode' : 'GeeksforGeeks'} problems
-                  </p>
                 </div>
               </div>
             ) : topics.length === 0 ? (
@@ -645,20 +790,11 @@ export default function CompanyPage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {topics.map((topic) => (
-                  <Button
-                    key={topic.name}
-                    variant="outline"
-                    className="w-full h-auto py-4 px-4 flex flex-col items-start justify-between gap-2 hover:border-primary hover:bg-primary/5 transition-all group"
-                    onClick={() => handleTopicClick(topic.name)}
-                  >
-                    <span className="font-semibold text-left group-hover:text-primary transition-colors">
-                      {topic.name}
-                    </span>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <TrendingUp className="h-3 w-3" />
-                      <span>{topic.count} problems</span>
-                    </div>
-                  </Button>
+                  <TopicCard 
+                    key={topic.name} 
+                    topic={topic} 
+                    onClick={() => handleTopicClick(topic.name)} 
+                  />
                 ))}
               </div>
             )}
@@ -686,13 +822,14 @@ export default function CompanyPage() {
       </div>
 
       <div className="flex items-center gap-4 mb-2">
-        <CompanyLogo companyName={prettyCompanyName || ''} className="w-12 h-12" />
+        <CompanyLogo companyName={prettyCompanyName || ''} />
         <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent capitalize">
           {prettyCompanyName} - {selectedTopic}
         </h1>
       </div>
       <p className="text-muted-foreground mb-6">{totalCount} problems found</p>
 
+      {/* Platform Tabs */}
       <div className="mb-6">
         <div className="border-b border-border">
           <div className="flex gap-1">
@@ -753,6 +890,7 @@ export default function CompanyPage() {
         </div>
       </div>
 
+      {/* Sort controls */}
       <Card className="mb-6 border-2">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -783,93 +921,26 @@ export default function CompanyPage() {
         </CardContent>
       </Card>
 
-      <motion.div initial="hidden" animate="visible" variants={containerVariants} className="space-y-3">
+      {/* Problems List */}
+      <div className="space-y-3">
         {displayedProblems.length === 0 ? (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12 text-muted-foreground">
+          <div className="text-center py-12 text-muted-foreground">
             No problems found for this company.
-          </motion.div>
+          </div>
         ) : (
           displayedProblems.map(problem => (
-            <motion.div
+            <ProblemCard
               key={problem.id}
-              variants={itemVariants}
-              className="flex items-center gap-4 p-4 rounded-xl border-2 bg-card hover:bg-accent/50 transition-colors hover:border-primary/50 hover:shadow-md"
-            >
-              <div className="flex-shrink-0">
-                <button
-                  onClick={() => {
-                    if (!session?.user) {
-                      alert('Please login to track progress');
-                      return;
-                    }
-                    const currentStatus = userProgress.get(problem.id)?.status;
-                    const nextStatus = currentStatus === 'solved' ? 'attempted' : 'solved';
-                    updateProgress(problem.id, nextStatus);
-                  }}
-                  className="hover:scale-110 transition-transform disabled:cursor-not-allowed"
-                  disabled={!session}
-                >
-                  {getStatusIcon(problem.id)}
-                </button>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="font-semibold truncate text-lg">{problem.title}</h3>
-                  {problem.isPremium && (
-                    <Badge variant="outline" className="text-xs border-amber-500 text-amber-500">
-                      Premium
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge className={cn('font-medium', getDifficultyColor(problem.difficulty))}>{problem.difficulty}</Badge>
-                  <Badge variant="outline" className="border-2">
-                    {problem.platform}
-                  </Badge>
-                  {problem.topicTags.slice(0, 2).map(tag => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                  {problem.topicTags.length > 2 && (
-                    <span className="text-xs text-muted-foreground font-medium">+{problem.topicTags.length - 2} more</span>
-                  )}
-                </div>
-              </div>
-              <div className="hidden lg:flex items-center gap-6 text-sm">
-                <div className="text-center">
-                  <p className="font-bold text-lg text-emerald-500">{problem.acceptanceRate}%</p>
-                  <p className="text-xs text-muted-foreground">Accepted</p>
-                </div>
-                <div className="text-center">
-                  <p className="font-bold text-lg">{problem.likes}</p>
-                  <p className="text-xs text-muted-foreground">Likes</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => updateProgress(problem.id, 'bookmarked')}
-                    disabled={!session}
-                    className="hover:text-blue-500 transition-transform"
-                  >
-                    <Bookmark className="h-4 w-4" />
-                  </Button>
-                </motion.div>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button size="sm" className="gap-2 font-medium" asChild>
-                    <a href={problem.url} target="_blank" rel="noopener noreferrer">
-                      Solve <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </Button>
-                </motion.div>
-              </div>
-            </motion.div>
+              problem={problem}
+              userProgress={userProgress}
+              session={session}
+              onUpdateProgress={updateProgress}
+              getDifficultyColor={getDifficultyColor}
+              getStatusIcon={getStatusIcon}
+            />
           ))
         )}
-      </motion.div>
+      </div>
 
       {loadingMore && (
         <div className="flex justify-center py-6">

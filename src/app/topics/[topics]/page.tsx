@@ -203,11 +203,21 @@ export default function TopicPage() {
     }
   }, [session, fetchUserProgress]);
 
+  const loadMore = useCallback(() => {
+    if (!loadingMore && hasMore && !isFetchingRef.current) {
+      console.log('🔄 Infinite scroll: Loading more... Current page:', page);
+      fetchProblems(page + 1, sortKey);
+    }
+  }, [fetchProblems, page, sortKey, loadingMore, hasMore]);
+
   // Intersection Observer for infinite scroll
   useEffect(() => {
+    const currentTarget = observerTarget.current;
+    
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !loadingMore && !loading && !isFetchingRef.current) {
+          console.log('📜 Intersection detected, triggering loadMore');
           loadMore();
         }
       },
@@ -217,24 +227,17 @@ export default function TopicPage() {
       }
     );
 
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
+    if (currentTarget) {
+      observer.observe(currentTarget);
     }
 
     return () => {
-      if (observerTarget.current) {
-        observer.unobserve(observerTarget.current);
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
       }
       observer.disconnect();
     };
-  }, [hasMore, loadingMore, loading]);
-
-  const loadMore = useCallback(() => {
-    if (!loadingMore && hasMore && !isFetchingRef.current) {
-      console.log('Loading more... Current page:', page);
-      fetchProblems(page + 1, sortKey);
-    }
-  }, [fetchProblems, page, sortKey, loadingMore, hasMore]);
+  }, [hasMore, loadingMore, loading, loadMore]);
 
   const updateProgress = async (problemId: number, status: 'solved' | 'attempted' | 'bookmarked') => {
     if (!session?.user) {
