@@ -24,9 +24,13 @@ import { revalidatePath } from 'next/cache';
 export async function createContest(data: {
   title: string;
   description: string;
+  slug?: string;
   startTime: Date;
-  durationMinutes: number;
-  visibility: 'public' | 'private';
+  endTime?: Date;
+  durationMinutes?: number;
+  visibility?: 'public' | 'private';
+  isPublic?: boolean;
+  maxParticipants?: number | null;
   accessCode?: string;
 }) {
   try {
@@ -35,22 +39,42 @@ export async function createContest(data: {
       return { success: false, error: 'Unauthorized' };
     }
 
-    const slug = data.title.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
-    const endTime = new Date(data.startTime.getTime() + data.durationMinutes * 60000);
+    // Generate slug if not provided
+    const contestSlug = data.slug || data.title.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
+    
+    // Calculate endTime and durationMinutes
+    let endTime: Date;
+    let durationMinutes: number;
+    
+    if (data.endTime) {
+      endTime = data.endTime;
+      durationMinutes = Math.round((data.endTime.getTime() - data.startTime.getTime()) / 60000);
+    } else if (data.durationMinutes) {
+      durationMinutes = data.durationMinutes;
+      endTime = new Date(data.startTime.getTime() + data.durationMinutes * 60000);
+    } else {
+      // Default to 2 hours if not specified
+      durationMinutes = 120;
+      endTime = new Date(data.startTime.getTime() + 120 * 60000);
+    }
+
+    // Determine visibility
+    const visibility = data.visibility || (data.isPublic !== undefined ? (data.isPublic ? 'public' : 'private') : 'public');
 
     const [contest] = await db.insert(contests).values({
       title: data.title,
-      description: data.description,
-      slug,
+      description: data.description || '',
+      slug: contestSlug,
       startTime: data.startTime,
       endTime,
-      durationMinutes: data.durationMinutes,
-      visibility: data.visibility,
+      durationMinutes,
+      visibility,
       accessCode: data.accessCode,
       createdBy: session.user.id,
     }).returning();
 
     revalidatePath('/contest');
+    revalidatePath('/admin/contests');
     return { success: true, data: contest };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -81,6 +105,54 @@ export async function getContests() {
       .orderBy(desc(contests.startTime));
 
     return { success: true, data: allContests };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// Get All Contests with Counts (Admin)
+export async function getAllContests() {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const allContests = await db
+      .select({
+        id: contests.id,
+        title: contests.title,
+        description: contests.description,
+        slug: contests.slug,
+        startTime: contests.startTime,
+        endTime: contests.endTime,
+        isPublic: sql<boolean>`${contests.visibility} = 'public'`,
+        maxParticipants: sql<number | null>`NULL`,
+        createdBy: contests.createdBy,
+        createdAt: contests.createdAt,
+        questionCount: sql<number>`(
+          SELECT COUNT(*)::int 
+          FROM ${contestQuestions} 
+          WHERE ${contestQuestions.contestId} = ${contests.id}
+        )`,
+        participantCount: sql<number>`(
+          SELECT COUNT(*)::int 
+          FROM ${contestParticipants} 
+          WHERE ${contestParticipants.contestId} = ${contests.id}
+        )`,
+      })
+      .from(contests)
+      .orderBy(desc(contests.createdAt));
+
+    const contestsWithCounts = allContests.map(contest => ({
+      ...contest,
+      _count: {
+        questions: contest.questionCount || 0,
+        registrations: contest.participantCount || 0,
+      },
+    }));
+
+    return { success: true, data: contestsWithCounts };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
