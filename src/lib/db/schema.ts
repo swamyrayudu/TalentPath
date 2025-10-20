@@ -151,19 +151,7 @@ export const problems = pgTable('problems', {
   topicTagsIdx: index('problems_topic_tags_idx').on(table.topicTags),
 }));
 
-export const questions = pgTable('questions', {
-  s_no: integer('s_no'),
-  category: text('category'),
-  q_no: text('q_no'),          // String question number (e.g., "Q1")
-  question: text('question'),
-  topic: text('topic'),
-  option_a: text('option_a').default(''),
-  option_b: text('option_b').default(''),
-  option_c: text('option_c').default(''),
-  option_d: text('option_d').default(''),
-  answer: text('answer'),
-  explanation: text('explanation'),
-});
+
 export const userProgress = pgTable('user_progress', {
   id: bigserial('id', { mode: 'number' }).primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
