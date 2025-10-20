@@ -956,7 +956,7 @@ export default function CompanyPage() {
           animate={{ opacity: 1 }}
           className="text-center py-6 text-muted-foreground border-t mt-4"
         >
-          <p className="font-medium">🎉 You've reached the end!</p>
+          <p className="font-medium">🎉 You&apos;ve reached the end!</p>
           <p className="text-sm">Great job exploring {displayedProblems.length} problems</p>
         </motion.div>
       )}

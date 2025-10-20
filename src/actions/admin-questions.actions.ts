@@ -121,7 +121,7 @@ export async function getAdminQuestions({
       limit,
     };
   } catch (error) {
-    console.error("Error fetching admin questions:", error);
+    // Error fetching admin questions
     throw error;
   }
 }
@@ -146,8 +146,8 @@ export async function getAllTopics(): Promise<string[]> {
     const uniqueTopics = [...new Set(allTopics)].filter(Boolean).sort();
 
     return uniqueTopics;
-  } catch (error) {
-    console.error("Error fetching topics:", error);
+  } catch {
+    // Error fetching topics
     return [];
   }
 }
@@ -171,8 +171,8 @@ export async function getAdminTestCases(
       .orderBy(adminTestCases.isSample, adminTestCases.createdAt);
 
     return testCases as AdminTestCase[];
-  } catch (error) {
-    console.error("Error fetching test cases:", error);
+  } catch {
+    // Error fetching test cases
     return [];
   }
 }
@@ -200,7 +200,7 @@ export async function getAllAdminTestCases({
     if (!session?.user) {
       throw new Error("Unauthorized");
     }
-    // @ts-ignore - role exists on user
+    // @ts-expect-error - role exists on user but not in type definition
     if (session.user.role !== "admin") {
       throw new Error("Unauthorized - Admin access required");
     }
@@ -243,7 +243,7 @@ export async function getAllAdminTestCases({
       hasMore,
     };
   } catch (error) {
-    console.error("Error fetching test cases:", error);
+    // Error fetching test cases
     throw error;
   }
 }
@@ -275,7 +275,7 @@ export async function createAdminQuestion(
     revalidatePath("/admin/questions");
     return question as AdminQuestion;
   } catch (error) {
-    console.error("Error creating admin question:", error);
+    // Error creating admin question
     throw error;
   }
 }
@@ -291,7 +291,7 @@ export async function createAdminTestCase(
     if (!session?.user) {
       throw new Error("Unauthorized");
     }
-    // @ts-ignore - role exists on user
+    // @ts-expect-error - role exists on user but not in type definition
     if (session.user.role !== "admin") {
       throw new Error("Unauthorized - Admin access required");
     }
@@ -304,7 +304,7 @@ export async function createAdminTestCase(
     revalidatePath("/admin/questions");
     return testCase as AdminTestCase;
   } catch (error) {
-    console.error("Error creating test case:", error);
+    // Error creating test case
     throw error;
   }
 }
@@ -336,16 +336,17 @@ export async function bulkImportQuestions(
           createdBy: session.user.id!,
         });
         success++;
-      } catch (error: any) {
+      } catch (error) {
         failed++;
-        errors.push(`${question.title}: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        errors.push(`${question.title}: ${errorMessage}`);
       }
     }
 
     revalidatePath("/admin/questions");
     return { success, failed, errors };
   } catch (error) {
-    console.error("Error bulk importing questions:", error);
+    // Error bulk importing questions
     throw error;
   }
 }
@@ -361,7 +362,7 @@ export async function bulkImportTestCases(
     if (!session?.user) {
       throw new Error("Unauthorized");
     }
-    // @ts-ignore - role exists on user
+    // @ts-expect-error - role exists on user but not in type definition
     if (session.user.role !== "admin") {
       throw new Error("Unauthorized - Admin access required");
     }
@@ -374,16 +375,17 @@ export async function bulkImportTestCases(
       try {
         await db.insert(adminTestCases).values(testCase);
         success++;
-      } catch (error: any) {
+      } catch (error) {
         failed++;
-        errors.push(`${testCase.questionTitle}: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        errors.push(`${testCase.questionTitle}: ${errorMessage}`);
       }
     }
 
     revalidatePath("/admin/questions");
     return { success, failed, errors };
   } catch (error) {
-    console.error("Error bulk importing test cases:", error);
+    // Error bulk importing test cases
     throw error;
   }
 }
@@ -402,7 +404,7 @@ export async function getAdminQuestionsStats(): Promise<{
     if (!session?.user) {
       throw new Error("Unauthorized");
     }
-    // @ts-ignore - role exists on user
+    // @ts-expect-error - role exists on user but not in type definition
     if (session.user.role !== "admin") {
       throw new Error("Unauthorized - Admin access required");
     }
@@ -462,7 +464,7 @@ export async function getAdminQuestionsStats(): Promise<{
       totalTestCases,
     };
   } catch (error) {
-    console.error("Error fetching stats:", error);
+    // Error fetching stats
     throw error;
   }
 }

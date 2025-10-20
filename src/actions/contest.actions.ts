@@ -12,7 +12,7 @@ import {
   adminQuestions,
   adminTestCases
 } from '@/lib/db/schema';
-import { eq, and, desc, sql, asc, like, or } from 'drizzle-orm';
+import { eq, and, desc, sql, asc, or } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 
@@ -76,8 +76,9 @@ export async function createContest(data: {
     revalidatePath('/contest');
     revalidatePath('/admin/contests');
     return { success: true, data: contest };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -908,21 +909,23 @@ export async function runTestCases(data: {
           executionTime: result.executionTime || 0,
           error: passed ? undefined : `Expected: "${testCase.expectedOutput.trim()}", Got: "${(result.output || '').trim()}"`,
         });
-      } catch (error: any) {
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to execute test';
         results.push({
           testCaseId: testCase.id,
           passed: false,
           expected: testCase.expectedOutput,
           actual: 'Network Error',
           executionTime: 0,
-          error: error.message || 'Failed to execute test',
+          error: errorMessage,
         });
       }
     }
 
     return { success: true, data: results };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 

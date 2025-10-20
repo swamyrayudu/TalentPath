@@ -118,7 +118,7 @@ export default function JobsPage() {
     setCurrentPage(1);
   };
 
-  const toggleFilter = (filter: string, setFilter: Function, currentFilters: string[]) => {
+  const toggleFilter = (filter: string, setFilter: (filters: string[]) => void, currentFilters: string[]) => {
     if (currentFilters.includes(filter)) {
       setFilter(currentFilters.filter((f: string) => f !== filter));
     } else {

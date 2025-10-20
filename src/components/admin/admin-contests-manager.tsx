@@ -675,7 +675,7 @@ export function AdminContestsManager() {
           <DialogHeader>
             <DialogTitle>Delete Contest</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{contestToDelete?.title}"? This action cannot be undone.
+              Are you sure you want to delete &quot;{contestToDelete?.title}&quot;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

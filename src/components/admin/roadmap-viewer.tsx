@@ -111,7 +111,7 @@ export function RoadmapViewer({
                   🎉 Roadmap Completed!
                 </h3>
                 <p className="text-sm text-green-600 dark:text-green-500">
-                  Congratulations! You've successfully completed all {steps.length} steps in this learning path.
+                  Congratulations! You&apos;ve successfully completed all {steps.length} steps in this learning path.
                 </p>
               </div>
               <Button

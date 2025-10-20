@@ -190,11 +190,10 @@ function preprocessInput(input: string, language: string): string {
   
   try {
     // Convert escaped newlines to actual newlines
-    let processed = input.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\r/g, '\r');
+    const processed = input.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\r/g, '\r');
     
     // Smart array/object format detection and conversion
-    const lines = processed.split('\n').map((line, index, array) => {
-      const originalLine = line;
+    const lines = processed.split('\n').map((line) => {
       line = line.trim();
       
       // Keep empty lines as-is (they're intentional)
@@ -255,7 +254,7 @@ function preprocessInput(input: string, language: string): string {
     const result = lines.join('\n');
     
     return result;
-  } catch (error) {
+  } catch {
     // If preprocessing fails, return original input
     return input;
   }
