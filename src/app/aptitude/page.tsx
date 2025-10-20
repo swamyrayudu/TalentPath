@@ -209,9 +209,7 @@ export default function AptitudePage() {
             <>
               {/* Pagination Info */}
               <div className="flex justify-between items-center mb-4">
-                <p className="text-sm text-muted-foreground">
-                  Page {currentPage} of {totalPages} • Showing {startIndex + 1}-{Math.min(endIndex, questions.length)} of {questions.length}
-                </p>
+
               </div>
 
               {currentQuestions.map((q, qi) => {
