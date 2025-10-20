@@ -5,6 +5,8 @@ import { ThemeProvider } from '../components/layouts/theme-provider';
 import ConditionalNavbar from '../components/layouts/conditional-navbar';
 import AuthProvider from '@/components/providers/session-provider';
 import { DsaProblemsCacheProvider } from '@/components/context/DsaProblemsCacheContext';
+import { Toaster } from 'sonner';
+import { NotificationProvider } from '@/components/notifications/notification-provider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -37,8 +39,11 @@ export default function RootLayout({
               enableSystem
               disableTransitionOnChange
             >
-              <ConditionalNavbar />
-              <main className="min-h-screen">{children}</main>
+              <NotificationProvider>
+                <ConditionalNavbar />
+                <main className="min-h-screen">{children}</main>
+                <Toaster richColors position="top-right" />
+              </NotificationProvider>
             </ThemeProvider>
           </DsaProblemsCacheProvider>
         </AuthProvider>

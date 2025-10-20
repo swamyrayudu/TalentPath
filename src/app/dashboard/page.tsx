@@ -13,6 +13,7 @@ import { Calendar, Code2, Trophy, Target, TrendingUp, CheckCircle2, Clock, Flame
 import Link from 'next/link';
 import { getUserContestStats } from '@/actions/contest.actions';
 import { ContestStatsCard } from '@/components/dashboard/contest-stats-card';
+import { NotificationSettings } from '@/components/notifications/notification-settings';
 
 export default async function Dashboard() {
   const session = await auth();
@@ -339,6 +340,11 @@ export default async function Dashboard() {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* Notification Settings */}
+        <div className="mt-8">
+          <NotificationSettings />
         </div>
       </div>
     </div>

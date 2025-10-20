@@ -39,6 +39,10 @@ export const submissionVerdictEnum = pgEnum('submission_verdict', [
   'pending', 'accepted', 'wrong_answer', 'runtime_error', 
   'time_limit_exceeded', 'compilation_error'
 ]);
+export const notificationTypeEnum = pgEnum('notification_type', [
+  'job_posted', 'contest_starting', 'contest_started', 'contest_ending', 
+  'contest_ended', 'system', 'achievement'
+]);
 
 // ============================================
 // AUTH & USER TABLES
@@ -448,6 +452,45 @@ export type ContestWithDetails = Contest & {
 export type AdminQuestionWithTestCases = AdminQuestion & {
   testCases: AdminTestCase[];
 };
+
+// ============================================
+// NOTIFICATION TABLES
+// ============================================
+
+export const notifications = pgTable('notifications', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: notificationTypeEnum('type').notNull(),
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  link: text('link'),
+  metadata: jsonb('metadata'),
+  read: boolean('read').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index('idx_notifications_user_id').on(table.userId),
+  readIdx: index('idx_notifications_read').on(table.read),
+  createdAtIdx: index('idx_notifications_created_at').on(table.createdAt),
+}));
+
+export const notificationPreferences = pgTable('notification_preferences', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id').notNull().unique().references(() => users.id, { onDelete: 'cascade' }),
+  jobNotifications: boolean('job_notifications').default(true).notNull(),
+  contestNotifications: boolean('contest_notifications').default(true).notNull(),
+  systemNotifications: boolean('system_notifications').default(true).notNull(),
+  browserNotifications: boolean('browser_notifications').default(false).notNull(),
+  emailNotifications: boolean('email_notifications').default(true).notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index('idx_notification_preferences_user_id').on(table.userId),
+}));
+
+// Notification Types
+export type Notification = typeof notifications.$inferSelect;
+export type NotificationInsert = typeof notifications.$inferInsert;
+export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
+export type NotificationPreferencesInsert = typeof notificationPreferences.$inferInsert;
 
 // ============================================
 // ENUM VALUE TYPES

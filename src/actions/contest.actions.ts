@@ -15,6 +15,7 @@ import {
 import { eq, and, desc, sql, asc, or } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
+import { notifyContestStarting } from './notifications.actions';
 
 // ============================================
 // CONTEST MANAGEMENT
@@ -702,6 +703,15 @@ export async function joinContest(contestId: string, accessCode?: string) {
       problemsSolved: 0,
       totalTimeMinutes: 0,
     });
+
+    // Send notification if contest is starting soon (within 15 minutes)
+    const now = new Date();
+    const startTime = new Date(contest.startTime);
+    const minutesUntilStart = Math.round((startTime.getTime() - now.getTime()) / 60000);
+    
+    if (minutesUntilStart > 0 && minutesUntilStart <= 15) {
+      await notifyContestStarting(contestId, contest.title, startTime, session.user.id);
+    }
 
     revalidatePath('/contest');
     revalidatePath(`/contest/${contest.slug}`);
