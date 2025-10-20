@@ -263,11 +263,11 @@ export async function getAllQuestionsFromLibrary(params?: {
     const conditions = [];
     conditions.push(eq(adminQuestions.isActive, true));
 
-    if (search) {
+    if (search && search.trim() !== "") {
       conditions.push(
         or(
-          like(adminQuestions.title, `%${search}%`),
-          like(adminQuestions.description, `%${search}%`)
+          sql`LOWER(${adminQuestions.title}) LIKE LOWER(${`%${search}%`})`,
+          sql`LOWER(${adminQuestions.description}) LIKE LOWER(${`%${search}%`})`
         )
       );
     }
@@ -292,7 +292,7 @@ export async function getAllQuestionsFromLibrary(params?: {
 
     const totalCount = countResult?.count || 0;
 
-    // Get paginated questions with test case count
+    // Get paginated questions with test case count - RANDOM ORDER
     const offset = (page - 1) * limit;
     const allQuestions = await db
       .select({
@@ -313,7 +313,7 @@ export async function getAllQuestionsFromLibrary(params?: {
       })
       .from(adminQuestions)
       .where(where)
-      .orderBy(desc(adminQuestions.createdAt))
+      .orderBy(sql`RANDOM()`)
       .limit(limit)
       .offset(offset);
 
@@ -733,6 +733,17 @@ export async function runTestCases(data: {
       return { success: false, error: 'Unauthorized' };
     }
 
+    // Get question details to check if order-independent comparison is needed
+    const [question] = await db
+      .select()
+      .from(contestQuestions)
+      .where(eq(contestQuestions.id, data.questionId))
+      .limit(1);
+
+    const isOrderIndependent = question?.title?.toLowerCase().includes('subset') || 
+                               question?.title?.toLowerCase().includes('combination') ||
+                               question?.title?.toLowerCase().includes('permutation');
+
     // Helper function to normalize output for comparison
     const normalizeOutput = (str: string) => {
       return str
@@ -757,6 +768,39 @@ export async function runTestCases(data: {
             .replace(/\s+/g, ' ');     // Normalize multiple spaces to single space
         })
         .join('\n');
+    };
+
+    // Helper function for order-independent comparison (for subsets, combinations, etc.)
+    const compareOrderIndependent = (expected: string, actual: string): boolean => {
+      try {
+        const normalizedExpected = normalizeOutput(expected);
+        const normalizedActual = normalizeOutput(actual);
+
+        // Parse the arrays
+        const expectedArray = JSON.parse(normalizedExpected);
+        const actualArray = JSON.parse(normalizedActual);
+
+        if (!Array.isArray(expectedArray) || !Array.isArray(actualArray)) {
+          return normalizedExpected === normalizedActual;
+        }
+
+        if (expectedArray.length !== actualArray.length) {
+          return false;
+        }
+
+        // Sort both arrays by their string representation for comparison
+        const sortArray = (arr: any[]) => {
+          return arr.map(item => JSON.stringify(Array.isArray(item) ? item.sort() : item)).sort();
+        };
+
+        const sortedExpected = sortArray(expectedArray);
+        const sortedActual = sortArray(actualArray);
+
+        return JSON.stringify(sortedExpected) === JSON.stringify(sortedActual);
+      } catch (e) {
+        // If JSON parsing fails, fall back to string comparison
+        return normalizeOutput(expected) === normalizeOutput(actual);
+      }
     };
 
     // Helper function to convert escaped newlines to actual newlines in input
@@ -811,9 +855,15 @@ export async function runTestCases(data: {
           continue;
         }
 
-        const normalizedExpected = normalizeOutput(testCase.expectedOutput);
-        const normalizedActual = normalizeOutput(result.output || '');
-        const passed = normalizedExpected === normalizedActual;
+        // Use order-independent comparison for specific question types
+        let passed: boolean;
+        if (isOrderIndependent) {
+          passed = compareOrderIndependent(testCase.expectedOutput, result.output || '');
+        } else {
+          const normalizedExpected = normalizeOutput(testCase.expectedOutput);
+          const normalizedActual = normalizeOutput(result.output || '');
+          passed = normalizedExpected === normalizedActual;
+        }
 
         results.push({
           testCaseId: testCase.id,
@@ -854,6 +904,17 @@ export async function submitSolution(data: {
       return { success: false, error: 'Unauthorized' };
     }
 
+    // Get question details to check if order-independent comparison is needed
+    const [question] = await db
+      .select()
+      .from(contestQuestions)
+      .where(eq(contestQuestions.id, data.questionId))
+      .limit(1);
+
+    const isOrderIndependent = question?.title?.toLowerCase().includes('subset') || 
+                               question?.title?.toLowerCase().includes('combination') ||
+                               question?.title?.toLowerCase().includes('permutation');
+
     // Helper function to normalize output for comparison
     const normalizeOutput = (str: string) => {
       return str
@@ -878,6 +939,39 @@ export async function submitSolution(data: {
             .replace(/\s+/g, ' ');     // Normalize multiple spaces to single space
         })
         .join('\n');
+    };
+
+    // Helper function for order-independent comparison (for subsets, combinations, etc.)
+    const compareOrderIndependent = (expected: string, actual: string): boolean => {
+      try {
+        const normalizedExpected = normalizeOutput(expected);
+        const normalizedActual = normalizeOutput(actual);
+
+        // Parse the arrays
+        const expectedArray = JSON.parse(normalizedExpected);
+        const actualArray = JSON.parse(normalizedActual);
+
+        if (!Array.isArray(expectedArray) || !Array.isArray(actualArray)) {
+          return normalizedExpected === normalizedActual;
+        }
+
+        if (expectedArray.length !== actualArray.length) {
+          return false;
+        }
+
+        // Sort both arrays by their string representation for comparison
+        const sortArray = (arr: any[]) => {
+          return arr.map(item => JSON.stringify(Array.isArray(item) ? item.sort() : item)).sort();
+        };
+
+        const sortedExpected = sortArray(expectedArray);
+        const sortedActual = sortArray(actualArray);
+
+        return JSON.stringify(sortedExpected) === JSON.stringify(sortedActual);
+      } catch (e) {
+        // If JSON parsing fails, fall back to string comparison
+        return normalizeOutput(expected) === normalizeOutput(actual);
+      }
     };
 
     // Helper function to convert escaped newlines to actual newlines in input
@@ -938,10 +1032,17 @@ export async function submitSolution(data: {
           break;
         }
 
-        const normalizedExpected = normalizeOutput(testCase.expectedOutput);
-        const normalizedActual = normalizeOutput(result.output || '');
+        // Use order-independent comparison for specific question types
+        let isCorrect: boolean;
+        if (isOrderIndependent) {
+          isCorrect = compareOrderIndependent(testCase.expectedOutput, result.output || '');
+        } else {
+          const normalizedExpected = normalizeOutput(testCase.expectedOutput);
+          const normalizedActual = normalizeOutput(result.output || '');
+          isCorrect = normalizedExpected === normalizedActual;
+        }
         
-        if (normalizedExpected === normalizedActual) {
+        if (isCorrect) {
           passedTests++;
           totalScore += testCase.points;
         } else {
@@ -1084,24 +1185,19 @@ async function updateLeaderboard(contestId: string, userId: string) {
       // Calculate total score
       const totalScore = acceptedSubmissions.reduce((sum, sub) => sum + (sub.score || 0), 0);
       
-      // Calculate cumulative time: sum of time taken for each problem
-      // Time is calculated from contest start to when each problem was first solved
-      let totalTimeMinutes = 0;
-      const solvedQuestions = new Set<string>();
-      
-      for (const submission of acceptedSubmissions) {
-        // Only count first accepted submission for each question
-        if (!solvedQuestions.has(submission.questionId)) {
-          solvedQuestions.add(submission.questionId);
-          const timeForThisProblem = Math.floor(
-            (new Date(submission.submittedAt).getTime() - new Date(contest.startTime).getTime()) / 60000
-          );
-          totalTimeMinutes += timeForThisProblem;
-        }
-      }
-
-      const problemsSolved = solvedQuestions.size;
+      // Calculate total time: time from contest start to LAST accepted submission
+      // This shows how long the user took to solve all their problems
       const lastSubmission = acceptedSubmissions[acceptedSubmissions.length - 1].submittedAt;
+      const totalTimeMinutes = Math.floor(
+        (new Date(lastSubmission).getTime() - new Date(contest.startTime).getTime()) / 60000
+      );
+      
+      // Count unique problems solved
+      const solvedQuestions = new Set<string>();
+      for (const submission of acceptedSubmissions) {
+        solvedQuestions.add(submission.questionId);
+      }
+      const problemsSolved = solvedQuestions.size;
 
       await db
         .update(contestLeaderboard)

@@ -22,7 +22,7 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { addExistingQuestionToContest, getAllQuestionsFromLibrary } from '@/actions/contest.actions';
-import { getAllTopics } from '@/actions/admin-questions.actions';
+import { getAllTopics, getAdminTestCases } from '@/actions/admin-questions.actions';
 import { toast } from 'sonner';
 import { Search, Plus, Loader2, BookOpen, TestTube, Tag } from 'lucide-react';
 
@@ -39,6 +39,16 @@ interface Question {
   createdAt: Date;
 }
 
+interface TestCase {
+  id: string;
+  questionTitle: string;
+  input: string;
+  expectedOutput: string;
+  isSample: boolean;
+  isHidden: boolean;
+  points: number;
+}
+
 interface QuestionLibraryProps {
   contestId: string;
   orderIndex: number;
@@ -50,10 +60,13 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
   const [isLoading, setIsLoading] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
   const [topicFilter, setTopicFilter] = useState<string>('all');
   const [topics, setTopics] = useState<string[]>([]);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+  const [selectedTestCases, setSelectedTestCases] = useState<TestCase[]>([]);
+  const [loadingTestCases, setLoadingTestCases] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -68,6 +81,15 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
     }
   }, [open]);
 
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   // Reset and reload questions when filters change
   useEffect(() => {
     if (open) {
@@ -76,7 +98,7 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
       setHasMore(true);
       loadQuestions(1);
     }
-  }, [open, searchQuery, difficultyFilter, topicFilter]);
+  }, [open, debouncedSearch, difficultyFilter, topicFilter]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -127,7 +149,7 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
       const result = await getAllQuestionsFromLibrary({
         page: currentPage,
         limit: 20,
-        search: searchQuery,
+        search: debouncedSearch,
         difficulty: difficultyFilter,
         topic: topicFilter,
       });
@@ -153,6 +175,26 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
       setIsLoading(false);
       setLoadingMore(false);
     }
+  };
+
+  const loadTestCases = async (questionTitle: string) => {
+    setLoadingTestCases(true);
+    try {
+      const testCases = await getAdminTestCases(questionTitle);
+      // Show only sample test cases (first 2)
+      const sampleTestCases = testCases.filter(tc => tc.isSample).slice(0, 2);
+      setSelectedTestCases(sampleTestCases);
+    } catch (error: any) {
+      console.error('Failed to load test cases:', error);
+      setSelectedTestCases([]);
+    } finally {
+      setLoadingTestCases(false);
+    }
+  };
+
+  const handleQuestionClick = (question: Question) => {
+    setSelectedQuestion(question);
+    loadTestCases(question.title);
   };
 
   const handleAddQuestion = async (question: Question) => {
@@ -271,7 +313,7 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
                     <Card
                       key={`${question.id}-${index}`}
                       className="hover:border-primary/50 transition-colors cursor-pointer"
-                      onClick={() => setSelectedQuestion(question)}
+                      onClick={() => handleQuestionClick(question)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-4">
@@ -414,6 +456,48 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
                   </div>
                 </div>
               )}
+
+              {/* Sample Test Cases */}
+              <div>
+                <h4 className="font-semibold mb-2 flex items-center gap-2">
+                  <TestTube className="h-4 w-4" />
+                  Sample Test Cases
+                </h4>
+                {loadingTestCases ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : selectedTestCases.length > 0 ? (
+                  <div className="space-y-3">
+                    {selectedTestCases.map((testCase, idx) => (
+                      <Card key={testCase.id} className="border-2">
+                        <CardContent className="p-3">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-semibold">Example {idx + 1}</span>
+                              <Badge variant="outline" className="text-xs">{testCase.points} points</Badge>
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-muted-foreground mb-1">Input:</p>
+                              <pre className="bg-muted/50 p-2 rounded text-xs font-mono overflow-x-auto border whitespace-pre-wrap">
+                                {testCase.input.replace(/\\n/g, '\n')}
+                              </pre>
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-muted-foreground mb-1">Expected Output:</p>
+                              <pre className="bg-muted/50 p-2 rounded text-xs font-mono overflow-x-auto border whitespace-pre-wrap">
+                                {testCase.expectedOutput.replace(/\\n/g, '\n')}
+                              </pre>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No sample test cases available</p>
+                )}
+              </div>
 
               <div className="flex justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={() => setSelectedQuestion(null)}>

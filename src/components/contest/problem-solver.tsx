@@ -78,6 +78,11 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
     const end = new Date(contest.endTime).getTime();
     return now > end;
   });
+  
+  // Resizable test results panel
+  const [testPanelHeight, setTestPanelHeight] = useState(300);
+  const [isResizing, setIsResizing] = useState(false);
+  const testPanelRef = useRef<HTMLDivElement>(null);
 
   // Load submissions from localStorage on mount
   useEffect(() => {
@@ -126,6 +131,43 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
 
     return () => clearInterval(interval);
   }, [contest.endTime]);
+
+  // Handle resizing of test results panel
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing || !testPanelRef.current) return;
+      
+      const container = testPanelRef.current.parentElement;
+      if (!container) return;
+      
+      const containerRect = container.getBoundingClientRect();
+      const newHeight = containerRect.bottom - e.clientY;
+      
+      // Min 150px, Max 80% of container height
+      const minHeight = 150;
+      const maxHeight = containerRect.height * 0.8;
+      
+      setTestPanelHeight(Math.min(Math.max(newHeight, minHeight), maxHeight));
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing]);
 
   const handleLanguageChange = (newLang: string) => {
     setLanguage(newLang);
@@ -555,13 +597,26 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
             />
           </div>
 
-          {/* Test Results Panel */}
+          {/* Test Results Panel - Resizable */}
           {testResults.length > 0 && (
-            <div className="border-t bg-background p-4 max-h-72 overflow-y-auto shrink-0 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
-              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <Award className="h-4 w-4" />
-                Test Results ({testResults.filter(r => r.passed).length}/{testResults.length} Passed)
-              </h3>
+            <div 
+              ref={testPanelRef}
+              className="border-t bg-background shrink-0 flex flex-col relative"
+              style={{ height: `${testPanelHeight}px` }}
+            >
+              {/* Resize Handle */}
+              <div 
+                className="absolute top-0 left-0 right-0 h-1 cursor-ns-resize hover:bg-blue-500 transition-colors z-10 group"
+                onMouseDown={() => setIsResizing(true)}
+              >
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-1 bg-gray-400 dark:bg-gray-600 rounded-full group-hover:bg-blue-500 transition-colors" />
+              </div>
+
+              <div className="p-4 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <Award className="h-4 w-4" />
+                  Test Results ({testResults.filter(r => r.passed).length}/{testResults.length} Passed)
+                </h3>
               <div className="space-y-2">
                 {testResults.map((result: any, index: number) => (
                   <Card 
@@ -589,6 +644,22 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
                           )}
                         </div>
                       </div>
+                      
+                      {/* Show output for PASSED tests with green styling */}
+                      {result.passed && (
+                        <div className="space-y-2 text-xs mt-3">
+                          <div>
+                            <p className="text-green-700 dark:text-green-300 font-semibold mb-1">✅ Output:</p>
+                            <pre className="bg-green-50 dark:bg-green-950/30 p-2 rounded font-mono overflow-x-auto border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300">{result.actual}</pre>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground font-semibold mb-1">Expected:</p>
+                            <pre className="bg-muted/50 p-2 rounded font-mono overflow-x-auto border text-xs">{result.expected}</pre>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Show output for FAILED tests with red styling */}
                       {!result.passed && (
                         <div className="space-y-2 text-xs mt-3">
                           {result.error && result.error.includes('Runtime Error') && (
@@ -610,8 +681,8 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
                                 <pre className="bg-muted p-2 rounded font-mono overflow-x-auto border">{result.expected}</pre>
                               </div>
                               <div>
-                                <p className="text-muted-foreground font-semibold mb-1">Got:</p>
-                                <pre className="bg-muted p-2 rounded font-mono overflow-x-auto border">{result.actual}</pre>
+                                <p className="text-red-700 dark:text-red-300 font-semibold mb-1">❌ Got:</p>
+                                <pre className="bg-red-50 dark:bg-red-950/30 p-2 rounded font-mono overflow-x-auto border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">{result.actual}</pre>
                               </div>
                             </>
                           )}
@@ -620,6 +691,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
                     </CardContent>
                   </Card>
                 ))}
+              </div>
               </div>
             </div>
           )}
