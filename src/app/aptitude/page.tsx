@@ -103,7 +103,7 @@ export default function AptitudePage() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-6xl">
+    <div className="container mx-auto py-8 px-4 max-w-7xl">
       {/* Top nav - only show on questions page */}
       {selectedTopic && (
         <div className="flex items-center gap-4 mb-6 flex-wrap">
