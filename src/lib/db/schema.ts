@@ -97,6 +97,19 @@ export const verificationTokens = pgTable('verificationToken', {
 // JOBS SYSTEM TABLES
 // ============================================
 
+export const questions = pgTable('questions', {
+  s_no: integer('s_no'),
+  category: text('category'),
+  question: text('question'),
+  topic: text('topic'),        // Use this to differentiate topics
+  option_a: text('option_a').default(''),
+  option_b: text('option_b').default(''),
+  option_c: text('option_c').default(''),
+  option_d: text('option_d').default(''),
+  answer: text('answer'),
+  explanation: text('explanation'),
+});
+
 export const jobs = pgTable('jobs', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   title: text('title').notNull(),

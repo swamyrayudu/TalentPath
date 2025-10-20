@@ -20,6 +20,7 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
+import { toast } from 'sonner';
 
 
 export default function AdminAptitudePage() {
@@ -94,49 +95,81 @@ export default function AdminAptitudePage() {
   }
 
   // Submit create or update
-  async function submitForm() {
-    const url = '/api/admin/aptitude';
-    let res;
+async function submitForm() {
+  if (!validateForm()) return;
+  
+  const url = '/api/admin/aptitude';
+  let res;
 
-    if (editingQuestionId) {
-      res = await fetch(url, {
-        method: 'PATCH',
-        body: JSON.stringify({ id: editingQuestionId, ...formData }),
-        headers: { 'Content-Type': 'application/json' },
-      });
-    } else {
-      res = await fetch(url, {
-        method: 'POST',
-        body: JSON.stringify(formData),
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+  // Use selectedTopic for new questions
+  const questionData = {
+    ...formData,
+    topic: selectedTopic || formData.topic
+  };
 
-    const data = await res.json();
-    if (data.success) {
-      // Refresh questions after change
-      if (selectedTopic) {
-        setLoading(true);
-        fetch(`/api/aptitude?topic=${selectedTopic}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data.success) setQuestions(data.questions);
-          })
-          .finally(() => {
-            setLoading(false);
-            cancelEdit();
-          });
-      }
-    } else {
-      alert('Failed to save question');
-    }
+  if (editingQuestionId) {
+    res = await fetch(url, {
+      method: 'PATCH',
+      body: JSON.stringify({ s_no: editingQuestionId, ...questionData }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } else {
+    res = await fetch(url, {
+      method: 'POST',
+      body: JSON.stringify(questionData),
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
+
+  const data = await res.json();
+  if (data.success) {
+    if (selectedTopic) {
+      setLoading(true);
+      fetch(`/api/aptitude?topic=${selectedTopic}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) setQuestions(data.questions);
+        })
+        .finally(() => {
+          setLoading(false);
+          cancelEdit();
+        });
+    }
+
+
+  
+    if (data.success) {
+  toast.success(editingQuestionId ? 'Question updated successfully' : 'Question created successfully');
+  // rest is unchanged
+} else {
+  toast.error(data.error || 'Failed to save question');
+}
+
+
+  } else {
+    alert(data.error || 'Failed to save question');
+  }
+}
+
+// Validate form before submission
+function validateForm() {
+  if (!formData.question.trim()) {
+    alert('Question text is required');
+    return false;
+  }
+  if (!selectedTopic && !formData.topic) {
+    alert('Topic is required');
+    return false;
+  }
+  return true;
+}
+
 
   // Delete question
   async function deleteQuestion(id: number) {
     if (!confirm('Are you sure you want to delete this question?')) return;
 
-    const res = await fetch(`/api/admin/aptitude?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/admin/aptitude?s_no=${id}`, { method: 'DELETE' });
     const data = await res.json();
     if (data.success) {
       setQuestions(questions.filter(q => q.s_no !== id));
