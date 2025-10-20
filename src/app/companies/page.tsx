@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState ,useMemo, memo,useCallback} from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import { Loader2, Building2, Search, TrendingUp, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 type CompanyData = {
@@ -94,6 +95,55 @@ export default function CompaniesPage() {
       </div>
     );
   }
+const CompanyLogo = memo(({ companyName }: { companyName: string }) => {
+  const [logoError, setLogoError] = useState(false);
+  const [logoLoading, setLogoLoading] = useState(true);
+  const [currentSourceIndex, setCurrentSourceIndex] = useState(0);
+  
+  const logoSources = useMemo(() => {
+    const domain = companyName.toLowerCase().replace(/\s+/g, '') + '.com';
+    return [
+      `https://logo.clearbit.com/${domain}`,
+      `https://img.logo.dev/${domain}?token=pk_X-yFQbLvSf6D9V0wXd1yEQ`,
+      `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+    ];
+  }, [companyName]);
+  
+  const handleError = useCallback(() => {
+    if (currentSourceIndex < logoSources.length - 1) {
+      setCurrentSourceIndex(prev => prev + 1);
+    } else {
+      setLogoError(true);
+      setLogoLoading(false);
+    }
+  }, [currentSourceIndex, logoSources.length]);
+  
+  if (logoError) {
+    return (
+      <div className="w-12 h-12 flex items-center justify-center bg-gradient-to-br from-primary/20 to-purple-600/20 rounded-xl">
+        <Building2 className="w-6 h-6 text-primary" />
+      </div>
+    );
+  }
+  
+  return (
+    <div className="w-12 h-12 relative overflow-hidden rounded-xl bg-white/50 backdrop-blur-sm border border-white/20 shadow-lg">
+      {logoLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/50">
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+        </div>
+      )}
+      <img
+        src={logoSources[currentSourceIndex]}
+        alt={`${companyName} logo`}
+        className={cn("w-full h-full object-contain p-1.5", logoLoading ? "opacity-0" : "opacity-100")}
+        onLoad={() => setLogoLoading(false)}
+        onError={handleError}
+        loading="lazy"
+      />
+    </div>
+  );
+});
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
@@ -165,7 +215,14 @@ export default function CompaniesPage() {
                     onClick={() => handleCompanyClick(company.name)}
                   >
                     <span className="font-semibold text-left group-hover:text-primary transition-colors">
-                      {company.name}
+                     <div className='flex '>
+                      <div className='size-12'>
+                         <CompanyLogo companyName={company.name || ''} />
+                      </div>
+                      <div className='pt-3 text-xl pl-4'>
+                        {company.name}
+                      </div>
+                     </div>
                     </span>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <TrendingUp className="h-3 w-3" />
