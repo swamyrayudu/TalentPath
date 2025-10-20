@@ -281,3 +281,9 @@ export default function AdminAptitudePage() {
     </div>
   );
 }
+
+
+
+
+
+
