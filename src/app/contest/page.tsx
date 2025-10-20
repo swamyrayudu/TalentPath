@@ -2,8 +2,9 @@ import { getContests } from '@/actions/contest.actions';
 import { ContestCard } from '@/components/contest/contest-card';
 import { CreateContestDialog } from '@/components/contest/create-contest-dialog';
 import { Button } from '@/components/ui/button';
-import { Plus, Trophy } from 'lucide-react';
+import { Plus, Trophy, LogIn } from 'lucide-react';
 import { auth } from '@/lib/auth';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -24,13 +25,20 @@ export default async function ContestsPage() {
           </div>
         </div>
 
-        {session?.user && (
+        {session?.user ? (
           <CreateContestDialog>
             <Button size="lg">
               <Plus className="h-5 w-5 mr-2" />
               Create Contest
             </Button>
           </CreateContestDialog>
+        ) : (
+          <Link href="/api/auth/signin">
+            <Button size="lg" variant="outline">
+              <LogIn className="h-5 w-5 mr-2" />
+              Login to Create Contest
+            </Button>
+          </Link>
         )}
       </div>
 
@@ -39,13 +47,20 @@ export default async function ContestsPage() {
           <Trophy className="h-24 w-24 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-2xl font-semibold mb-2">No Contests Available</h2>
           <p className="text-muted-foreground mb-6">Be the first to create a contest!</p>
-          {session?.user && (
+          {session?.user ? (
             <CreateContestDialog>
               <Button size="lg">
                 <Plus className="h-5 w-5 mr-2" />
                 Create First Contest
               </Button>
             </CreateContestDialog>
+          ) : (
+            <Link href="/api/auth/signin">
+              <Button size="lg" variant="outline">
+                <LogIn className="h-5 w-5 mr-2" />
+                Login to Create Contest
+              </Button>
+            </Link>
           )}
         </div>
       ) : (

@@ -104,7 +104,28 @@ export async function getContests() {
       .where(eq(contests.visibility, 'public'))
       .orderBy(desc(contests.startTime));
 
-    return { success: true, data: allContests };
+    // Calculate dynamic status based on current time
+    const now = new Date();
+    const contestsWithStatus = allContests.map(contest => {
+      let status: 'draft' | 'upcoming' | 'live' | 'ended' = 'draft';
+      
+      if (contest.startTime && contest.endTime) {
+        if (now < new Date(contest.startTime)) {
+          status = 'upcoming';
+        } else if (now >= new Date(contest.startTime) && now <= new Date(contest.endTime)) {
+          status = 'live';
+        } else {
+          status = 'ended';
+        }
+      }
+      
+      return {
+        ...contest,
+        status,
+      };
+    });
+
+    return { success: true, data: contestsWithStatus };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -186,7 +207,21 @@ export async function getContest(slug: string) {
       return { success: false, error: 'Contest not found' };
     }
 
-    return { success: true, data: contest };
+    // Calculate dynamic status based on current time
+    const now = new Date();
+    let status: 'draft' | 'upcoming' | 'live' | 'ended' = 'draft';
+    
+    if (contest.startTime && contest.endTime) {
+      if (now < new Date(contest.startTime)) {
+        status = 'upcoming';
+      } else if (now >= new Date(contest.startTime) && now <= new Date(contest.endTime)) {
+        status = 'live';
+      } else {
+        status = 'ended';
+      }
+    }
+
+    return { success: true, data: { ...contest, status } };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
