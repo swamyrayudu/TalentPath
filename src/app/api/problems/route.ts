@@ -21,22 +21,8 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '200');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    console.log('📊 Fetching problems with filters:', {
-      difficulty,
-      platform,
-      topic,
-      company,
-      search,
-      sortBy,
-      sortOrder,
-      limit,
-      offset,
-    });
-
     // Decode company name if it's a slug
     const decodedCompany = company ? decodeURIComponent(company).replace(/-/g, ' ') : null;
-    
-    console.log('🔍 Decoded company:', decodedCompany);
 
     const baseQuery = db.select().from(problems);
     const conditions = [];
@@ -52,7 +38,6 @@ export async function GET(request: NextRequest) {
     if (topic && topic !== 'all' && topic !== 'undefined') {
       // Check both topicTags (for exact match, case-insensitive) and topicSlugs (for slug match)
       const topicSlug = topic.toLowerCase().replace(/\s+/g, '-');
-      console.log('🏷️ Filtering by topic:', topic, '(slug:', topicSlug, ')');
       conditions.push(
         sql`EXISTS (
           SELECT 1 FROM unnest(${problems.topicTags}) AS tag 
@@ -63,7 +48,6 @@ export async function GET(request: NextRequest) {
     if (company && company !== 'all' && company !== 'undefined') {
       // Decode and handle company name properly (convert slug to name)
       const companyName = decodeURIComponent(company).replace(/-/g, ' ');
-      console.log('🏢 Filtering by company:', companyName);
       conditions.push(
         sql`EXISTS (
           SELECT 1 FROM unnest(${problems.companyTags}) AS tag 
@@ -114,8 +98,6 @@ export async function GET(request: NextRequest) {
 
     // Fetch paginated problems
     const result = await query.orderBy(orderByClause).limit(limit).offset(offset);
-
-    console.log(`✅ Retrieved ${result.length}/${total} problems`);
 
     return NextResponse.json({
       success: true,

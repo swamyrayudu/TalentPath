@@ -23,11 +23,17 @@ import {
   Lightbulb, 
   LightbulbOff, 
   CornerDownLeft, 
-  Code2 
+  Code2,
+  Terminal,
+  Settings,
+  Zap,
+  FileCode,
+  MonitorPlay
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LANGUAGE_SNIPPETS } from './snippets';
 import { registerCompletionProviders } from './intellisense';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const LANGUAGES = [
   { 
@@ -165,6 +171,7 @@ export function CodeEditor() {
   const [suggestionsEnabled, setSuggestionsEnabled] = useState(true);
   const [snippetsEnabled, setSnippetsEnabled] = useState(true);
   const [showInputModal, setShowInputModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('editor');
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
   const completionProviderRef = useRef<any>(null);
@@ -291,6 +298,7 @@ export function CodeEditor() {
       executeCode([]);
     } else {
       setShowInputModal(true);
+      setActiveTab('input');
       toast.info(`Please provide ${prompts.length} input(s)`);
     }
   };
@@ -302,6 +310,7 @@ export function CodeEditor() {
     }
 
     setShowInputModal(false);
+    setActiveTab('output');
     executeCode(userInputs);
   };
 
@@ -325,6 +334,7 @@ export function CodeEditor() {
 
     setIsRunning(true);
     setOutput('⏳ Compiling and running...\n');
+    setActiveTab('output');
 
     try {
       const response = await fetch('/api/compile', {
@@ -519,233 +529,559 @@ export function CodeEditor() {
   const currentLang = LANGUAGES.find(l => l.value === language);
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <CardTitle>Code Editor</CardTitle>
-              <Select value={language} onValueChange={handleLanguageChange}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {LANGUAGES.map((lang) => (
-                    <SelectItem key={lang.value} value={lang.value}>
-                      <span className="flex items-center gap-2">
-                        <img 
-                          src={lang.iconUrl} 
-                          alt={lang.label}
-                          className="w-5 h-5"
-                        />
-                        <span>{lang.label}</span>
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-950 dark:via-slate-900 dark:to-gray-950 p-3 sm:p-6">
+      <div className="max-w-[1800px] mx-auto space-y-4 sm:space-y-6">
+        {/* Header Section */}
+        <Card className="border-none shadow-xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl">
+          <CardHeader className="pb-4 sm:pb-6">
+            <div className="flex flex-col gap-4">
+              {/* Title and Language Selector */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg">
+                    <Code2 className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
+                      Code Playground
+                    </CardTitle>
+                  </div>
+                </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button 
-                variant={suggestionsEnabled ? "default" : "outline"} 
-                size="sm" 
-                onClick={toggleSuggestions}
-                title="Toggle IntelliSense (Autocomplete)"
-              >
-                {suggestionsEnabled ? (
-                  <Lightbulb className="h-4 w-4 mr-2" />
-                ) : (
-                  <LightbulbOff className="h-4 w-4 mr-2" />
-                )}
-                IntelliSense
-              </Button>
-              <Button 
-                variant={snippetsEnabled ? "default" : "outline"} 
-                size="sm" 
-                onClick={toggleSnippets}
-                title="Toggle Code Snippets (print, def, list, etc.)"
-              >
-                {snippetsEnabled ? (
-                  <Code2 className="h-4 w-4 mr-2" />
-                ) : (
-                  <Code2 className="h-4 w-4 mr-2 opacity-50" />
-                )}
-                Snippets
-              </Button>
-              <Button variant="outline" size="sm" onClick={copyCode}>
-                {copied ? <CheckCircle2 className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
-                {copied ? 'Copied!' : 'Copy'}
-              </Button>
-              <Button variant="outline" size="sm" onClick={resetCode}>
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Reset
-              </Button>
-              <Button onClick={handleRunClick} disabled={isRunning}>
-                {isRunning ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
-                Run
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <img 
-                  src={currentLang?.iconUrl} 
-                  alt={currentLang?.label}
-                  className="w-5 h-5"
-                />
-                <CardTitle className="text-sm">{currentLang?.label} Editor</CardTitle>
+                <Select value={language} onValueChange={handleLanguageChange}>
+                  <SelectTrigger className="w-full sm:w-[220px] h-11 border-2 hover:border-blue-400 transition-all shadow-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LANGUAGES.map((lang) => (
+                      <SelectItem key={lang.value} value={lang.value}>
+                        <span className="flex items-center gap-2">
+                          <img 
+                            src={lang.iconUrl} 
+                            alt={lang.label}
+                            className="w-5 h-5"
+                          />
+                          <span className="font-medium">{lang.label}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <Badge variant="outline" className="text-xs">
-                Ctrl+Enter • Ctrl+Space
-              </Badge>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap flex-1">
+                  <Button 
+                    variant={suggestionsEnabled ? "default" : "outline"} 
+                    size="sm" 
+                    onClick={toggleSuggestions}
+                    title="Toggle IntelliSense (Autocomplete)"
+                    className="flex-1 sm:flex-none min-w-[100px] shadow-sm"
+                  >
+                    {suggestionsEnabled ? (
+                      <Lightbulb className="h-4 w-4 sm:mr-2" />
+                    ) : (
+                      <LightbulbOff className="h-4 w-4 sm:mr-2" />
+                    )}
+                    <span className="hidden sm:inline">IntelliSense</span>
+                  </Button>
+                  <Button 
+                    variant={snippetsEnabled ? "default" : "outline"} 
+                    size="sm" 
+                    onClick={toggleSnippets}
+                    title="Toggle Code Snippets"
+                    className="flex-1 sm:flex-none min-w-[100px] shadow-sm"
+                  >
+                    <Code2 className={`h-4 w-4 sm:mr-2 ${!snippetsEnabled && 'opacity-50'}`} />
+                    <span className="hidden sm:inline">Snippets</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={copyCode}
+                    className="shadow-sm hover:bg-blue-50 dark:hover:bg-blue-950"
+                  >
+                    {copied ? <CheckCircle2 className="h-4 w-4 sm:mr-2 text-green-500" /> : <Copy className="h-4 w-4 sm:mr-2" />}
+                    <span className="hidden sm:inline">{copied ? 'Copied!' : 'Copy'}</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={resetCode}
+                    className="shadow-sm hover:bg-orange-50 dark:hover:bg-orange-950"
+                  >
+                    <RotateCcw className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Reset</span>
+                  </Button>
+                </div>
+                
+                <Button 
+                  onClick={handleRunClick} 
+                  disabled={isRunning}
+                  size="sm"
+                  className="w-full sm:w-auto sm:min-w-[120px] bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+                >
+                  {isRunning ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Running...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4 mr-2" fill="currentColor" />
+                      Run Code
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </CardHeader>
-          <CardContent className="p-0">
-            <Editor
-              height="500px"
-              language={currentLang?.monacoLang || 'python'}
-              value={code}
-              onChange={(value) => setCode(value || '')}
-              onMount={handleEditorDidMount}
-              theme="vs-dark"
-              options={{
-                minimap: { enabled: false },
-                fontSize: 14,
-                lineNumbers: 'on',
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                tabSize: 4,
-                insertSpaces: true,
-                wordWrap: 'on',
-                quickSuggestions: suggestionsEnabled,
-                suggestOnTriggerCharacters: suggestionsEnabled,
-                acceptSuggestionOnEnter: 'on',
-                tabCompletion: 'on',
-                wordBasedSuggestions: 'matchingDocuments',
-                parameterHints: {
-                  enabled: suggestionsEnabled,
-                },
-                suggest: {
-                  showWords: suggestionsEnabled,
-                  showMethods: suggestionsEnabled,
-                  showFunctions: suggestionsEnabled,
-                  showSnippets: snippetsEnabled,
-                },
-              }}
-            />
-          </CardContent>
         </Card>
 
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
+        {/* Main Content Grid - Desktop View */}
+        <div className="hidden xl:grid grid-cols-2 gap-4 sm:gap-6">
+          {/* Code Editor Section */}
+          <Card className="border-none shadow-xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl overflow-hidden">
+            <CardHeader className="pb-3 bg-gradient-to-r from-slate-100 to-slate-50 dark:from-gray-800 dark:to-gray-850 border-b">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm">Custom Input</CardTitle>
-                {prompts.length > 0 ? (
-                  <Badge 
-                    variant={showInputModal ? "default" : "outline"} 
-                    className="gap-1"
-                  >
-                    {showInputModal ? (
-                      <AlertCircle className="h-3 w-3" />
-                    ) : (
-                      <CheckCircle2 className="h-3 w-3" />
-                    )}
-                    {prompts.length} input{prompts.length > 1 ? 's' : ''} required
-                  </Badge>
-                ) : (
-                  <Badge variant="outline">No inputs needed</Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  <img 
+                    src={currentLang?.iconUrl} 
+                    alt={currentLang?.label}
+                    className="w-5 h-5 sm:w-6 sm:h-6"
+                  />
+                  <CardTitle className="text-sm sm:text-base font-semibold">
+                    {currentLang?.label} Editor
+                  </CardTitle>
+                </div>
+                <Badge variant="outline" className="text-xs flex items-center gap-1 px-2 py-1">
+                  <Zap className="h-3 w-3" />
+                  Ctrl+Enter
+                </Badge>
               </div>
             </CardHeader>
-            <CardContent>
-              {showInputModal && prompts.length > 0 ? (
-                <div className="space-y-4">
-                  <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <p className="text-sm text-blue-700 dark:text-blue-300 mb-3 font-medium">
-                      📝 Please provide the following inputs:
-                    </p>
-                    <div 
-                      className={`space-y-3 ${prompts.length > 4 ? 'max-h-[200px] overflow-y-auto pr-2' : ''}`}
-                      style={{
-                        scrollbarWidth: 'thin',
-                        scrollbarColor: '#3b82f6 transparent'
-                      }}
-                    >
-                      {prompts.map((prompt, index) => (
-                        <div key={index} className="space-y-1">
-                          <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                            {prompt}
-                          </label>
-                          <Input
-                            ref={(el) => {
-                              if (el) {
-                                inputRefs.current[index] = el;
-                              }
-                            }}
-                            placeholder={`Enter value for "${prompt}"`}
-                            value={userInputs[index] || ''}
-                            onChange={(e) => {
-                              const newInputs = [...userInputs];
-                              newInputs[index] = e.target.value;
-                              setUserInputs(newInputs);
-                            }}
-                            onKeyDown={(e) => handleInputKeyDown(e, index)}
-                            className="font-mono text-sm"
-                            autoFocus={index === 0}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <Button 
-                      onClick={handleSubmitInputs} 
-                      disabled={!allInputsFilled}
-                      className="w-full mt-4"
-                      size="sm"
-                    >
-                      <CornerDownLeft className="h-4 w-4 mr-2" />
-                      Submit & Run
-                      {allInputsFilled && <span className="ml-2 text-xs opacity-75">(Press Enter)</span>}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="h-[150px] flex items-center justify-center bg-gray-50 dark:bg-gray-900 rounded border border-dashed border-gray-300 dark:border-gray-700">
-                  <div className="text-center space-y-2">
-                    <CheckCircle2 className="h-8 w-8 mx-auto text-green-500" />
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      No user inputs required for this code
-                    </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">
-                      Click <strong>Run</strong> to execute
-                    </p>
-                  </div>
-                </div>
-              )}
+            <CardContent className="p-0">
+              <div className="relative">
+                <Editor
+                  height="calc(100vh - 280px)"
+                  language={currentLang?.monacoLang || 'python'}
+                  value={code}
+                  onChange={(value) => setCode(value || '')}
+                  onMount={handleEditorDidMount}
+                  theme="vs-dark"
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    lineNumbers: 'on',
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true,
+                    tabSize: 4,
+                    insertSpaces: true,
+                    wordWrap: 'on',
+                    quickSuggestions: suggestionsEnabled,
+                    suggestOnTriggerCharacters: suggestionsEnabled,
+                    acceptSuggestionOnEnter: 'on',
+                    tabCompletion: 'on',
+                    wordBasedSuggestions: 'matchingDocuments',
+                    parameterHints: {
+                      enabled: suggestionsEnabled,
+                    },
+                    suggest: {
+                      showWords: suggestionsEnabled,
+                      showMethods: suggestionsEnabled,
+                      showFunctions: suggestionsEnabled,
+                      showSnippets: snippetsEnabled,
+                    },
+                    padding: { top: 16, bottom: 16 },
+                    smoothScrolling: true,
+                    cursorBlinking: 'smooth',
+                    cursorSmoothCaretAnimation: 'on',
+                  }}
+                />
+              </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Output</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-gray-900 text-gray-100 p-4 rounded font-mono text-sm h-[600px] overflow-auto">
-                <pre className="whitespace-pre-wrap">
-                  {output || '// Output will appear here...'}
-                </pre>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Input/Output Section */}
+          <div className="space-y-4 sm:space-y-6">
+            {/* Custom Input Card */}
+            <Card className="border-none shadow-xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl">
+              <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-b">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Terminal className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
+                    <CardTitle className="text-sm sm:text-base font-semibold">Input Console</CardTitle>
+                  </div>
+                  {prompts.length > 0 ? (
+                    <Badge 
+                      variant={showInputModal ? "default" : "outline"} 
+                      className="gap-1 bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-none"
+                    >
+                      {showInputModal ? (
+                        <AlertCircle className="h-3 w-3" />
+                      ) : (
+                        <CheckCircle2 className="h-3 w-3" />
+                      )}
+                      {prompts.length} input{prompts.length > 1 ? 's' : ''}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-xs">
+                      <CheckCircle2 className="h-3 w-3 mr-1 text-green-500" />
+                      Ready
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="p-4">
+                {showInputModal && prompts.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 border-2 border-blue-200 dark:border-blue-800 rounded-xl">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Settings className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                          Provide Input Values
+                        </p>
+                      </div>
+                      <div 
+                        className={`space-y-3 ${prompts.length > 4 ? 'max-h-[250px] overflow-y-auto pr-2 custom-scrollbar' : ''}`}
+                      >
+                        {prompts.map((prompt, index) => (
+                          <div key={index} className="space-y-2 bg-white dark:bg-gray-900 p-3 rounded-lg border border-blue-100 dark:border-blue-900">
+                            <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white text-xs">
+                                {index + 1}
+                              </span>
+                              {prompt}
+                            </label>
+                            <Input
+                              ref={(el) => {
+                                if (el) {
+                                  inputRefs.current[index] = el;
+                                }
+                              }}
+                              placeholder={`Enter value...`}
+                              value={userInputs[index] || ''}
+                              onChange={(e) => {
+                                const newInputs = [...userInputs];
+                                newInputs[index] = e.target.value;
+                                setUserInputs(newInputs);
+                              }}
+                              onKeyDown={(e) => handleInputKeyDown(e, index)}
+                              className="font-mono text-sm border-2 focus:border-blue-400 transition-colors"
+                              autoFocus={index === 0}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <Button 
+                        onClick={handleSubmitInputs} 
+                        disabled={!allInputsFilled}
+                        className="w-full mt-4 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg disabled:opacity-50"
+                        size="sm"
+                      >
+                        <CornerDownLeft className="h-4 w-4 mr-2" />
+                        Submit & Execute
+                        {allInputsFilled && <span className="ml-2 text-xs opacity-90">(Enter ↵)</span>}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-[180px] flex items-center justify-center bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-900 dark:to-slate-900 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700">
+                    <div className="text-center space-y-3">
+                      <div className="flex justify-center">
+                        <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
+                          <CheckCircle2 className="h-8 w-8 text-green-500" />
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                          No Input Required
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Click <strong className="text-green-600 dark:text-green-400">Run Code</strong> to execute
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Output Card */}
+            <Card className="border-none shadow-xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl">
+              <CardHeader className="pb-3 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 border-b">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg">
+                    <Terminal className="h-4 w-4 text-white" />
+                  </div>
+                  <CardTitle className="text-sm sm:text-base font-semibold">Output Console</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950 text-gray-100 p-4 sm:p-6 font-mono text-xs sm:text-sm h-[400px] sm:h-[calc(100vh-520px)] overflow-auto custom-scrollbar">
+                  <pre className="whitespace-pre-wrap leading-relaxed">
+                    {output || (
+                      <span className="text-gray-500 flex items-center gap-2">
+                        <Terminal className="h-4 w-4" />
+                        Output will appear here after execution...
+                      </span>
+                    )}
+                  </pre>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Mobile Tabbed View */}
+        <div className="xl:hidden">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl shadow-lg h-12 p-1">
+              <TabsTrigger 
+                value="editor" 
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-slate-500 data-[state=active]:to-slate-600 data-[state=active]:text-white font-medium"
+              >
+                <FileCode className="h-4 w-4 mr-2" />
+                Editor
+              </TabsTrigger>
+              <TabsTrigger 
+                value="input"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white font-medium relative"
+              >
+                <Terminal className="h-4 w-4 mr-2" />
+                Input
+                {prompts.length > 0 && (
+                  <Badge className="ml-2 h-5 w-5 p-0 flex items-center justify-center bg-red-500 text-white text-xs">
+                    {prompts.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="output"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-600 data-[state=active]:text-white font-medium"
+              >
+                <MonitorPlay className="h-4 w-4 mr-2" />
+                Output
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Editor Tab */}
+            <TabsContent value="editor" className="mt-4">
+              <Card className="border-none shadow-xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl overflow-hidden">
+                <CardHeader className="pb-3 bg-gradient-to-r from-slate-100 to-slate-50 dark:from-gray-800 dark:to-gray-850 border-b">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <img 
+                        src={currentLang?.iconUrl} 
+                        alt={currentLang?.label}
+                        className="w-5 h-5"
+                      />
+                      <CardTitle className="text-sm font-semibold">
+                        {currentLang?.label} Editor
+                      </CardTitle>
+                    </div>
+                    <Badge variant="outline" className="text-xs flex items-center gap-1 px-2 py-1">
+                      <Zap className="h-3 w-3" />
+                      Ctrl+Enter
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="relative">
+                    <Editor
+                      height="calc(100vh - 350px)"
+                      language={currentLang?.monacoLang || 'python'}
+                      value={code}
+                      onChange={(value) => setCode(value || '')}
+                      onMount={handleEditorDidMount}
+                      theme="vs-dark"
+                      options={{
+                        minimap: { enabled: false },
+                        fontSize: 13,
+                        lineNumbers: 'on',
+                        scrollBeyondLastLine: false,
+                        automaticLayout: true,
+                        tabSize: 4,
+                        insertSpaces: true,
+                        wordWrap: 'on',
+                        quickSuggestions: suggestionsEnabled,
+                        suggestOnTriggerCharacters: suggestionsEnabled,
+                        acceptSuggestionOnEnter: 'on',
+                        tabCompletion: 'on',
+                        wordBasedSuggestions: 'matchingDocuments',
+                        parameterHints: {
+                          enabled: suggestionsEnabled,
+                        },
+                        suggest: {
+                          showWords: suggestionsEnabled,
+                          showMethods: suggestionsEnabled,
+                          showFunctions: suggestionsEnabled,
+                          showSnippets: snippetsEnabled,
+                        },
+                        padding: { top: 12, bottom: 12 },
+                        smoothScrolling: true,
+                        cursorBlinking: 'smooth',
+                        cursorSmoothCaretAnimation: 'on',
+                      }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Input Tab */}
+            <TabsContent value="input" className="mt-4">
+              <Card className="border-none shadow-xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl">
+                <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-b">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Terminal className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
+                      <CardTitle className="text-sm sm:text-base font-semibold">Input Console</CardTitle>
+                    </div>
+                    {prompts.length > 0 ? (
+                      <Badge 
+                        variant={showInputModal ? "default" : "outline"} 
+                        className="gap-1 bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-none"
+                      >
+                        {showInputModal ? (
+                          <AlertCircle className="h-3 w-3" />
+                        ) : (
+                          <CheckCircle2 className="h-3 w-3" />
+                        )}
+                        {prompts.length} input{prompts.length > 1 ? 's' : ''}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">
+                        <CheckCircle2 className="h-3 w-3 mr-1 text-green-500" />
+                        Ready
+                      </Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4">
+                  {showInputModal && prompts.length > 0 ? (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 border-2 border-blue-200 dark:border-blue-800 rounded-xl">
+                        <div className="flex items-center gap-2 mb-4">
+                          <Settings className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                            Provide Input Values
+                          </p>
+                        </div>
+                        <div 
+                          className={`space-y-3 ${prompts.length > 4 ? 'max-h-[calc(100vh-450px)] overflow-y-auto pr-2 custom-scrollbar' : ''}`}
+                        >
+                          {prompts.map((prompt, index) => (
+                            <div key={index} className="space-y-2 bg-white dark:bg-gray-900 p-3 rounded-lg border border-blue-100 dark:border-blue-900">
+                              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white text-xs">
+                                  {index + 1}
+                                </span>
+                                {prompt}
+                              </label>
+                              <Input
+                                ref={(el) => {
+                                  if (el) {
+                                    inputRefs.current[index] = el;
+                                  }
+                                }}
+                                placeholder={`Enter value...`}
+                                value={userInputs[index] || ''}
+                                onChange={(e) => {
+                                  const newInputs = [...userInputs];
+                                  newInputs[index] = e.target.value;
+                                  setUserInputs(newInputs);
+                                }}
+                                onKeyDown={(e) => handleInputKeyDown(e, index)}
+                                className="font-mono text-sm border-2 focus:border-blue-400 transition-colors"
+                                autoFocus={index === 0}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <Button 
+                          onClick={handleSubmitInputs} 
+                          disabled={!allInputsFilled}
+                          className="w-full mt-4 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg disabled:opacity-50"
+                          size="sm"
+                        >
+                          <CornerDownLeft className="h-4 w-4 mr-2" />
+                          Submit & Execute
+                          {allInputsFilled && <span className="ml-2 text-xs opacity-90">(Enter ↵)</span>}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="h-[calc(100vh-400px)] flex items-center justify-center bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-900 dark:to-slate-900 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700">
+                      <div className="text-center space-y-3">
+                        <div className="flex justify-center">
+                          <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
+                            <CheckCircle2 className="h-8 w-8 text-green-500" />
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                            No Input Required
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Click <strong className="text-green-600 dark:text-green-400">Run Code</strong> to execute
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Output Tab */}
+            <TabsContent value="output" className="mt-4">
+              <Card className="border-none shadow-xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl">
+                <CardHeader className="pb-3 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 border-b">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg">
+                      <Terminal className="h-4 w-4 text-white" />
+                    </div>
+                    <CardTitle className="text-sm sm:text-base font-semibold">Output Console</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950 text-gray-100 p-4 font-mono text-xs sm:text-sm h-[calc(100vh-350px)] overflow-auto custom-scrollbar">
+                    <pre className="whitespace-pre-wrap leading-relaxed">
+                      {output || (
+                        <span className="text-gray-500 flex items-center gap-2">
+                          <Terminal className="h-4 w-4" />
+                          Output will appear here after execution...
+                        </span>
+                      )}
+                    </pre>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
+
+      {/* Custom Scrollbar Styles */}
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(0, 0, 0, 0.1);
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: linear-gradient(to bottom, #3b82f6, #6366f1);
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(to bottom, #2563eb, #4f46e5);
+        }
+      `}</style>
     </div>
   );
 }
