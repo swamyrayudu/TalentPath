@@ -26,8 +26,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
-    updateAge: 24 * 60 * 60, // Update session every 24 hours
+    updateAge: 7 * 24 * 60 * 60, // Only update session every 7 days (reduced from 24h)
   },
+  // Disable unnecessary redirects and session checks
+  useSecureCookies: process.env.NODE_ENV === 'production',
   callbacks: {
     async jwt({ token, user, trigger, session }) {
       // Initial sign in - store user data in token

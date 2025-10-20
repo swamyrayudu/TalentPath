@@ -11,18 +11,15 @@ export async function middleware(request: NextRequest) {
   // defensive check here so the function is safe if reused.)
   if (!pathname.startsWith('/admin')) return NextResponse.next();
 
-  // Try to get the NextAuth JWT from the request.
-  // Prefer using NEXTAUTH_SECRET (production). If it's not set (common in
-  // local development), fall back to calling getToken without the secret so
-  // the middleware can still read the token if present.
-  let token = null as any;
-  try {
-    token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-  } catch (e) {
-    // If getToken throws (missing/incorrect secret), try again without secret
-    // to allow local development. This is NOT recommended for production.
-    token = await getToken({ req: request });
-  }
+  // Get the NextAuth JWT from the request (single call)
+  const token = await getToken({ 
+    req: request, 
+    secret: process.env.NEXTAUTH_SECRET,
+    // Use cookie name to avoid multiple lookups
+    cookieName: process.env.NODE_ENV === 'production' 
+      ? '__Secure-next-auth.session-token' 
+      : 'next-auth.session-token'
+  });
 
   // If there's no token available here, don't redirect at edge level.
   // Some environments (local dev or cookie/secret mismatches) can make
