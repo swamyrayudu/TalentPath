@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation';
-import { getContest, getContestQuestions, getLeaderboard, checkParticipation, getQuestionCompletionStatus } from '@/actions/contest.actions';
+import { getContest, getContestQuestions, getLeaderboard, checkParticipation, getQuestionCompletionStatus, getUserSubmissions } from '@/actions/contest.actions';
 import { ContestHeader } from '@/components/contest/contest-header';
 import { ContestTimer } from '@/components/contest/contest-timer';
 import { QuestionsList } from '@/components/contest/questions-list';
 import { ContestLeaderboard } from '@/components/contest/leaderboard';
 import { JoinContestButton } from '@/components/contest/join-contest-button';
+import { MySubmissionsList } from '@/components/contest/my-submissions-list';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Settings, ArrowLeft } from 'lucide-react';
@@ -45,6 +46,15 @@ export default async function ContestDetailPage({
     const statusResult = await getQuestionCompletionStatus(contest.id, session.user.id);
     if (statusResult.success && statusResult.data) {
       completedQuestionIds = statusResult.data;
+    }
+  }
+
+  // Get user submissions for this contest
+  let userSubmissions: any[] = [];
+  if (session?.user?.id && isParticipant) {
+    const submissionsResult = await getUserSubmissions(contest.id, session.user.id);
+    if (submissionsResult.success && submissionsResult.data) {
+      userSubmissions = submissionsResult.data;
     }
   }
 
@@ -120,8 +130,17 @@ export default async function ContestDetailPage({
             </TabsContent>
 
             <TabsContent value="submissions" className="mt-6">
-              {/* Submissions list will be here */}
-              <p className="text-muted-foreground">Your submissions will appear here</p>
+              {isParticipant && session?.user ? (
+                <MySubmissionsList submissions={userSubmissions} />
+              ) : (
+                <div className="text-center py-16">
+                  <p className="text-muted-foreground">
+                    {!session?.user 
+                      ? 'Please sign in to view your submissions' 
+                      : 'Join the contest to see your submissions'}
+                  </p>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>

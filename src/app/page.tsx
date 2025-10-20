@@ -17,9 +17,33 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { useSession, signIn } from 'next-auth/react';
+import { ContestSubmissionsPreview } from '@/components/home/contest-submissions-preview';
+import { useEffect, useState } from 'react';
 
 export default function Home() {
   const { data: session } = useSession();
+  const [contestStats, setContestStats] = useState<any>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+
+  useEffect(() => {
+    async function fetchContestStats() {
+      if (session?.user?.id) {
+        setLoadingStats(true);
+        try {
+          const response = await fetch('/api/contest-stats');
+          if (response.ok) {
+            const data = await response.json();
+            setContestStats(data);
+          }
+        } catch (error) {
+          console.error('Failed to fetch contest stats:', error);
+        } finally {
+          setLoadingStats(false);
+        }
+      }
+    }
+    fetchContestStats();
+  }, [session?.user?.id]);
 
   const handleGoogleSignIn = async () => {
     await signIn('google', { callbackUrl: '/dashboard' });
@@ -223,6 +247,15 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Contest Submissions Stats for Logged-in Users */}
+      {session?.user && contestStats && (
+        <section className="container mx-auto px-4 py-24">
+          <div className="max-w-4xl mx-auto">
+            <ContestSubmissionsPreview stats={contestStats} />
+          </div>
+        </section>
+      )}
 
       {/* CTA Section */}
       <section className="container mx-auto px-4 py-24">

@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Calendar, Code2, Trophy, Target, TrendingUp, CheckCircle2, Clock, Flame } from 'lucide-react';
 import Link from 'next/link';
+import { getUserContestStats } from '@/actions/contest.actions';
+import { ContestStatsCard } from '@/components/dashboard/contest-stats-card';
 
 export default async function Dashboard() {
   const session = await auth();
@@ -31,6 +33,18 @@ export default async function Dashboard() {
     .leftJoin(problems, eq(userProgress.problemId, problems.id))
     .where(eq(userProgress.userId, userId))
     .orderBy(desc(userProgress.solvedAt));
+
+  // Fetch contest submission statistics
+  const contestStatsResult = await getUserContestStats(userId);
+  const contestStats = contestStatsResult.success && contestStatsResult.data 
+    ? contestStatsResult.data 
+    : {
+        totalSubmissions: 0,
+        totalAccepted: 0,
+        uniqueProblemsSolved: 0,
+        questionStats: [],
+        recentSubmissions: [],
+      };
 
   // Calculate statistics
   const solved = userProgressData.filter(p => p.progress.status === 'solved');
@@ -201,9 +215,9 @@ export default async function Dashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Clock className="h-5 w-5" />
-                  Recent Submissions
+                  Recent DSA Submissions
                 </CardTitle>
-                <CardDescription>Your latest solved problems</CardDescription>
+                <CardDescription>Your latest solved DSA problems</CardDescription>
               </CardHeader>
               <CardContent>
                 {stats.recentSubmissions.length === 0 ? (
@@ -246,6 +260,9 @@ export default async function Dashboard() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Contest Statistics */}
+            <ContestStatsCard stats={contestStats} />
           </div>
 
           {/* Sidebar - 1 column */}

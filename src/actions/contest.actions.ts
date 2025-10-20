@@ -1289,3 +1289,82 @@ export async function getUserRank(contestId: string, userId: string) {
     return { success: false, error: error.message };
   }
 }
+
+// Get User Contest Submissions Statistics
+export async function getUserContestStats(userId: string) {
+  try {
+    // Get all submissions by user
+    const allSubmissions = await db
+      .select({
+        id: contestSubmissions.id,
+        contestId: contestSubmissions.contestId,
+        questionId: contestSubmissions.questionId,
+        questionTitle: contestQuestions.title,
+        verdict: contestSubmissions.verdict,
+        score: contestSubmissions.score,
+        submittedAt: contestSubmissions.submittedAt,
+      })
+      .from(contestSubmissions)
+      .leftJoin(contestQuestions, eq(contestSubmissions.questionId, contestQuestions.id))
+      .where(eq(contestSubmissions.userId, userId))
+      .orderBy(desc(contestSubmissions.submittedAt));
+
+    // Calculate statistics
+    const totalSubmissions = allSubmissions.length;
+    const acceptedSubmissions = allSubmissions.filter(s => s.verdict === 'accepted');
+    const totalAccepted = acceptedSubmissions.length;
+
+    // Count unique problems solved
+    const uniqueProblemsSolved = new Set(
+      acceptedSubmissions.map(s => s.questionId)
+    ).size;
+
+    // Group submissions by question with counts
+    const submissionsByQuestion = allSubmissions.reduce((acc, submission) => {
+      const questionTitle = submission.questionTitle || 'Unknown Question';
+      if (!acc[questionTitle]) {
+        acc[questionTitle] = {
+          questionId: submission.questionId,
+          questionTitle,
+          totalSubmissions: 0,
+          acceptedSubmissions: 0,
+          lastSubmittedAt: submission.submittedAt,
+        };
+      }
+      acc[questionTitle].totalSubmissions++;
+      if (submission.verdict === 'accepted') {
+        acc[questionTitle].acceptedSubmissions++;
+      }
+      // Update last submission time if newer
+      if (submission.submittedAt && 
+          (!acc[questionTitle].lastSubmittedAt || 
+           new Date(submission.submittedAt) > new Date(acc[questionTitle].lastSubmittedAt))) {
+        acc[questionTitle].lastSubmittedAt = submission.submittedAt;
+      }
+      return acc;
+    }, {} as Record<string, {
+      questionId: string;
+      questionTitle: string;
+      totalSubmissions: number;
+      acceptedSubmissions: number;
+      lastSubmittedAt: Date | null;
+    }>);
+
+    // Convert to array and sort by submission count
+    const questionStats = Object.values(submissionsByQuestion)
+      .sort((a, b) => b.totalSubmissions - a.totalSubmissions);
+
+    return {
+      success: true,
+      data: {
+        totalSubmissions,
+        totalAccepted,
+        uniqueProblemsSolved,
+        questionStats,
+        recentSubmissions: allSubmissions.slice(0, 10),
+      },
+    };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
