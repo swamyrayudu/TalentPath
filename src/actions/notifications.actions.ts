@@ -84,6 +84,12 @@ export async function createBulkNotifications(
   metadata?: any
 ) {
   try {
+    console.log('📧 createBulkNotifications called:', {
+      userCount: userIds.length,
+      type,
+      title
+    });
+
     // Get users with their preferences
     const usersWithPrefs = await db
       .select({
@@ -96,6 +102,8 @@ export async function createBulkNotifications(
       .leftJoin(notificationPreferences, eq(users.id, notificationPreferences.userId))
       .where(sql`${users.id} = ANY(${userIds})`);
 
+    console.log('👥 Users with preferences fetched:', usersWithPrefs.length);
+
     // Filter users based on preferences
     const eligibleUserIds = usersWithPrefs.filter(user => {
       if (type === 'job_posted' && user.jobNotifications === false) return false;
@@ -104,7 +112,10 @@ export async function createBulkNotifications(
       return true;
     }).map(user => user.userId);
 
+    console.log('✅ Eligible users after filtering:', eligibleUserIds.length);
+
     if (eligibleUserIds.length === 0) {
+      console.log('⚠️ No eligible users for notifications');
       return { success: true, count: 0 };
     }
 
@@ -117,14 +128,16 @@ export async function createBulkNotifications(
       metadata,
     }));
 
+    console.log('💾 Inserting notifications into database...');
     await db.insert(notifications).values(notificationData);
+    console.log('✅ Notifications inserted successfully:', notificationData.length);
 
     revalidatePath('/dashboard');
     revalidatePath('/api/notifications');
 
     return { success: true, count: eligibleUserIds.length };
   } catch (error) {
-    console.error('Error creating bulk notifications:', error);
+    console.error('❌ Error creating bulk notifications:', error);
     return { success: false, error: 'Failed to create bulk notifications' };
   }
 }
@@ -346,15 +359,19 @@ export async function updateNotificationPreferences(preferences: {
 // Called when admin posts a job
 export async function notifyJobPosted(jobId: string, jobTitle: string, company: string) {
   try {
+    console.log('🎯 notifyJobPosted called for:', { jobId, jobTitle, company });
+    
     // Get all users except admin
     const allUsers = await db.query.users.findMany({
       where: eq(users.role, 'user'),
       columns: { id: true },
     });
 
+    console.log('👥 Total users found (role=user):', allUsers.length);
+
     const userIds = allUsers.map(u => u.id);
 
-    await createBulkNotifications(
+    const result = await createBulkNotifications(
       userIds,
       'job_posted',
       `New Job: ${company}`,
@@ -363,9 +380,10 @@ export async function notifyJobPosted(jobId: string, jobTitle: string, company: 
       { jobId, company }
     );
 
-    return { success: true };
+    console.log('📬 Notification result:', result);
+    return result.success ? { success: true } : result;
   } catch (error) {
-    console.error('Error notifying job posted:', error);
+    console.error('❌ Error notifying job posted:', error);
     return { success: false, error: 'Failed to send job notifications' };
   }
 }

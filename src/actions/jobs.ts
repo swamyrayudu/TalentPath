@@ -31,7 +31,23 @@ export async function createJob(formData: {
   }).returning();
 
   // Send notifications to all users
-  await notifyJobPosted(newJob[0].id, newJob[0].title, newJob[0].company);
+  try {
+    console.log('🔔 Attempting to send job notifications...', {
+      jobId: newJob[0].id,
+      title: newJob[0].title,
+      company: newJob[0].company
+    });
+    
+    const result = await notifyJobPosted(newJob[0].id, newJob[0].title, newJob[0].company);
+    
+    if (result.success) {
+      console.log('✅ Job notifications sent successfully');
+    } else if ('error' in result) {
+      console.error('❌ Failed to send job notifications:', result.error);
+    }
+  } catch (error) {
+    console.error('❌ Error in notifyJobPosted:', error);
+  }
 
   revalidatePath('/admin/jobs');
   revalidatePath('/jobs');
