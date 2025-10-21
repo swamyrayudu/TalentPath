@@ -83,6 +83,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
   const [testPanelHeight, setTestPanelHeight] = useState(300);
   const [isResizing, setIsResizing] = useState(false);
   const testPanelRef = useRef<HTMLDivElement>(null);
+  const mobileDetailsRef = useRef<HTMLDetailsElement>(null);
 
   // Load submissions from localStorage on mount
   useEffect(() => {
@@ -105,6 +106,17 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
       localStorage.setItem(storageKey, JSON.stringify(allSubmissions));
     }
   }, [allSubmissions, contest.id, question.id, userId]);
+
+  // Auto-open mobile details panel when switching to submissions tab
+  useEffect(() => {
+    if (activeTab === 'submissions' && mobileDetailsRef.current && window.innerWidth < 1024) {
+      mobileDetailsRef.current.open = true;
+      // Scroll to the submissions section
+      setTimeout(() => {
+        mobileDetailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [activeTab]);
 
   // Contest timer
   useEffect(() => {
@@ -583,7 +595,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
 
         {/* Mobile Problem Description - Collapsible */}
         <div className="lg:hidden block border-b">
-          <details className="group">
+          <details ref={mobileDetailsRef} className="group">
             <summary className="cursor-pointer p-4 flex items-center justify-between bg-muted/50 hover:bg-muted transition-colors">
               <span className="font-semibold">📖 View Problem</span>
               <span className="text-xs text-muted-foreground group-open:hidden">Tap to expand</span>
@@ -705,7 +717,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
                                 </Badge>
                               </div>
                             </CardHeader>
-                            <CardContent className="p-3 pt-0">
+                            <CardContent className="p-3 pt-0 space-y-2">
                               <div className="grid grid-cols-2 gap-2 text-[10px]">
                                 <div>
                                   <p className="text-muted-foreground">Score</p>
@@ -716,6 +728,26 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
                                   <p className="font-bold text-sm">{submission.passedTestCases}/{submission.totalTestCases}</p>
                                 </div>
                               </div>
+                              
+                              {/* Error message for failed submissions */}
+                              {submission.verdict !== 'accepted' && submission.errorMessage && (
+                                <div className="mt-2 pt-2 border-t border-red-200 dark:border-red-800">
+                                  <p className="text-[9px] font-semibold text-red-600 dark:text-red-400 mb-1">Error:</p>
+                                  <pre className="bg-red-100 dark:bg-red-900/30 p-1.5 rounded text-[9px] font-mono overflow-x-auto border border-red-300 dark:border-red-700 whitespace-pre-wrap break-all max-h-20 line-clamp-3">
+                                    {submission.errorMessage}
+                                  </pre>
+                                </div>
+                              )}
+                              
+                              {/* Success message */}
+                              {submission.verdict === 'accepted' && (
+                                <div className="mt-2 pt-2 border-t border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/20 -mx-3 -mb-3 px-3 pb-3 rounded-b">
+                                  <p className="text-[9px] text-green-700 dark:text-green-300 flex items-center gap-1">
+                                    <CheckCircle2 className="h-2.5 w-2.5" />
+                                    Accepted!
+                                  </p>
+                                </div>
+                              )}
                             </CardContent>
                           </Card>
                         );
