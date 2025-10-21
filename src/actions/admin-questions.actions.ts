@@ -63,7 +63,14 @@ export async function getAdminQuestions({
   try {
     const session = await auth();
     if (!session?.user) {
-      throw new Error("Unauthorized");
+      console.error("Unauthorized: No session found");
+      return {
+        questions: [],
+        totalCount: 0,
+        hasMore: false,
+        page,
+        limit,
+      };
     }
 
     // Build where conditions
@@ -113,6 +120,8 @@ export async function getAdminQuestions({
 
     const hasMore = offset + questions.length < totalCount;
 
+    console.log(`Fetched ${questions.length} questions, total: ${totalCount}, hasMore: ${hasMore}`);
+
     return {
       questions: questions as AdminQuestion[],
       totalCount,
@@ -121,8 +130,14 @@ export async function getAdminQuestions({
       limit,
     };
   } catch (error) {
-    // Error fetching admin questions
-    throw error;
+    console.error("Error fetching admin questions:", error);
+    return {
+      questions: [],
+      totalCount: 0,
+      hasMore: false,
+      page,
+      limit,
+    };
   }
 }
 
@@ -161,18 +176,23 @@ export async function getAdminTestCases(
   try {
     const session = await auth();
     if (!session?.user) {
-      throw new Error("Unauthorized");
+      console.error("Unauthorized: No session found");
+      return [];
     }
+
+    console.log(`Fetching test cases for question: "${questionTitle}"`);
 
     const testCases = await db
       .select()
       .from(adminTestCases)
       .where(eq(adminTestCases.questionTitle, questionTitle))
-      .orderBy(adminTestCases.isSample, adminTestCases.createdAt);
+      .orderBy(desc(adminTestCases.isSample), adminTestCases.createdAt);
 
+    console.log(`Found ${testCases.length} test cases for "${questionTitle}"`);
+    
     return testCases as AdminTestCase[];
-  } catch {
-    // Error fetching test cases
+  } catch (error) {
+    console.error("Error fetching test cases:", error);
     return [];
   }
 }
@@ -465,6 +485,142 @@ export async function getAdminQuestionsStats(): Promise<{
     };
   } catch (error) {
     // Error fetching stats
+    throw error;
+  }
+}
+
+/**
+ * Update admin question
+ */
+export async function updateAdminQuestion(
+  id: string,
+  data: Partial<Omit<AdminQuestion, "id" | "createdAt" | "updatedAt" | "createdBy">>
+): Promise<AdminQuestion> {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      throw new Error("Unauthorized");
+    }
+    // @ts-expect-error - role exists on user but not in type definition
+    if (session.user.role !== "admin") {
+      throw new Error("Unauthorized - Admin access required");
+    }
+
+    // Get the current question
+    const [currentQuestion] = await db
+      .select()
+      .from(adminQuestions)
+      .where(eq(adminQuestions.id, id))
+      .limit(1);
+
+    if (!currentQuestion) {
+      throw new Error("Question not found");
+    }
+
+    // Prevent title changes due to foreign key constraints
+    if (data.title && currentQuestion.title !== data.title) {
+      throw new Error("Cannot change question title. Test cases reference the title. Please create a new question instead.");
+    }
+
+    // Update the question (without changing title)
+    const updateData = { ...data };
+    delete updateData.title; // Remove title from updates
+
+    const [question] = await db
+      .update(adminQuestions)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(adminQuestions.id, id))
+      .returning();
+
+    console.log("Question updated successfully");
+
+    revalidatePath("/admin/questions");
+    revalidatePath("/admin/contests");
+    return question as AdminQuestion;
+  } catch (error) {
+    console.error("Error updating admin question:", error);
+    throw error;
+  }
+}
+
+/**
+ * Delete admin question
+ */
+export async function deleteAdminQuestion(id: string): Promise<boolean> {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      throw new Error("Unauthorized");
+    }
+    // @ts-expect-error - role exists on user but not in type definition
+    if (session.user.role !== "admin") {
+      throw new Error("Unauthorized - Admin access required");
+    }
+
+    await db.delete(adminQuestions).where(eq(adminQuestions.id, id));
+
+    revalidatePath("/admin/questions");
+    revalidatePath("/admin/contests");
+    return true;
+  } catch (error) {
+    console.error("Error deleting admin question:", error);
+    throw error;
+  }
+}
+
+/**
+ * Update admin test case
+ */
+export async function updateAdminTestCase(
+  id: string,
+  data: Partial<Omit<AdminTestCase, "id" | "createdAt">>
+): Promise<AdminTestCase> {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      throw new Error("Unauthorized");
+    }
+    // @ts-expect-error - role exists on user but not in type definition
+    if (session.user.role !== "admin") {
+      throw new Error("Unauthorized - Admin access required");
+    }
+
+    const [testCase] = await db
+      .update(adminTestCases)
+      .set(data)
+      .where(eq(adminTestCases.id, id))
+      .returning();
+
+    revalidatePath("/admin/questions");
+    revalidatePath("/admin/contests");
+    return testCase as AdminTestCase;
+  } catch (error) {
+    console.error("Error updating admin test case:", error);
+    throw error;
+  }
+}
+
+/**
+ * Delete admin test case
+ */
+export async function deleteAdminTestCase(id: string): Promise<boolean> {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      throw new Error("Unauthorized");
+    }
+    // @ts-expect-error - role exists on user but not in type definition
+    if (session.user.role !== "admin") {
+      throw new Error("Unauthorized - Admin access required");
+    }
+
+    await db.delete(adminTestCases).where(eq(adminTestCases.id, id));
+
+    revalidatePath("/admin/questions");
+    revalidatePath("/admin/contests");
+    return true;
+  } catch (error) {
+    console.error("Error deleting admin test case:", error);
     throw error;
   }
 }
