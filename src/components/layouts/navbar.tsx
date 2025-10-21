@@ -37,7 +37,6 @@ import { ModeToggle } from './mode-toggle';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { NotificationBell } from '@/components/notifications/notification-bell';
 
 const navRoutes = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -115,7 +114,6 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center space-x-2">
-            {session?.user && <NotificationBell />}
             <ModeToggle />
 
             <div className="hidden md:block">
