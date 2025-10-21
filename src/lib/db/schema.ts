@@ -392,6 +392,27 @@ export const adminTestCases = pgTable('admin_test_cases', {
 }));
 
 // ============================================
+// APTITUDE RESULTS SYSTEM
+// ============================================
+
+export const aptitudeResults = pgTable('aptitude_results', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  topic: text('topic').notNull(),
+  totalQuestions: integer('total_questions').notNull(),
+  correctAnswers: integer('correct_answers').notNull(),
+  score: integer('score').notNull(), // percentage
+  timeTaken: integer('time_taken'), // in seconds
+  answers: jsonb('answers').notNull(), // Store user answers
+  completedAt: timestamp('completed_at').defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index('idx_aptitude_results_user_id').on(table.userId),
+  topicIdx: index('idx_aptitude_results_topic').on(table.topic),
+  completedAtIdx: index('idx_aptitude_results_completed_at').on(table.completedAt),
+  userTopicIdx: index('idx_aptitude_results_user_topic').on(table.userId, table.topic),
+}));
+
+// ============================================
 // TYPE EXPORTS
 // ============================================
 
@@ -448,6 +469,10 @@ export type AdminQuestion = typeof adminQuestions.$inferSelect;
 export type AdminQuestionInsert = typeof adminQuestions.$inferInsert;
 export type AdminTestCase = typeof adminTestCases.$inferSelect;
 export type AdminTestCaseInsert = typeof adminTestCases.$inferInsert;
+
+// Aptitude Results Types
+export type AptitudeResult = typeof aptitudeResults.$inferSelect;
+export type AptitudeResultInsert = typeof aptitudeResults.$inferInsert;
 
 // ============================================
 // HELPER TYPES

@@ -56,7 +56,7 @@ export default function AptitudePage() {
     }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (Object.keys(userAnswers).length !== questions.length) {
       toast.error('Please answer all questions before submitting!');
       return;
@@ -69,10 +69,37 @@ export default function AptitudePage() {
       }
     });
 
+    const scorePercentage = Math.round((correctCount / questions.length) * 100);
+
     setScore(correctCount);
     setSubmitted(true);
     setCurrentPage(1); // Reset to first page on submission
+    
     toast.success(`Quiz submitted! You scored ${correctCount} out of ${questions.length}`);
+
+    // Save result to database
+    try {
+      const response = await fetch('/api/aptitude/results', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          topic: selectedTopic,
+          totalQuestions: questions.length,
+          correctAnswers: correctCount,
+          score: scorePercentage,
+          answers: userAnswers,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        console.log('Result saved successfully');
+      }
+    } catch (error) {
+      console.error('Error saving result:', error);
+    }
   };
 
   const isCorrect = (questionIndex: number) => {

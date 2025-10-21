@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import { 
   userProgress, 
-  problems, 
+  problems,
+  aptitudeResults,
 } from '@/lib/db/schema';
 import { eq, desc, and, sql } from 'drizzle-orm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +14,7 @@ import { Calendar, Code2, Trophy, Target, TrendingUp, CheckCircle2, Clock, Flame
 import Link from 'next/link';
 import { getUserContestStats } from '@/actions/contest.actions';
 import { ContestStatsCard } from '@/components/dashboard/contest-stats-card';
+import { AptitudeStatsCard } from '@/components/dashboard/aptitude-stats-card';
 
 export default async function Dashboard() {
   const session = await auth();
@@ -45,6 +47,55 @@ export default async function Dashboard() {
         questionStats: [],
         recentSubmissions: [],
       };
+
+  // Fetch aptitude test results
+  const aptitudeResultsData = await db
+    .select()
+    .from(aptitudeResults)
+    .where(eq(aptitudeResults.userId, userId))
+    .orderBy(desc(aptitudeResults.completedAt));
+
+  // Calculate aptitude statistics
+  const aptitudeStats = {
+    totalTests: aptitudeResultsData.length,
+    averageScore: aptitudeResultsData.length > 0
+      ? Math.round(
+          aptitudeResultsData.reduce((sum, r) => sum + r.score, 0) / aptitudeResultsData.length
+        )
+      : 0,
+    bestScore: aptitudeResultsData.length > 0
+      ? Math.max(...aptitudeResultsData.map(r => r.score))
+      : 0,
+    topicStats: (() => {
+      const topicMap = new Map<string, { total: number; count: number; best: number }>();
+      
+      aptitudeResultsData.forEach(result => {
+        const existing = topicMap.get(result.topic) || { total: 0, count: 0, best: 0 };
+        topicMap.set(result.topic, {
+          total: existing.total + result.score,
+          count: existing.count + 1,
+          best: Math.max(existing.best, result.score),
+        });
+      });
+
+      return Array.from(topicMap.entries())
+        .map(([topic, data]) => ({
+          topic,
+          testsCompleted: data.count,
+          averageScore: Math.round(data.total / data.count),
+          bestScore: data.best,
+        }))
+        .sort((a, b) => b.averageScore - a.averageScore);
+    })(),
+    recentTests: aptitudeResultsData.slice(0, 5).map(r => ({
+      id: r.id,
+      topic: r.topic,
+      score: r.score,
+      totalQuestions: r.totalQuestions,
+      correctAnswers: r.correctAnswers,
+      completedAt: r.completedAt,
+    })),
+  };
 
   // Calculate statistics
   const solved = userProgressData.filter(p => p.progress.status === 'solved');
@@ -263,6 +314,9 @@ export default async function Dashboard() {
 
             {/* Contest Statistics */}
             <ContestStatsCard stats={contestStats} />
+
+            {/* Aptitude Statistics */}
+            <AptitudeStatsCard stats={aptitudeStats} />
           </div>
 
           {/* Sidebar - 1 column */}
@@ -328,6 +382,13 @@ export default async function Dashboard() {
                 >
                   <Code2 className="h-5 w-5 text-primary" />
                   <span className="font-medium">Browse Problems</span>
+                </Link>
+                <Link
+                  href="/aptitude"
+                  className="flex items-center gap-2 p-3 rounded-lg border-2 hover:border-primary hover:bg-primary/5 transition-all"
+                >
+                  <Target className="h-5 w-5 text-primary" />
+                  <span className="font-medium">Aptitude Tests</span>
                 </Link>
                 <Link
                   href="/companies"
