@@ -245,70 +245,72 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              Question Library
-            </DialogTitle>
-            <DialogDescription>
-              Browse and add existing questions with test cases to your contest
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-4xl h-[90vh] sm:h-[85vh] flex flex-col p-0">
+          <div className="flex flex-col h-full overflow-hidden">
+            <DialogHeader className="shrink-0 px-6 pt-6 pb-4">
+              <DialogTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                Question Library
+              </DialogTitle>
+              <DialogDescription>
+                Browse and add existing questions with test cases to your contest
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-4">
             {/* Filters */}
-            <div className="flex gap-3 flex-wrap">
-              <div className="flex-1 min-w-[200px] relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search questions..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
+            <div className="shrink-0 px-6 pb-4">
+              <div className="flex gap-3 flex-wrap">
+                <div className="flex-1 min-w-[200px] relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search questions..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Difficulty" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Levels</SelectItem>
+                    <SelectItem value="EASY">Easy</SelectItem>
+                    <SelectItem value="MEDIUM">Medium</SelectItem>
+                    <SelectItem value="HARD">Hard</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={topicFilter} onValueChange={setTopicFilter}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Topic" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Topics</SelectItem>
+                    {topics.map((topic) => (
+                      <SelectItem key={topic} value={topic}>
+                        {topic}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Difficulty" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Levels</SelectItem>
-                  <SelectItem value="EASY">Easy</SelectItem>
-                  <SelectItem value="MEDIUM">Medium</SelectItem>
-                  <SelectItem value="HARD">Hard</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={topicFilter} onValueChange={setTopicFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Topic" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Topics</SelectItem>
-                  {topics.map((topic) => (
-                    <SelectItem key={topic} value={topic}>
-                      {topic}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             {/* Questions List */}
-            {isLoading && page === 1 ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : questions.length === 0 ? (
-              <div className="text-center py-12">
-                <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">
-                  No questions match your filters
-                </p>
-              </div>
-            ) : (
-              <ScrollArea className="h-[500px] pr-4" ref={scrollAreaRef}>
-                <div className="space-y-3">
+            <div className="flex-1 min-h-0 overflow-hidden px-6 pb-6">
+              {isLoading && page === 1 ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : questions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full">
+                  <BookOpen className="h-12 w-12 text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground">
+                    No questions match your filters
+                  </p>
+                </div>
+              ) : (
+                <div className="h-full overflow-y-auto pr-2 -mr-2 space-y-3" ref={scrollAreaRef}>
                   {questions.map((question, index) => (
                     <Card
                       key={`${question.id}-${index}`}
@@ -317,9 +319,9 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 space-y-2">
+                          <div className="flex-1 space-y-2 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-semibold text-lg">{question.title}</h3>
+                              <h3 className="font-semibold text-lg break-words">{question.title}</h3>
                               <Badge 
                                 variant="outline" 
                                 className={getDifficultyColor(question.difficulty)}
@@ -331,7 +333,7 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
                               </Badge>
                             </div>
                             
-                            <p className="text-sm text-muted-foreground line-clamp-2">
+                            <p className="text-sm text-muted-foreground line-clamp-2 break-words">
                               {question.description}
                             </p>
                             
@@ -346,7 +348,7 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
                               </div>
                             )}
                             
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
                               <span className="flex items-center gap-1">
                                 <TestTube className="h-3 w-3" />
                                 {question.testCaseCount} test cases
@@ -362,6 +364,7 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
 
                           <Button
                             size="sm"
+                            className="shrink-0"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleAddQuestion(question);
@@ -393,8 +396,8 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
                     </div>
                   )}
                 </div>
-              </ScrollArea>
-            )}
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -402,121 +405,125 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
       {/* Question Details Dialog */}
       {selectedQuestion && (
         <Dialog open={!!selectedQuestion} onOpenChange={() => setSelectedQuestion(null)}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{selectedQuestion.title}</DialogTitle>
-              <div className="flex items-center gap-2 mt-2">
-                <Badge 
-                  variant="outline" 
-                  className={getDifficultyColor(selectedQuestion.difficulty)}
-                >
-                  {selectedQuestion.difficulty}
-                </Badge>
-                <Badge variant="secondary">{selectedQuestion.points} points</Badge>
-              </div>
-            </DialogHeader>
+          <DialogContent className="max-w-3xl h-[90vh] sm:h-[85vh] flex flex-col p-0">
+            <div className="flex flex-col h-full overflow-hidden">
+              <DialogHeader className="shrink-0 px-6 pt-6 pb-4">
+                <DialogTitle className="break-words">{selectedQuestion.title}</DialogTitle>
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  <Badge 
+                    variant="outline" 
+                    className={getDifficultyColor(selectedQuestion.difficulty)}
+                  >
+                    {selectedQuestion.difficulty}
+                  </Badge>
+                  <Badge variant="secondary">{selectedQuestion.points} points</Badge>
+                </div>
+              </DialogHeader>
 
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-semibold mb-2">Description</h4>
-                <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-                  {selectedQuestion.description}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-semibold">Time Limit:</span>{' '}
-                  {selectedQuestion.timeLimitSeconds || 2} seconds
-                </div>
-                <div>
-                  <span className="font-semibold">Memory Limit:</span>{' '}
-                  {selectedQuestion.memoryLimitMb || 256} MB
-                </div>
-                <div>
-                  <span className="font-semibold">Test Cases:</span>{' '}
-                  {selectedQuestion.testCaseCount}
-                </div>
-                <div>
-                  <span className="font-semibold">Points:</span>{' '}
-                  {selectedQuestion.points}
-                </div>
-              </div>
-
-              {selectedQuestion.topics && selectedQuestion.topics.length > 0 && (
-                <div>
-                  <h4 className="font-semibold mb-2">Topics</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedQuestion.topics.map((topic, idx) => (
-                      <Badge key={`selected-topic-${idx}-${topic}`} variant="outline">
-                        <Tag className="h-3 w-3 mr-1" />
-                        {topic}
-                      </Badge>
-                    ))}
+              <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold mb-2">Description</h4>
+                    <div className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
+                      {selectedQuestion.description}
+                    </div>
                   </div>
-                </div>
-              )}
 
-              {/* Sample Test Cases */}
-              <div>
-                <h4 className="font-semibold mb-2 flex items-center gap-2">
-                  <TestTube className="h-4 w-4" />
-                  Sample Test Cases
-                </h4>
-                {loadingTestCases ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-semibold">Time Limit:</span>{' '}
+                      {selectedQuestion.timeLimitSeconds || 2} seconds
+                    </div>
+                    <div>
+                      <span className="font-semibold">Memory Limit:</span>{' '}
+                      {selectedQuestion.memoryLimitMb || 256} MB
+                    </div>
+                    <div>
+                      <span className="font-semibold">Test Cases:</span>{' '}
+                      {selectedQuestion.testCaseCount}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Points:</span>{' '}
+                      {selectedQuestion.points}
+                    </div>
                   </div>
-                ) : selectedTestCases.length > 0 ? (
-                  <div className="space-y-3">
-                    {selectedTestCases.map((testCase, idx) => (
-                      <Card key={testCase.id} className="border-2">
-                        <CardContent className="p-3">
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-semibold">Example {idx + 1}</span>
-                              <Badge variant="outline" className="text-xs">{testCase.points} points</Badge>
-                            </div>
-                            <div>
-                              <p className="text-xs font-semibold text-muted-foreground mb-1">Input:</p>
-                              <pre className="bg-muted/50 p-2 rounded text-xs font-mono overflow-x-auto border whitespace-pre-wrap">
-                                {testCase.input.replace(/\\n/g, '\n')}
-                              </pre>
-                            </div>
-                            <div>
-                              <p className="text-xs font-semibold text-muted-foreground mb-1">Expected Output:</p>
-                              <pre className="bg-muted/50 p-2 rounded text-xs font-mono overflow-x-auto border whitespace-pre-wrap">
-                                {testCase.expectedOutput.replace(/\\n/g, '\n')}
-                              </pre>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No sample test cases available</p>
-                )}
-              </div>
 
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setSelectedQuestion(null)}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => {
-                    handleAddQuestion(selectedQuestion);
-                    setSelectedQuestion(null);
-                  }}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Plus className="h-4 w-4 mr-2" />
+                  {selectedQuestion.topics && selectedQuestion.topics.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-2">Topics</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedQuestion.topics.map((topic, idx) => (
+                          <Badge key={`selected-topic-${idx}-${topic}`} variant="outline">
+                            <Tag className="h-3 w-3 mr-1" />
+                            {topic}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
                   )}
-                  Add to Contest
-                </Button>
+
+                  {/* Sample Test Cases */}
+                  <div>
+                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                      <TestTube className="h-4 w-4" />
+                      Sample Test Cases
+                    </h4>
+                    {loadingTestCases ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : selectedTestCases.length > 0 ? (
+                      <div className="space-y-3">
+                        {selectedTestCases.map((testCase, idx) => (
+                          <Card key={testCase.id} className="border-2">
+                            <CardContent className="p-3">
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                                  <span className="text-sm font-semibold">Example {idx + 1}</span>
+                                  <Badge variant="outline" className="text-xs">{testCase.points} points</Badge>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-semibold text-muted-foreground mb-1">Input:</p>
+                                  <pre className="bg-muted/50 p-2 rounded text-xs font-mono overflow-x-auto border whitespace-pre-wrap break-all">
+                                    {testCase.input.replace(/\\n/g, '\n')}
+                                  </pre>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-semibold text-muted-foreground mb-1">Expected Output:</p>
+                                  <pre className="bg-muted/50 p-2 rounded text-xs font-mono overflow-x-auto border whitespace-pre-wrap break-all">
+                                    {testCase.expectedOutput.replace(/\\n/g, '\n')}
+                                  </pre>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No sample test cases available</p>
+                    )}
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t -mx-6 px-6 py-4 mt-4">
+                    <Button variant="outline" onClick={() => setSelectedQuestion(null)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        handleAddQuestion(selectedQuestion);
+                        setSelectedQuestion(null);
+                      }}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Plus className="h-4 w-4 mr-2" />
+                      )}
+                      Add to Contest
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           </DialogContent>
