@@ -486,14 +486,14 @@ export default function AdminProblemsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {displayedProblems.length === 0 ? (
+              {displayedProblems.filter(p => p.isVisibleToUsers).length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8">
-                    <p className="text-muted-foreground">No problems found</p>
+                    <p className="text-muted-foreground">No visible problems yet</p>
                   </TableCell>
                 </TableRow>
               ) : (
-                displayedProblems.map(problem => (
+                displayedProblems.filter(p => p.isVisibleToUsers).map(problem => (
                   <TableRow key={problem.id}>
                     <TableCell>
                       <div>
@@ -532,18 +532,119 @@ export default function AdminProblemsPage() {
                     <TableCell>
                       <Button
                         size="sm"
-                        variant={problem.isVisibleToUsers ? "default" : "outline"}
+                        variant="default"
                         onClick={() => handleToggleSingleVisibility(problem.id, problem.isVisibleToUsers)}
                         disabled={toggleLoading === problem.id}
-                        className={problem.isVisibleToUsers ? "bg-green-600 hover:bg-green-700" : ""}
+                        className="bg-green-600 hover:bg-green-700"
                       >
                         {toggleLoading === problem.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : problem.isVisibleToUsers ? (
+                        ) : (
                           <>
                             <Eye className="h-4 w-4 mr-1" />
                             Visible
                           </>
+                        )}
+                      </Button>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="ghost"
+                          onClick={() => window.open(problem.url, '_blank')}>
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost"
+                          onClick={() => handleEdit(problem)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost"
+                          onClick={() => handleDelete(problem.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Hidden Questions Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <EyeOff className="h-5 w-5 text-gray-500" />
+            Hidden from Users ({displayedProblems.filter(p => !p.isVisibleToUsers).length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Title</TableHead>
+                <TableHead>Difficulty</TableHead>
+                <TableHead>Platform</TableHead>
+                <TableHead>Topics</TableHead>
+                <TableHead>Stats</TableHead>
+                <TableHead>Visibility</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {displayedProblems.filter(p => !p.isVisibleToUsers).length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8">
+                    <p className="text-muted-foreground">All problems are visible</p>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                displayedProblems.filter(p => !p.isVisibleToUsers).map(problem => (
+                  <TableRow key={problem.id}>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{problem.title}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {problem.slug}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getDifficultyColor(problem.difficulty)}>
+                        {problem.difficulty}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{problem.platform}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {problem.topicTags.slice(0, 2).map((tag) => (
+                          <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+                        ))}
+                        {problem.topicTags.length > 2 && (
+                          <span className="text-xs text-muted-foreground">
+                            +{problem.topicTags.length - 2}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <p>👍 {problem.likes}</p>
+                        <p className="text-muted-foreground">{problem.acceptanceRate}%</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleToggleSingleVisibility(problem.id, problem.isVisibleToUsers)}
+                        disabled={toggleLoading === problem.id}
+                      >
+                        {toggleLoading === problem.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <>
                             <EyeOff className="h-4 w-4 mr-1" />
@@ -573,7 +674,7 @@ export default function AdminProblemsPage() {
               )}
               {loadingMore && (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-4 text-center">
+                  <TableCell colSpan={7} className="py-4 text-center">
                     <Loader2 className="h-5 w-5 animate-spin" />
                   </TableCell>
                 </TableRow>
