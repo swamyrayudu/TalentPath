@@ -157,6 +157,7 @@ export const problems = pgTable('problems', {
   accepted: bigint('accepted', { mode: 'number' }).default(0),
   submissions: bigint('submissions', { mode: 'number' }).default(0),
   similarQuestions: jsonb('similar_questions').default([]),
+  isVisibleToUsers: boolean('is_visible_to_users').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({

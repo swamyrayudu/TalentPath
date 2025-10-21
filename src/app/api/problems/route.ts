@@ -9,6 +9,7 @@ export const revalidate = 300; // Cache for 5 minutes
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await auth();
     const { searchParams } = new URL(request.url);
 
     const difficulty = searchParams.get('difficulty');
@@ -21,11 +22,27 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '200');
     const offset = parseInt(searchParams.get('offset') || '0');
 
+    // Check if user is admin
+    let isAdmin = false;
+    if (session?.user?.id) {
+      const user = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, session.user.id))
+        .limit(1);
+      isAdmin = user[0]?.role === 'admin';
+    }
+
     // Decode company name if it's a slug
     const decodedCompany = company ? decodeURIComponent(company).replace(/-/g, ' ') : null;
 
     const baseQuery = db.select().from(problems);
     const conditions = [];
+
+    // For non-admin users, only show visible problems
+    if (!isAdmin) {
+      conditions.push(eq(problems.isVisibleToUsers, true));
+    }
 
     if (difficulty && difficulty !== 'all') {
       conditions.push(eq(problems.difficulty, difficulty as any));
@@ -104,6 +121,7 @@ export async function GET(request: NextRequest) {
       data: result,
       count: result.length,
       total,
+      isAdmin, // Include admin status in response
     });
   } catch (error) {
     console.error('❌ Error fetching problems:', error);

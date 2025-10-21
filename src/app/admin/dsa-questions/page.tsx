@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, Edit, Trash2, Search, Download, AlertCircle, CheckCircle, Loader2, ExternalLink } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Download, AlertCircle, CheckCircle, Loader2, ExternalLink, Eye, EyeOff, ChevronDown } from 'lucide-react';
 import { useAdminProblemsCache } from '@/components/context/AdminProblemsCacheContext';
 
 interface Problem {
@@ -33,6 +33,7 @@ interface Problem {
   accepted: number;
   submissions: number;
   isPremium: boolean;
+  isVisibleToUsers: boolean;
 }
 interface ProblemFormData {
   title: string;
@@ -69,6 +70,7 @@ export default function AdminProblemsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [page, setPage] = useState<number>(1);
   const [hasMore, setHasMore] = useState<boolean>(true);
+  const [toggleLoading, setToggleLoading] = useState<number | null>(null); // Track which problem is being toggled
 
   const observerTarget = useRef<HTMLDivElement>(null);
 
@@ -285,6 +287,32 @@ export default function AdminProblemsPage() {
     }
   };
 
+  const handleToggleSingleVisibility = async (problemId: number, currentVisibility: boolean) => {
+    try {
+      setToggleLoading(problemId);
+      const response = await fetch('/api/admin/problems/visibility', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ problemIds: [problemId], isVisible: !currentVisibility }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setSuccess(data.message);
+        // Update local cache
+        setAllProblems(allProblems.map(p => 
+          p.id === problemId ? { ...p, isVisibleToUsers: !currentVisibility } : p
+        ));
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(data.error || 'Failed to update visibility');
+      }
+    } catch (error) {
+      setError('Failed to update visibility');
+    } finally {
+      setToggleLoading(null);
+    }
+  };
+
   if (status === 'loading' || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -435,8 +463,15 @@ export default function AdminProblemsPage() {
           <Input placeholder="Search problems by title, slug, or topics..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
         </div>
       </CardContent></Card>
-      <Card>
-        <CardHeader><CardTitle>Problems ({displayedProblems.length} of {getFilteredProblems().length})</CardTitle></CardHeader>
+
+      {/* Visible Questions Section */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Eye className="h-5 w-5 text-green-500" />
+            Visible to Users ({displayedProblems.filter(p => p.isVisibleToUsers).length})
+          </CardTitle>
+        </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
@@ -446,13 +481,14 @@ export default function AdminProblemsPage() {
                 <TableHead>Platform</TableHead>
                 <TableHead>Topics</TableHead>
                 <TableHead>Stats</TableHead>
+                <TableHead>Visibility</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {displayedProblems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     <p className="text-muted-foreground">No problems found</p>
                   </TableCell>
                 </TableRow>
@@ -493,6 +529,29 @@ export default function AdminProblemsPage() {
                         <p className="text-muted-foreground">{problem.acceptanceRate}%</p>
                       </div>
                     </TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        variant={problem.isVisibleToUsers ? "default" : "outline"}
+                        onClick={() => handleToggleSingleVisibility(problem.id, problem.isVisibleToUsers)}
+                        disabled={toggleLoading === problem.id}
+                        className={problem.isVisibleToUsers ? "bg-green-600 hover:bg-green-700" : ""}
+                      >
+                        {toggleLoading === problem.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : problem.isVisibleToUsers ? (
+                          <>
+                            <Eye className="h-4 w-4 mr-1" />
+                            Visible
+                          </>
+                        ) : (
+                          <>
+                            <EyeOff className="h-4 w-4 mr-1" />
+                            Hidden
+                          </>
+                        )}
+                      </Button>
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button size="sm" variant="ghost"
@@ -514,7 +573,7 @@ export default function AdminProblemsPage() {
               )}
               {loadingMore && (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-4 text-center">
+                  <TableCell colSpan={8} className="py-4 text-center">
                     <Loader2 className="h-5 w-5 animate-spin" />
                   </TableCell>
                 </TableRow>

@@ -77,6 +77,7 @@ export default function TopicPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const observerTarget = useRef<HTMLDivElement>(null);
   const isFetchingRef = useRef(false); // Prevent duplicate fetches
@@ -127,6 +128,11 @@ export default function TopicPage() {
 
       if (data.success) {
         const newProblems = data.data;
+        
+        // Set admin status from API response
+        if (data.isAdmin !== undefined) {
+          setIsAdmin(data.isAdmin);
+        }
         
         // Set total count if available from API
         if (data.total !== undefined) {
@@ -411,9 +417,16 @@ export default function TopicPage() {
         <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent mb-2">
           {formatTopicName(topicSlug)} Problems
         </h1>
-        <p className="text-muted-foreground text-lg">
-          {stats.total > 0 ? `Found ${stats.total} problems` : 'No problems found for this topic'}
-        </p>
+        <div className="flex items-center gap-3">
+          <p className="text-muted-foreground text-lg">
+            {stats.total > 0 ? `Found ${stats.total} problems` : 'No problems found for this topic'}
+          </p>
+          {isAdmin && (
+            <Badge variant="outline" className="border-purple-500 text-purple-500 animate-pulse">
+              Admin View - All Problems
+            </Badge>
+          )}
+        </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 max-w-8xl mt-6">

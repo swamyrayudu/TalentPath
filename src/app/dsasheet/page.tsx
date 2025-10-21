@@ -223,11 +223,11 @@ export default function DsaSheet() {
     try {
       setLoading(true);
       
-      // First, load just 200 problems to show something quickly
-      const initialResponse = await fetch('/api/problems?limit=200');
+      // First, load just visible problems (for users) or initial batch (for admins)
+      const initialResponse = await fetch('/api/problems?limit=10000');
       const initialData = await initialResponse.json();
       
-      if (initialData.success && initialData.data.length > 0) {
+      if (initialData.success) {
         setAllProblems(initialData.data);
         // Set total count from API
         if (initialData.total) {
@@ -257,29 +257,10 @@ export default function DsaSheet() {
         setDisplayedProblems(filtered.slice(0, ITEMS_PER_PAGE));
         setHasMore(filtered.length > ITEMS_PER_PAGE);
         setLoading(false);
-        
-        // Load remaining problems in background (non-blocking)
-        setTimeout(() => {
-          fetchRemainingProblems(200);
-        }, 500);
       }
     } catch (error) {
       console.error('Error fetching initial problems:', error);
       setLoading(false);
-    }
-  };
-
-  // Fetch remaining problems in background
-  const fetchRemainingProblems = async (offset: number) => {
-    try {
-      const response = await fetch(`/api/problems?limit=10000&offset=${offset}`);
-      const data = await response.json();
-      
-      if (data.success && data.data.length > 0) {
-        setAllProblems((prev) => [...prev, ...data.data]);
-      }
-    } catch (error) {
-      console.error('Error fetching remaining problems:', error);
     }
   };
 
