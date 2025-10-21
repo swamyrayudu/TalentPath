@@ -75,7 +75,7 @@ export default function Home() {
 
   const developers = [
     {
-      name: 'R.V.V. Swamy',
+      name: 'R.V.V.Swamy',
       role: 'Full Stack Developer',
       gradient: 'from-blue-500 to-cyan-500',
       socials: {
@@ -86,7 +86,7 @@ export default function Home() {
       }
     },
     {
-      name: 'P.S.V. Siva Durga Prasad',
+      name: 'P.S.V.S.Durga Prasad',
       role: 'Full Stack Developer',
       gradient: 'from-purple-500 to-pink-500',
       socials: {

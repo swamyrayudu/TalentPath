@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       'contest_submissions', 'contest_test_cases', 'contests', 
       'jobs', 'problems', 'questions', 'roadmap_steps', 'roadmaps', 
       'session', 'topics', 'user', 'user_progress', 'user_roadmap_progress', 
-      'verificationToken'
+      'verificationToken','aptitude_results'
     ];
     return !excludedTables.includes(name);
   });
