@@ -11,39 +11,19 @@ import {
   FileSpreadsheet, 
   Map,
   ArrowRight,
-  Sparkles,
-  Zap,
-  Target,
-  CheckCircle2
+  Mail,
+  Github,
+  Linkedin,
+  Twitter,
+  User,
+  Heart,
+  Instagram,
+  MessageCircle
 } from 'lucide-react';
 import { useSession, signIn } from 'next-auth/react';
-import { ContestSubmissionsPreview } from '@/components/home/contest-submissions-preview';
-import { useEffect, useState } from 'react';
 
 export default function Home() {
   const { data: session } = useSession();
-  const [contestStats, setContestStats] = useState<any>(null);
-  const [loadingStats, setLoadingStats] = useState(false);
-
-  useEffect(() => {
-    async function fetchContestStats() {
-      if (session?.user?.id) {
-        setLoadingStats(true);
-        try {
-          const response = await fetch('/api/contest-stats');
-          if (response.ok) {
-            const data = await response.json();
-            setContestStats(data);
-          }
-        } catch (error) {
-          console.error('Failed to fetch contest stats:', error);
-        } finally {
-          setLoadingStats(false);
-        }
-      }
-    }
-    fetchContestStats();
-  }, [session?.user?.id]);
 
   const handleGoogleSignIn = async () => {
     await signIn('google', { callbackUrl: '/dashboard' });
@@ -53,65 +33,80 @@ export default function Home() {
     {
       icon: Brain,
       title: 'Aptitude Tests',
-      description: 'Master quantitative, logical, and verbal reasoning with comprehensive practice tests',
+      description: 'Master quantitative, logical, and verbal reasoning with practice tests',
+      href: '/aptitude',
       gradient: 'from-purple-500 to-pink-500',
     },
     {
       icon: Code,
       title: 'Online Compiler',
       description: 'Write and execute code in multiple languages with real-time feedback',
+      href: '/compiler',
       gradient: 'from-blue-500 to-cyan-500',
     },
     {
       icon: Trophy,
       title: 'Coding Contests',
-      description: 'Compete with developers worldwide and sharpen your problem-solving skills',
+      description: 'Compete with developers worldwide and sharpen your skills',
+      href: '/contest',
       gradient: 'from-yellow-500 to-orange-500',
     },
     {
       icon: FileSpreadsheet,
       title: 'DSA Sheet',
-      description: 'Structured curriculum covering essential data structures and algorithms',
+      description: 'Structured curriculum covering data structures and algorithms',
+      href: '/dsasheet',
       gradient: 'from-green-500 to-emerald-500',
     },
     {
       icon: Briefcase,
       title: 'Job Portal',
       description: 'Discover opportunities at top tech companies and startups',
+      href: '/jobs',
       gradient: 'from-indigo-500 to-purple-500',
     },
     {
       icon: Map,
       title: 'Career Roadmap',
       description: 'Personalized learning paths tailored to your career goals',
+      href: '/roadmap',
       gradient: 'from-rose-500 to-red-500',
     },
   ];
 
-  const benefits = [
-    'Comprehensive learning platform',
-    'Real-time code execution',
-    'Competitive programming',
-    'Career guidance & roadmaps',
-    'Job opportunities',
-    'Progress tracking',
+  const developers = [
+    {
+      name: 'R.V.V. Swamy',
+      role: 'Full Stack Developer',
+      gradient: 'from-blue-500 to-cyan-500',
+      socials: {
+        github: 'https://github.com/swamyrayudu',
+        linkedin: 'https://www.linkedin.com/in/rayudu-veera-venkata-swamy/',
+        instagram: 'https://www.instagram.com/swamy__rayudu/',
+        whatsapp: 'https://wa.me/917288819391',
+      }
+    },
+    {
+      name: 'P.S.V. Siva Durga Prasad',
+      role: 'Full Stack Developer',
+      gradient: 'from-purple-500 to-pink-500',
+      socials: {
+        github: 'https://github.com/Durga62823',
+        linkedin: 'https://www.linkedin.com/in/durga-prasad-peddapalli-1616a8297/',
+        instagram: 'https://www.instagram.com/the_addicted__person_78/',
+        whatsapp: 'https://wa.me/919030512334',
+      }
+    },
   ];
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section with Gradient Background */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 dark:from-black dark:via-black dark:to-black">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 dark:from-black dark:via-gray-950 dark:to-black">
         <div className="absolute inset-0 bg-grid-slate-900/[0.04] dark:bg-grid-slate-100/[0.03]" />
-        <div className="container relative mx-auto px-4 py-24 md:py-32">
+        <div className="container relative mx-auto px-4 py-20 md:py-32">
           <div className="max-w-4xl mx-auto text-center space-y-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-amber-200 dark:border-amber-800 bg-amber-100 dark:bg-amber-900/30">
-              <Sparkles className="h-4 w-4 text-amber-600" />
-              <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                Your Complete Career Platform
-              </span>
-            </div>
-            
-            <h1 className="text-5xl md:text-7xl font-bold">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight">
               <span className="bg-gradient-to-r from-amber-600 via-orange-600 to-yellow-600 bg-clip-text text-transparent">
                 Master Coding.
               </span>
@@ -119,14 +114,17 @@ export default function Home() {
               <span className="text-foreground">Land Your Dream Job.</span>
             </h1>
             
-            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
               Practice DSA, compete in contests, prepare for aptitude tests, and discover your next opportunity — all in one place.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               {session?.user ? (
                 <Link href="/dashboard">
-                  <Button size="lg" className="gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-lg shadow-amber-500/50">
+                  <Button 
+                    size="lg" 
+                    className="gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-lg transition-all duration-300 hover:scale-105"
+                  >
                     Go to Dashboard
                     <ArrowRight className="h-5 w-5" />
                   </Button>
@@ -135,165 +133,249 @@ export default function Home() {
                 <Button 
                   size="lg" 
                   onClick={handleGoogleSignIn}
-                  className="gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-lg shadow-amber-500/50"
+                  className="gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-lg transition-all duration-300 hover:scale-105"
                 >
                   Get Started Free
                   <ArrowRight className="h-5 w-5" />
                 </Button>
               )}
-              <Link href="#features">
-                <Button size="lg" variant="outline" className="border-2">
-                  Explore Features
-                </Button>
-              </Link>
-            </div>
-
-            {/* Benefits Pills */}
-            <div className="flex flex-wrap gap-3 justify-center pt-8">
-              {benefits.map((benefit, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200 dark:border-gray-700"
-                >
-                  <CheckCircle2 className="h-4 w-4 text-amber-600" />
-                  <span className="text-sm font-medium">{benefit}</span>
-                </div>
-              ))}
             </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="container mx-auto px-4 py-24 dark:bg-black">
-        <div className="text-center mb-16 space-y-4">
-          <h2 className="text-4xl md:text-5xl font-bold">
+      <section className="container mx-auto px-4 py-16 md:py-24">
+        <div className="text-center mb-12 space-y-3">
+          <h2 className="text-3xl md:text-4xl font-bold">
             Everything You Need to <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">Excel</span>
           </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Comprehensive tools and resources to accelerate your tech career
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Comprehensive tools to accelerate your tech career
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {features.map((feature, index) => {
             const Icon = feature.icon;
             return (
-              <Card 
-                key={index} 
-                className="group hover:shadow-2xl transition-all duration-300 border-2 hover:border-transparent hover:scale-105 relative overflow-hidden"
-              >
-                <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
-                <CardHeader className="relative">
-                  <div className={`p-3 w-fit rounded-xl bg-gradient-to-br ${feature.gradient} mb-4 shadow-lg`}>
-                    <Icon className="h-6 w-6 text-white" />
-                  </div>
-                  <CardTitle className="text-xl">{feature.title}</CardTitle>
-                  <CardDescription className="text-base">
-                    {feature.description}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
+              <Link key={index} href={feature.href}>
+                <Card className="group hover:shadow-xl transition-all duration-300 hover:scale-105 h-full cursor-pointer">
+                  <CardHeader>
+                    <div className={`p-3 w-fit rounded-xl bg-gradient-to-br ${feature.gradient} mb-3 shadow-md group-hover:shadow-lg transition-shadow duration-300`}>
+                      <Icon className="h-6 w-6 text-white" />
+                    </div>
+                    <CardTitle className="text-xl">{feature.title}</CardTitle>
+                    <CardDescription className="text-base">
+                      {feature.description}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
             );
           })}
         </div>
       </section>
 
-      {/* Why Choose Section */}
-      <section className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-black dark:to-black py-24">
-        <div className="container mx-auto px-4">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="text-4xl md:text-5xl font-bold text-center mb-16">
-              Why <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">TalentPath</span>?
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-              <div className="text-center space-y-4">
-                <div className="flex justify-center">
-                  <div className="p-6 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-xl shadow-amber-500/30">
-                    <Target className="h-12 w-12 text-white" />
-                  </div>
-                </div>
-                <h3 className="text-2xl font-bold">Focused Learning</h3>
-                <p className="text-muted-foreground text-lg">
-                  Curated content and structured paths designed to help you master essential skills efficiently
-                </p>
-              </div>
-              
-              <div className="text-center space-y-4">
-                <div className="flex justify-center">
-                  <div className="p-6 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-xl shadow-amber-500/30">
-                    <Zap className="h-12 w-12 text-white" />
-                  </div>
-                </div>
-                <h3 className="text-2xl font-bold">Real-Time Practice</h3>
-                <p className="text-muted-foreground text-lg">
-                  Instant feedback on your code with our powerful online compiler and testing environment
-                </p>
-              </div>
-              
-              <div className="text-center space-y-4">
-                <div className="flex justify-center">
-                  <div className="p-6 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-xl shadow-amber-500/30">
-                    <Sparkles className="h-12 w-12 text-white" />
-                  </div>
-                </div>
-                <h3 className="text-2xl font-bold">Career Growth</h3>
-                <p className="text-muted-foreground text-lg">
-                  From learning to landing jobs, we support every step of your professional journey
-                </p>
-              </div>
+      {/* Developers Section */}
+      <section className="container mx-auto px-4 py-16 md:py-24 bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-gray-950/50 dark:to-black/50">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12 space-y-3">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800">
+              <Heart className="h-4 w-4 text-amber-600 fill-amber-600" />
+              <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                Built with passion
+              </span>
             </div>
+            <h2 className="text-3xl md:text-4xl font-bold">
+              Meet the <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">Developers</span>
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Crafted by dedicated developers committed to your success
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+            {developers.map((dev, index) => (
+              <div
+                key={index}
+                className="group relative overflow-hidden rounded-2xl border-2 border-transparent hover:border-amber-500/20 bg-white dark:bg-gray-900 p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105"
+              >
+                <div className={`absolute inset-0 bg-gradient-to-br ${dev.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
+                <div className="relative space-y-4">
+                  <div className={`p-4 w-fit rounded-xl bg-gradient-to-br ${dev.gradient} shadow-lg mx-auto`}>
+                    <User className="h-8 w-8 text-white" />
+                  </div>
+                  <div className="text-center space-y-2">
+                    <h3 className="text-xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                      {dev.name}
+                    </h3>
+                    <p className="text-sm text-muted-foreground font-medium">
+                      {dev.role}
+                    </p>
+                  </div>
+                  
+                  {/* Social Links */}
+                  <div className="flex justify-center gap-3 pt-2">
+                    <a
+                      href={dev.socials.github}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2.5 rounded-lg bg-muted hover:bg-gray-800 hover:text-white dark:hover:bg-gray-700 transition-all duration-200 hover:scale-110"
+                      aria-label="GitHub"
+                    >
+                      <Github className="h-5 w-5" />
+                    </a>
+                    <a
+                      href={dev.socials.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2.5 rounded-lg bg-muted hover:bg-blue-600 hover:text-white transition-all duration-200 hover:scale-110"
+                      aria-label="LinkedIn"
+                    >
+                      <Linkedin className="h-5 w-5" />
+                    </a>
+                    <a
+                      href={dev.socials.instagram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2.5 rounded-lg bg-muted hover:bg-gradient-to-br hover:from-purple-600 hover:to-pink-600 hover:text-white transition-all duration-200 hover:scale-110"
+                      aria-label="Instagram"
+                    >
+                      <Instagram className="h-5 w-5" />
+                    </a>
+                    <a
+                      href={dev.socials.whatsapp}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2.5 rounded-lg bg-muted hover:bg-green-600 hover:text-white transition-all duration-200 hover:scale-110"
+                      aria-label="WhatsApp"
+                    >
+                      <MessageCircle className="h-5 w-5" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Contest Submissions Stats for Logged-in Users */}
-      {session?.user && contestStats && (
-        <section className="container mx-auto px-4 py-24">
-          <div className="max-w-4xl mx-auto">
-            <ContestSubmissionsPreview stats={contestStats} />
-          </div>
-        </section>
-      )}
-
       {/* CTA Section */}
-      <section className="container mx-auto px-4 py-24">
-        <div className="max-w-4xl mx-auto text-center space-y-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-3xl p-12 md:p-16 shadow-2xl shadow-amber-500/30">
-          <h2 className="text-4xl md:text-5xl font-bold text-white">
-            Ready to Transform Your Career?
-          </h2>
-          <p className="text-xl text-amber-50">
-            Join thousands of developers already advancing their skills and careers with TalentPath
-          </p>
-          {!session?.user && (
+      {!session?.user && (
+        <section className="container mx-auto px-4 py-16 md:py-24">
+          <div className="max-w-4xl mx-auto text-center space-y-6 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-10 md:p-16 shadow-xl">
+            <h2 className="text-3xl md:text-4xl font-bold text-white">
+              Ready to Transform Your Career?
+            </h2>
+            <p className="text-lg md:text-xl text-amber-50">
+              Join thousands of developers advancing their skills with TalentPath
+            </p>
             <Button 
               size="lg" 
               onClick={handleGoogleSignIn}
-              className="gap-2 bg-white text-amber-600 hover:bg-amber-50 shadow-xl text-lg px-8"
+              className="gap-2 bg-white text-amber-600 hover:bg-amber-50 shadow-lg text-lg px-8 transition-all duration-300 hover:scale-105"
             >
               Start Your Journey
               <ArrowRight className="h-5 w-5" />
             </Button>
-          )}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
 
       {/* Footer */}
-      <footer className="border-t bg-muted/30">
+      <footer className="border-t bg-muted/30 mt-16">
         <div className="container mx-auto px-4 py-12">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600">
-                <Code className="h-5 w-5 text-white" />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            {/* Brand Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600">
+                  <Code className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                  TalentPath
+                </span>
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                TalentPath
-              </span>
+              <p className="text-sm text-muted-foreground">
+                Empowering careers, one line of code at a time.
+              </p>
             </div>
-            <p className="text-muted-foreground">
-              © 2025 TalentPath. Empowering careers, one line of code at a time.
-            </p>
+
+            {/* Platform Links */}
+            <div>
+              <h3 className="font-semibold mb-4">Platform</h3>
+              <ul className="space-y-2">
+                <li>
+                  <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-amber-600 transition-colors duration-200">
+                    Dashboard
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/aptitude" className="text-sm text-muted-foreground hover:text-amber-600 transition-colors duration-200">
+                    Aptitude Tests
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/compiler" className="text-sm text-muted-foreground hover:text-amber-600 transition-colors duration-200">
+                    Compiler
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/contest" className="text-sm text-muted-foreground hover:text-amber-600 transition-colors duration-200">
+                    Contests
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Resources Links */}
+            <div>
+              <h3 className="font-semibold mb-4">Resources</h3>
+              <ul className="space-y-2">
+                <li>
+                  <Link href="/dsasheet" className="text-sm text-muted-foreground hover:text-amber-600 transition-colors duration-200">
+                    DSA Sheet
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/roadmap" className="text-sm text-muted-foreground hover:text-amber-600 transition-colors duration-200">
+                    Roadmap
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/jobs" className="text-sm text-muted-foreground hover:text-amber-600 transition-colors duration-200">
+                    Jobs
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Contact & Social */}
+
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="pt-8 border-t border-border">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+              <p className="text-sm text-muted-foreground">
+                © 2025 TalentPath. All rights reserved.
+              </p>
+              <div className="flex flex-col md:flex-row items-center gap-4">
+                <div className="flex gap-6">
+                  <Link href="/privacy" className="text-sm text-muted-foreground hover:text-amber-600 transition-colors duration-200">
+                    Privacy Policy
+                  </Link>
+                  <Link href="/terms" className="text-sm text-muted-foreground hover:text-amber-600 transition-colors duration-200">
+                    Terms of Service
+                  </Link>
+                </div>
+                <div className="hidden md:block h-4 w-px bg-border" />
+                <p className="text-sm text-muted-foreground">
+                  Crafted by <span className="font-semibold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">R.V.V. Swamy</span> & <span className="font-semibold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">P.S.V. Siva Durga Prasad</span>
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </footer>
