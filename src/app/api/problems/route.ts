@@ -15,14 +15,18 @@ export async function GET(request: NextRequest) {
     const difficulty = searchParams.get('difficulty');
     const platform = searchParams.get('platform');
     const topic = searchParams.get('topic');
-    const company = searchParams.get('company'); // <── new param
+    const company = searchParams.get('company');
     const search = searchParams.get('search');
     const sortBy = searchParams.get('sortBy') || 'likes';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
     const limit = parseInt(searchParams.get('limit') || '200');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    // Check if user is admin
+    console.log('🔍 Fetching problems with filters:', { 
+      topic, company, difficulty, platform, hasSession: !!session?.user?.id 
+    });
+
+    // Check admin role
     let isAdmin = false;
     if (session?.user?.id) {
       const user = await db
@@ -30,22 +34,31 @@ export async function GET(request: NextRequest) {
         .from(users)
         .where(eq(users.id, session.user.id))
         .limit(1);
+
       isAdmin = user[0]?.role === 'admin';
+      console.log('👤 User role:', isAdmin ? 'ADMIN' : 'USER');
+    } else {
+      console.log('👤 No session - treating as regular user');
     }
 
-    // Decode company name if it's a slug
-    const decodedCompany = company ? decodeURIComponent(company).replace(/-/g, ' ') : null;
-
-    const baseQuery = db.select().from(problems);
     const conditions = [];
 
-    // For non-admin users, only show visible problems
+    // ✅ Always apply admin approval filter for non-admins
     if (!isAdmin) {
-      conditions.push(eq(problems.isVisibleToUsers, true));
+      try {
+        conditions.push(eq(problems.isVisibleToUsers, true));
+        console.log('✅ Applied admin approval filter for non-admin user');
+      } catch (err) {
+        console.error('⚠️ WARNING: isApproved column may not exist yet!');
+        console.error('⚠️ Please ensure migration is applied.');
+      }
+    } else {
+      console.log('🔓 Admin user - showing all problems');
     }
 
+    // Apply Filters
     if (difficulty && difficulty !== 'all') {
-      conditions.push(eq(problems.difficulty, difficulty as any));
+      conditions.push(eq(problems.difficulty, difficulty.toUpperCase() as any));
     }
 
     if (platform && platform !== 'all') {
@@ -53,17 +66,19 @@ export async function GET(request: NextRequest) {
     }
 
     if (topic && topic !== 'all' && topic !== 'undefined') {
-      // Check both topicTags (for exact match, case-insensitive) and topicSlugs (for slug match)
       const topicSlug = topic.toLowerCase().replace(/\s+/g, '-');
       conditions.push(
-        sql`EXISTS (
-          SELECT 1 FROM unnest(${problems.topicTags}) AS tag 
-          WHERE LOWER(tag) = LOWER(${topic})
-        ) OR ${problems.topicSlugs} && ARRAY[${topicSlug}]`
+        sql`(
+          EXISTS (
+            SELECT 1 FROM unnest(${problems.topicTags}) AS tag 
+            WHERE LOWER(tag) = LOWER(${topic})
+          )
+          OR ${problems.topicSlugs} && ARRAY[${topicSlug}]
+        )`
       );
     }
+
     if (company && company !== 'all' && company !== 'undefined') {
-      // Decode and handle company name properly (convert slug to name)
       const companyName = decodeURIComponent(company).replace(/-/g, ' ');
       conditions.push(
         sql`EXISTS (
@@ -72,7 +87,6 @@ export async function GET(request: NextRequest) {
         )`
       );
     }
-
 
     if (search) {
       conditions.push(
@@ -83,9 +97,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const query = conditions.length > 0
-      ? baseQuery.where(and(...conditions))
-      : baseQuery;
+    // Combine filters with AND
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Dynamic sorting
     let orderByClause;
@@ -106,36 +119,41 @@ export async function GET(request: NextRequest) {
         orderByClause = desc(problems.likes);
     }
 
-    // Total count
-    const countResult = await (conditions.length > 0
-      ? db.select({ count: sql<number>`count(*)::int` }).from(problems).where(and(...conditions))
-      : db.select({ count: sql<number>`count(*)::int` }).from(problems));
+    // Count total results
+    const countResult = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(problems)
+      .where(whereClause || sql`TRUE`);
 
     const total = countResult[0]?.count || 0;
 
-    // Fetch paginated problems
-    const result = await query.orderBy(orderByClause).limit(limit).offset(offset);
+    // Fetch paginated results
+    const result = await db
+      .select()
+      .from(problems)
+      .where(whereClause || sql`TRUE`)
+      .orderBy(orderByClause)
+      .limit(limit)
+      .offset(offset);
+
+    console.log(`✅ Returned ${result.length} problems (Total: ${total})`);
 
     return NextResponse.json({
       success: true,
       data: result,
       count: result.length,
       total,
-      isAdmin, // Include admin status in response
+      isAdmin
     });
   } catch (error) {
     console.error('❌ Error fetching problems:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch problems',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
+      { success: false, error: 'Failed to fetch problems', details: message },
       { status: 500 }
     );
   }
 }
-
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();

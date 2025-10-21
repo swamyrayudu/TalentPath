@@ -126,6 +126,13 @@ export default function TopicPage() {
       
       const data = await response.json();
 
+      // Check if migration is required
+      if (!data.success && data.error === 'Database migration required') {
+        console.error('🚨 MIGRATION ERROR:', data.details);
+        setError('Database setup required. Please contact administrator.');
+        return;
+      }
+
       if (data.success) {
         const newProblems = data.data;
         

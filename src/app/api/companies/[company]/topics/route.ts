@@ -19,30 +19,50 @@ export async function GET(
     const companySlug = params.company;
     const companyName = companySlug.replace(/-/g, ' ');
     const platform = searchParams.get('platform');
-    
+
     console.log('📊 Fetching topics for company:', companyName, 'platform:', platform);
     const startTime = Date.now();
 
-    // Build platform condition - platform is required now
+    // ✅ Check if user is admin
+    const session = await auth();
+    let isAdmin = false;
+    if (session?.user?.id) {
+      const user = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, session.user.id))
+        .limit(1);
+      isAdmin = user[0]?.role === 'admin';
+      console.log('👤 User role:', isAdmin ? 'ADMIN' : 'USER');
+    } else {
+      console.log('👥 Unauthenticated - treated as non-admin');
+    }
+
+    // ✅ Apply approval + visibility filter
+    const approvalCondition = !isAdmin
+      ? sql`AND p.is_approved = true AND p.is_visible_to_users = true`
+      : sql``;
+
     const platformCondition = platform
       ? sql`AND p.platform = ${platform}`
       : sql``;
 
-    // Get all unique topics for this company with problem counts
+    // ✅ Efficient SQL to get unique topics and counts
     const result = await db.execute<{ topic: string; count: string }>(sql`
       SELECT 
-        TRIM(topic) as topic,
-        COUNT(DISTINCT p.id) as count
+        TRIM(topic) AS topic,
+        COUNT(DISTINCT p.id) AS count
       FROM 
         ${problems} p,
-        unnest(p.topic_tags) as topic
+        UNNEST(p.topic_tags) AS topic
       WHERE 
         EXISTS (
           SELECT 1 
-          FROM unnest(p.company_tags) AS company_tag 
+          FROM UNNEST(p.company_tags) AS company_tag 
           WHERE LOWER(TRIM(company_tag)) = LOWER(${companyName})
         )
         AND TRIM(topic) != ''
+        ${approvalCondition}
         ${platformCondition}
       GROUP BY 
         TRIM(topic)
@@ -58,16 +78,19 @@ export async function GET(
     const endTime = Date.now();
     console.log(`✅ Retrieved ${topics.length} topics for ${companyName} in ${endTime - startTime}ms`);
 
-    return NextResponse.json({
-      success: true,
-      data: topics,
-      company: companyName,
-      count: topics.length,
-    }, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=1200',
+    return NextResponse.json(
+      {
+        success: true,
+        data: topics,
+        company: companyName,
+        count: topics.length,
       },
-    });
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=1200',
+        },
+      }
+    );
   } catch (error) {
     console.error('❌ Error fetching company topics:', error);
     return NextResponse.json(
