@@ -17,7 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Play, Loader2, Send, CheckCircle2, XCircle, Clock, Trophy, Award, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { Play, Loader2, Send, CheckCircle2, XCircle, Clock, Trophy, Award, ArrowLeft, AlertTriangle, X } from 'lucide-react';
 import { submitSolution, runTestCases } from '@/actions/contest.actions';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -294,39 +294,41 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
-      <div className="border-b bg-background px-6 py-3 shrink-0 sticky top-0 z-10">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-4">
+      <div className="border-b bg-background px-3 lg:px-6 py-2 lg:py-3 shrink-0 sticky top-0 z-10">
+        <div className="flex items-center justify-between gap-2 lg:gap-4 flex-wrap">
+          <div className="flex items-center gap-2 lg:gap-4 flex-1 min-w-0">
             <Link href={`/contest/${contest.slug}`}>
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
+              <Button variant="ghost" size="sm" className="h-8 lg:h-9 px-2 lg:px-3">
+                <ArrowLeft className="h-3 w-3 lg:h-4 lg:w-4 lg:mr-2" />
+                <span className="hidden lg:inline">Back</span>
               </Button>
             </Link>
-            <div className="h-6 w-px bg-border" />
-            <h1 className="text-xl font-bold">{question.title}</h1>
-            <Badge className={getDifficultyColor(question.difficulty)}>
-              {question.difficulty}
-            </Badge>
-            <div className="flex items-center gap-2 text-sm">
-              <Trophy className="h-4 w-4 text-yellow-500" />
-              <span className="font-medium">{question.points} points</span>
+            <div className="h-6 w-px bg-border hidden lg:block" />
+            <div className="flex items-center gap-2 flex-wrap min-w-0 flex-1">
+              <h1 className="text-sm lg:text-xl font-bold truncate">{question.title}</h1>
+              <Badge className={`${getDifficultyColor(question.difficulty)} text-[10px] lg:text-xs px-1 lg:px-2`}>
+                {question.difficulty}
+              </Badge>
+              <div className="flex items-center gap-1 text-xs lg:text-sm">
+                <Trophy className="h-3 w-3 lg:h-4 lg:w-4 text-yellow-500" />
+                <span className="font-medium">{question.points}</span>
+              </div>
             </div>
           </div>
           
-          <div className="flex items-center gap-4 shrink-0">
-            <div className="flex items-center gap-2 text-sm">
-              <Clock className="h-4 w-4 text-orange-500" />
-              <span className="font-mono font-bold">{timeLeft}</span>
+          <div className="flex items-center gap-2 lg:gap-4 shrink-0 flex-wrap w-full lg:w-auto">
+            <div className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm order-1 lg:order-none">
+              <Clock className="h-3 w-3 lg:h-4 lg:w-4 text-orange-500" />
+              <span className="font-mono font-bold text-xs lg:text-sm">{timeLeft}</span>
             </div>
 
             <Select value={language} onValueChange={handleLanguageChange}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[100px] lg:w-[180px] h-8 lg:h-9 text-xs lg:text-sm order-2 lg:order-none">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {LANGUAGES.map((lang) => (
-                  <SelectItem key={lang.value} value={lang.value}>
+                  <SelectItem key={lang.value} value={lang.value} className="text-xs lg:text-sm">
                     {lang.label}
                   </SelectItem>
                 ))}
@@ -337,26 +339,29 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
               variant="outline" 
               onClick={handleRunTests} 
               disabled={isRunning || isSubmitting || isContestEnded}
+              size="sm"
+              className="h-8 lg:h-9 text-xs lg:text-sm px-2 lg:px-3 order-3 lg:order-none"
             >
               {isRunning ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-3 w-3 lg:h-4 lg:w-4 lg:mr-2 animate-spin" />
               ) : (
-                <Play className="h-4 w-4 mr-2" />
+                <Play className="h-3 w-3 lg:h-4 lg:w-4 lg:mr-2" />
               )}
-              Run Tests
+              <span className="hidden sm:inline">Run</span>
             </Button>
 
             <Button 
               onClick={handleSubmit} 
               disabled={isSubmitting || isRunning || isContestEnded}
-              className="bg-green-600 hover:bg-green-700"
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 h-8 lg:h-9 text-xs lg:text-sm px-2 lg:px-3 order-4 lg:order-none"
             >
               {isSubmitting ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-3 w-3 lg:h-4 lg:w-4 lg:mr-2 animate-spin" />
               ) : (
-                <Send className="h-4 w-4 mr-2" />
+                <Send className="h-3 w-3 lg:h-4 lg:w-4 lg:mr-2" />
               )}
-              Submit
+              <span className="hidden sm:inline">Submit</span>
             </Button>
           </div>
         </div>
@@ -373,10 +378,10 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
       )}
 
       {/* Main Content */}
-      <div className="flex-1 grid grid-cols-2 divide-x min-h-0">
-        {/* Left Panel - Problem Description */}
-        <div className="flex flex-col h-full overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
+      <div className="flex-1 flex flex-col lg:grid lg:grid-cols-2 lg:divide-x min-h-0">
+        {/* Left Panel - Problem Description - Desktop Only */}
+        <div className="hidden lg:flex flex-col h-full overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-4 lg:p-6 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="mb-4">
                 <TabsTrigger value="description">Description</TabsTrigger>
@@ -576,8 +581,155 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
           </div>
         </div>
 
+        {/* Mobile Problem Description - Collapsible */}
+        <div className="lg:hidden block border-b">
+          <details className="group">
+            <summary className="cursor-pointer p-4 flex items-center justify-between bg-muted/50 hover:bg-muted transition-colors">
+              <span className="font-semibold">📖 View Problem</span>
+              <span className="text-xs text-muted-foreground group-open:hidden">Tap to expand</span>
+              <span className="text-xs text-muted-foreground hidden group-open:inline">Tap to collapse</span>
+            </summary>
+            <div className="max-h-[50vh] overflow-y-auto p-4 bg-background">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="mb-4 w-full">
+                  <TabsTrigger value="description" className="flex-1">Description</TabsTrigger>
+                  <TabsTrigger value="submissions" className="flex-1">
+                    Submissions
+                    {allSubmissions.length > 0 && (
+                      <Badge variant="secondary" className="ml-2 text-xs">
+                        {allSubmissions.length}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="description" className="space-y-4 mt-0">
+                  <div>
+                    <h3 className="text-base font-semibold mb-2">Problem Statement</h3>
+                    <div className="prose dark:prose-invert max-w-none">
+                      <pre className="whitespace-pre-wrap text-xs bg-muted/50 p-3 rounded-lg border">
+                        {question.description}
+                      </pre>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-semibold mb-2">Sample Test Cases</h3>
+                    <div className="space-y-3">
+                      {sampleTestCases.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">No sample test cases available</p>
+                      ) : (
+                        <>
+                          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-2">
+                            <p className="text-[10px] text-blue-700 dark:text-blue-300">
+                              💡 Arrays are auto-converted to space-separated format
+                            </p>
+                          </div>
+                          {sampleTestCases.map((testCase: any, index: number) => (
+                            <Card key={testCase.id} className="border-2">
+                              <CardHeader className="pb-2 p-3">
+                                <CardTitle className="text-xs flex items-center justify-between">
+                                  <span>Example {index + 1}</span>
+                                  <Badge variant="outline" className="text-[10px]">{testCase.points} pts</Badge>
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent className="space-y-2 p-3 pt-0">
+                                <div>
+                                  <p className="text-[10px] font-semibold text-muted-foreground mb-1">Input:</p>
+                                  <pre className="bg-muted/50 p-2 rounded text-[10px] font-mono overflow-x-auto border whitespace-pre-wrap">
+                                    {testCase.input.replace(/\\n/g, '\n')}
+                                  </pre>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] font-semibold text-muted-foreground mb-1">Expected Output:</p>
+                                  <pre className="bg-muted/50 p-2 rounded text-[10px] font-mono overflow-x-auto border whitespace-pre-wrap">
+                                    {testCase.expectedOutput.replace(/\\n/g, '\n')}
+                                  </pre>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-semibold mb-2">Constraints</h3>
+                    <ul className="list-disc list-inside space-y-1 text-xs text-muted-foreground">
+                      <li>Time Limit: {question.timeLimitSeconds} second(s)</li>
+                      <li>Memory Limit: {question.memoryLimitMb} MB</li>
+                    </ul>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="submissions" className="space-y-3 mt-0">
+                  {allSubmissions.length === 0 ? (
+                    <Card>
+                      <CardContent className="py-8 text-center">
+                        <Send className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                        <p className="text-xs text-muted-foreground">No submissions yet</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-3">
+                      {allSubmissions.slice(0, 3).map((submission, index) => {
+                        const isLatest = index === 0;
+                        const submissionDate = new Date(submission.timestamp);
+                        
+                        return (
+                          <Card 
+                            key={submission.id}
+                            className={`${
+                              submission.verdict === 'accepted' 
+                                ? 'border-green-500 border-2' 
+                                : 'border-red-500 border-2'
+                            } ${isLatest ? 'ring-1 ring-blue-500' : ''}`}
+                          >
+                            <CardHeader className="p-3 pb-2">
+                              <div className="flex items-center justify-between flex-wrap gap-1">
+                                <CardTitle className="text-xs flex items-center gap-1">
+                                  {isLatest && <Badge variant="secondary" className="text-[10px] px-1">Latest</Badge>}
+                                  #{allSubmissions.length - index}
+                                </CardTitle>
+                                <Badge 
+                                  variant={submission.verdict === 'accepted' ? 'default' : 'destructive'}
+                                  className="text-[10px] px-1"
+                                >
+                                  {submission.verdict === 'accepted' ? (
+                                    <CheckCircle2 className="h-2 w-2 mr-0.5" />
+                                  ) : (
+                                    <XCircle className="h-2 w-2 mr-0.5" />
+                                  )}
+                                  {submission.verdict.replace(/_/g, ' ').toUpperCase()}
+                                </Badge>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="p-3 pt-0">
+                              <div className="grid grid-cols-2 gap-2 text-[10px]">
+                                <div>
+                                  <p className="text-muted-foreground">Score</p>
+                                  <p className="font-bold text-sm">{submission.score}/{question.points}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">Tests</p>
+                                  <p className="font-bold text-sm">{submission.passedTestCases}/{submission.totalTestCases}</p>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
+          </details>
+        </div>
+
         {/* Right Panel - Code Editor */}
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col h-full overflow-hidden flex-1">
           <div className="flex-1 min-h-0 overflow-hidden">
             <Editor
               height="100%"
@@ -606,38 +758,49 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
             >
               {/* Resize Handle */}
               <div 
-                className="absolute top-0 left-0 right-0 h-1 cursor-ns-resize hover:bg-blue-500 transition-colors z-10 group"
+                className="absolute top-0 left-0 right-0 h-1 cursor-ns-resize hover:bg-blue-500 transition-colors z-10 group hidden lg:block"
                 onMouseDown={() => setIsResizing(true)}
               >
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-1 bg-gray-400 dark:bg-gray-600 rounded-full group-hover:bg-blue-500 transition-colors" />
               </div>
 
-              <div className="p-4 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <Award className="h-4 w-4" />
-                  Test Results ({testResults.filter(r => r.passed).length}/{testResults.length} Passed)
-                </h3>
+              <div className="p-2 lg:p-4 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
+                <div className="flex items-center justify-between mb-2 lg:mb-3">
+                  <h3 className="text-xs lg:text-sm font-semibold flex items-center gap-2">
+                    <Award className="h-3 w-3 lg:h-4 lg:w-4" />
+                    Test Results ({testResults.filter(r => r.passed).length}/{testResults.length} Passed)
+                  </h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTestResults([])}
+                    className="h-6 w-6 lg:h-7 lg:w-7 p-0 hover:bg-destructive/10 hover:text-destructive"
+                    title="Close test results"
+                  >
+                    <X className="h-3 w-3 lg:h-4 lg:w-4" />
+                  </Button>
+                </div>
               <div className="space-y-2">
                 {testResults.map((result: any, index: number) => (
                   <Card 
                     key={index} 
                     className={`border-2 ${result.passed ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 'border-red-500 bg-red-50 dark:bg-red-950/20'}`}
                   >
-                    <CardContent className="p-3">
+                    <CardContent className="p-2 lg:p-3">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium">Test Case {index + 1}</span>
-                        <div className="flex items-center gap-2">
+                        <span className="text-xs lg:text-sm font-medium">Test Case {index + 1}</span>
+                        <div className="flex items-center gap-1 lg:gap-2">
                           {result.passed ? (
                             <>
-                              <CheckCircle2 className="h-4 w-4 text-green-500" />
-                              <Badge variant="outline" className="text-green-700 border-green-500 bg-green-100 dark:bg-green-900">
+                              <CheckCircle2 className="h-3 w-3 lg:h-4 lg:w-4 text-green-500" />
+                              <Badge variant="outline" className="text-[10px] lg:text-xs text-green-700 border-green-500 bg-green-100 dark:bg-green-900 px-1 lg:px-2">
                                 Passed
                               </Badge>
                             </>
                           ) : (
                             <>
-                              <XCircle className="h-4 w-4 text-red-500" />
-                              <Badge variant="outline" className="text-red-700 border-red-500 bg-red-100 dark:bg-red-900">
+                              <XCircle className="h-3 w-3 lg:h-4 lg:w-4 text-red-500" />
+                              <Badge variant="outline" className="text-[10px] lg:text-xs text-red-700 border-red-500 bg-red-100 dark:bg-red-900 px-1 lg:px-2">
                                 Failed
                               </Badge>
                             </>
@@ -647,42 +810,42 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
                       
                       {/* Show output for PASSED tests with green styling */}
                       {result.passed && (
-                        <div className="space-y-2 text-xs mt-3">
+                        <div className="space-y-2 text-[10px] lg:text-xs mt-2 lg:mt-3">
                           <div>
                             <p className="text-green-700 dark:text-green-300 font-semibold mb-1">✅ Output:</p>
-                            <pre className="bg-green-50 dark:bg-green-950/30 p-2 rounded font-mono overflow-x-auto border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300">{result.actual}</pre>
+                            <pre className="bg-green-50 dark:bg-green-950/30 p-1.5 lg:p-2 rounded font-mono overflow-x-auto border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 text-[10px] lg:text-xs whitespace-pre-wrap break-all">{result.actual}</pre>
                           </div>
                           <div>
                             <p className="text-muted-foreground font-semibold mb-1">Expected:</p>
-                            <pre className="bg-muted/50 p-2 rounded font-mono overflow-x-auto border text-xs">{result.expected}</pre>
+                            <pre className="bg-muted/50 p-1.5 lg:p-2 rounded font-mono overflow-x-auto border text-[10px] lg:text-xs whitespace-pre-wrap break-all">{result.expected}</pre>
                           </div>
                         </div>
                       )}
                       
                       {/* Show output for FAILED tests with red styling */}
                       {!result.passed && (
-                        <div className="space-y-2 text-xs mt-3">
+                        <div className="space-y-2 text-[10px] lg:text-xs mt-2 lg:mt-3">
                           {result.error && result.error.includes('Runtime Error') && (
-                            <div className="bg-red-100 dark:bg-red-900/30 p-2 rounded border border-red-300 dark:border-red-700">
+                            <div className="bg-red-100 dark:bg-red-900/30 p-1.5 lg:p-2 rounded border border-red-300 dark:border-red-700">
                               <p className="text-red-700 dark:text-red-300 font-semibold mb-1">⚠️ Runtime Error</p>
-                              <pre className="text-red-600 dark:text-red-400 whitespace-pre-wrap text-[10px]">{result.actual}</pre>
+                              <pre className="text-red-600 dark:text-red-400 whitespace-pre-wrap text-[10px] break-all">{result.actual}</pre>
                             </div>
                           )}
                           {result.error && result.error.includes('Timeout') && (
-                            <div className="bg-orange-100 dark:bg-orange-900/30 p-2 rounded border border-orange-300 dark:border-orange-700">
+                            <div className="bg-orange-100 dark:bg-orange-900/30 p-1.5 lg:p-2 rounded border border-orange-300 dark:border-orange-700">
                               <p className="text-orange-700 dark:text-orange-300 font-semibold mb-1">⏱️ Timeout</p>
-                              <pre className="text-orange-600 dark:text-orange-400 whitespace-pre-wrap text-[10px]">{result.actual}</pre>
+                              <pre className="text-orange-600 dark:text-orange-400 whitespace-pre-wrap text-[10px] break-all">{result.actual}</pre>
                             </div>
                           )}
                           {!result.error || (!result.error.includes('Runtime Error') && !result.error.includes('Timeout')) && (
                             <>
                               <div>
                                 <p className="text-muted-foreground font-semibold mb-1">Expected:</p>
-                                <pre className="bg-muted p-2 rounded font-mono overflow-x-auto border">{result.expected}</pre>
+                                <pre className="bg-muted p-1.5 lg:p-2 rounded font-mono overflow-x-auto border text-[10px] lg:text-xs whitespace-pre-wrap break-all">{result.expected}</pre>
                               </div>
                               <div>
                                 <p className="text-red-700 dark:text-red-300 font-semibold mb-1">❌ Got:</p>
-                                <pre className="bg-red-50 dark:bg-red-950/30 p-2 rounded font-mono overflow-x-auto border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">{result.actual}</pre>
+                                <pre className="bg-red-50 dark:bg-red-950/30 p-1.5 lg:p-2 rounded font-mono overflow-x-auto border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-[10px] lg:text-xs whitespace-pre-wrap break-all">{result.actual}</pre>
                               </div>
                             </>
                           )}

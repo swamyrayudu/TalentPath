@@ -247,47 +247,47 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-4xl h-[90vh] sm:h-[85vh] flex flex-col p-0">
           <div className="flex flex-col h-full overflow-hidden">
-            <DialogHeader className="shrink-0 px-6 pt-6 pb-4">
-              <DialogTitle className="flex items-center gap-2">
-                <BookOpen className="h-5 w-5" />
+            <DialogHeader className="shrink-0 px-4 lg:px-6 pt-4 lg:pt-6 pb-3 lg:pb-4">
+              <DialogTitle className="flex items-center gap-2 text-base lg:text-lg">
+                <BookOpen className="h-4 w-4 lg:h-5 lg:w-5" />
                 Question Library
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-xs lg:text-sm">
                 Browse and add existing questions with test cases to your contest
               </DialogDescription>
             </DialogHeader>
 
             {/* Filters */}
-            <div className="shrink-0 px-6 pb-4">
-              <div className="flex gap-3 flex-wrap">
-                <div className="flex-1 min-w-[200px] relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="shrink-0 px-4 lg:px-6 pb-3 lg:pb-4">
+              <div className="flex gap-2 lg:gap-3 flex-wrap">
+                <div className="flex-1 min-w-[150px] lg:min-w-[200px] relative">
+                  <Search className="absolute left-2 lg:left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 lg:h-4 lg:w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search questions..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
+                    className="pl-7 lg:pl-9 h-8 lg:h-10 text-xs lg:text-sm"
                   />
                 </div>
                 <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-28 lg:w-40 h-8 lg:h-10 text-xs lg:text-sm">
                     <SelectValue placeholder="Difficulty" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Levels</SelectItem>
-                    <SelectItem value="EASY">Easy</SelectItem>
-                    <SelectItem value="MEDIUM">Medium</SelectItem>
-                    <SelectItem value="HARD">Hard</SelectItem>
+                    <SelectItem value="all" className="text-xs lg:text-sm">All Levels</SelectItem>
+                    <SelectItem value="EASY" className="text-xs lg:text-sm">Easy</SelectItem>
+                    <SelectItem value="MEDIUM" className="text-xs lg:text-sm">Medium</SelectItem>
+                    <SelectItem value="HARD" className="text-xs lg:text-sm">Hard</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={topicFilter} onValueChange={setTopicFilter}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-32 lg:w-48 h-8 lg:h-10 text-xs lg:text-sm">
                     <SelectValue placeholder="Topic" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Topics</SelectItem>
+                    <SelectItem value="all" className="text-xs lg:text-sm">All Topics</SelectItem>
                     {topics.map((topic) => (
-                      <SelectItem key={topic} value={topic}>
+                      <SelectItem key={topic} value={topic} className="text-xs lg:text-sm">
                         {topic}
                       </SelectItem>
                     ))}
@@ -297,7 +297,7 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
             </div>
 
             {/* Questions List */}
-            <div className="flex-1 min-h-0 overflow-hidden px-6 pb-6">
+            <div className="flex-1 min-h-0 overflow-hidden px-4 lg:px-6 pb-4 lg:pb-6">
               {isLoading && page === 1 ? (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -310,69 +310,74 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
                   </p>
                 </div>
               ) : (
-                <div className="h-full overflow-y-auto pr-2 -mr-2 space-y-3" ref={scrollAreaRef}>
+                <div className="h-full overflow-y-auto pr-2 -mr-2 space-y-2 lg:space-y-3" ref={scrollAreaRef}>
                   {questions.map((question, index) => (
                     <Card
                       key={`${question.id}-${index}`}
                       className="hover:border-primary/50 transition-colors cursor-pointer"
                       onClick={() => handleQuestionClick(question)}
                     >
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 space-y-2 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-semibold text-lg break-words">{question.title}</h3>
+                      <CardContent className="p-3 lg:p-4">
+                        <div className="flex items-start justify-between gap-2 lg:gap-4">
+                          <div className="flex-1 space-y-1.5 lg:space-y-2 min-w-0">
+                            <div className="flex items-center gap-1.5 lg:gap-2 flex-wrap">
+                              <h3 className="font-semibold text-sm lg:text-lg break-words">{question.title}</h3>
                               <Badge 
                                 variant="outline" 
-                                className={getDifficultyColor(question.difficulty)}
+                                className={`${getDifficultyColor(question.difficulty)} text-[10px] lg:text-xs px-1 lg:px-2`}
                               >
                                 {question.difficulty}
                               </Badge>
-                              <Badge variant="secondary" className="text-xs">
-                                {question.points} points
+                              <Badge variant="secondary" className="text-[10px] lg:text-xs px-1 lg:px-2">
+                                {question.points} pts
                               </Badge>
                             </div>
                             
-                            <p className="text-sm text-muted-foreground line-clamp-2 break-words">
+                            <p className="text-xs lg:text-sm text-muted-foreground line-clamp-2 break-words">
                               {question.description}
                             </p>
                             
                             {question.topics && question.topics.length > 0 && (
                               <div className="flex flex-wrap gap-1">
-                                {question.topics.map((topic, topicIndex) => (
-                                  <Badge key={`${question.id}-topic-${topicIndex}-${topic}`} variant="outline" className="text-xs">
-                                    <Tag className="h-3 w-3 mr-1" />
+                                {question.topics.slice(0, 3).map((topic, topicIndex) => (
+                                  <Badge key={`${question.id}-topic-${topicIndex}-${topic}`} variant="outline" className="text-[10px] lg:text-xs px-1 lg:px-2">
+                                    <Tag className="h-2 w-2 lg:h-3 lg:w-3 mr-0.5 lg:mr-1" />
                                     {topic}
                                   </Badge>
                                 ))}
+                                {question.topics.length > 3 && (
+                                  <Badge variant="outline" className="text-[10px] lg:text-xs px-1 lg:px-2">
+                                    +{question.topics.length - 3}
+                                  </Badge>
+                                )}
                               </div>
                             )}
                             
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-                              <span className="flex items-center gap-1">
-                                <TestTube className="h-3 w-3" />
-                                {question.testCaseCount} test cases
+                            <div className="flex items-center gap-2 lg:gap-4 text-[10px] lg:text-xs text-muted-foreground flex-wrap">
+                              <span className="flex items-center gap-0.5 lg:gap-1">
+                                <TestTube className="h-2.5 w-2.5 lg:h-3 lg:w-3" />
+                                {question.testCaseCount} tests
                               </span>
                               <span>
-                                Time: {question.timeLimitSeconds || 2}s
+                                {question.timeLimitSeconds || 2}s
                               </span>
                               <span>
-                                Memory: {question.memoryLimitMb || 256}MB
+                                {question.memoryLimitMb || 256}MB
                               </span>
                             </div>
                           </div>
 
                           <Button
                             size="sm"
-                            className="shrink-0"
+                            className="shrink-0 h-7 lg:h-8 text-xs lg:text-sm px-2 lg:px-3"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleAddQuestion(question);
                             }}
                             disabled={isLoading}
                           >
-                            <Plus className="h-4 w-4 mr-1" />
-                            Add
+                            <Plus className="h-3 w-3 lg:h-4 lg:w-4 lg:mr-1" />
+                            <span className="hidden sm:inline">Add</span>
                           </Button>
                         </div>
                       </CardContent>
@@ -407,36 +412,36 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
         <Dialog open={!!selectedQuestion} onOpenChange={() => setSelectedQuestion(null)}>
           <DialogContent className="max-w-3xl h-[90vh] sm:h-[85vh] flex flex-col p-0">
             <div className="flex flex-col h-full overflow-hidden">
-              <DialogHeader className="shrink-0 px-6 pt-6 pb-4">
-                <DialogTitle className="break-words">{selectedQuestion.title}</DialogTitle>
-                <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <DialogHeader className="shrink-0 px-4 lg:px-6 pt-4 lg:pt-6 pb-3 lg:pb-4">
+                <DialogTitle className="break-words text-base lg:text-lg">{selectedQuestion.title}</DialogTitle>
+                <div className="flex items-center gap-1.5 lg:gap-2 mt-2 flex-wrap">
                   <Badge 
                     variant="outline" 
-                    className={getDifficultyColor(selectedQuestion.difficulty)}
+                    className={`${getDifficultyColor(selectedQuestion.difficulty)} text-[10px] lg:text-xs px-1 lg:px-2`}
                   >
                     {selectedQuestion.difficulty}
                   </Badge>
-                  <Badge variant="secondary">{selectedQuestion.points} points</Badge>
+                  <Badge variant="secondary" className="text-[10px] lg:text-xs px-1 lg:px-2">{selectedQuestion.points} points</Badge>
                 </div>
               </DialogHeader>
 
-              <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
-                <div className="space-y-4">
+              <div className="flex-1 min-h-0 overflow-y-auto px-4 lg:px-6 pb-4 lg:pb-6">
+                <div className="space-y-3 lg:space-y-4">
                   <div>
-                    <h4 className="font-semibold mb-2">Description</h4>
-                    <div className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
+                    <h4 className="font-semibold mb-2 text-sm lg:text-base">Description</h4>
+                    <div className="text-xs lg:text-sm text-muted-foreground whitespace-pre-wrap break-words">
                       {selectedQuestion.description}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-2 gap-2 lg:gap-4 text-xs lg:text-sm">
                     <div>
                       <span className="font-semibold">Time Limit:</span>{' '}
-                      {selectedQuestion.timeLimitSeconds || 2} seconds
+                      {selectedQuestion.timeLimitSeconds || 2}s
                     </div>
                     <div>
                       <span className="font-semibold">Memory Limit:</span>{' '}
-                      {selectedQuestion.memoryLimitMb || 256} MB
+                      {selectedQuestion.memoryLimitMb || 256}MB
                     </div>
                     <div>
                       <span className="font-semibold">Test Cases:</span>{' '}
@@ -450,11 +455,11 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
 
                   {selectedQuestion.topics && selectedQuestion.topics.length > 0 && (
                     <div>
-                      <h4 className="font-semibold mb-2">Topics</h4>
-                      <div className="flex flex-wrap gap-2">
+                      <h4 className="font-semibold mb-2 text-sm lg:text-base">Topics</h4>
+                      <div className="flex flex-wrap gap-1.5 lg:gap-2">
                         {selectedQuestion.topics.map((topic, idx) => (
-                          <Badge key={`selected-topic-${idx}-${topic}`} variant="outline">
-                            <Tag className="h-3 w-3 mr-1" />
+                          <Badge key={`selected-topic-${idx}-${topic}`} variant="outline" className="text-[10px] lg:text-xs px-1 lg:px-2">
+                            <Tag className="h-2.5 w-2.5 lg:h-3 lg:w-3 mr-0.5 lg:mr-1" />
                             {topic}
                           </Badge>
                         ))}
@@ -464,33 +469,33 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
 
                   {/* Sample Test Cases */}
                   <div>
-                    <h4 className="font-semibold mb-2 flex items-center gap-2">
-                      <TestTube className="h-4 w-4" />
+                    <h4 className="font-semibold mb-2 flex items-center gap-1.5 lg:gap-2 text-sm lg:text-base">
+                      <TestTube className="h-3 w-3 lg:h-4 lg:w-4" />
                       Sample Test Cases
                     </h4>
                     {loadingTestCases ? (
                       <div className="flex items-center justify-center py-4">
-                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        <Loader2 className="h-4 w-4 lg:h-5 lg:w-5 animate-spin text-muted-foreground" />
                       </div>
                     ) : selectedTestCases.length > 0 ? (
-                      <div className="space-y-3">
+                      <div className="space-y-2 lg:space-y-3">
                         {selectedTestCases.map((testCase, idx) => (
                           <Card key={testCase.id} className="border-2">
-                            <CardContent className="p-3">
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                                  <span className="text-sm font-semibold">Example {idx + 1}</span>
-                                  <Badge variant="outline" className="text-xs">{testCase.points} points</Badge>
+                            <CardContent className="p-2 lg:p-3">
+                              <div className="space-y-1.5 lg:space-y-2">
+                                <div className="flex items-center justify-between mb-1.5 lg:mb-2 flex-wrap gap-1 lg:gap-2">
+                                  <span className="text-xs lg:text-sm font-semibold">Example {idx + 1}</span>
+                                  <Badge variant="outline" className="text-[10px] lg:text-xs px-1 lg:px-2">{testCase.points} points</Badge>
                                 </div>
                                 <div>
-                                  <p className="text-xs font-semibold text-muted-foreground mb-1">Input:</p>
-                                  <pre className="bg-muted/50 p-2 rounded text-xs font-mono overflow-x-auto border whitespace-pre-wrap break-all">
+                                  <p className="text-[10px] lg:text-xs font-semibold text-muted-foreground mb-1">Input:</p>
+                                  <pre className="bg-muted/50 p-1.5 lg:p-2 rounded text-[10px] lg:text-xs font-mono overflow-x-auto border whitespace-pre-wrap break-all">
                                     {testCase.input.replace(/\\n/g, '\n')}
                                   </pre>
                                 </div>
                                 <div>
-                                  <p className="text-xs font-semibold text-muted-foreground mb-1">Expected Output:</p>
-                                  <pre className="bg-muted/50 p-2 rounded text-xs font-mono overflow-x-auto border whitespace-pre-wrap break-all">
+                                  <p className="text-[10px] lg:text-xs font-semibold text-muted-foreground mb-1">Expected Output:</p>
+                                  <pre className="bg-muted/50 p-1.5 lg:p-2 rounded text-[10px] lg:text-xs font-mono overflow-x-auto border whitespace-pre-wrap break-all">
                                     {testCase.expectedOutput.replace(/\\n/g, '\n')}
                                   </pre>
                                 </div>
@@ -500,12 +505,12 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">No sample test cases available</p>
+                      <p className="text-xs lg:text-sm text-muted-foreground">No sample test cases available</p>
                     )}
                   </div>
 
-                  <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t -mx-6 px-6 py-4 mt-4">
-                    <Button variant="outline" onClick={() => setSelectedQuestion(null)}>
+                  <div className="flex justify-end gap-2 pt-3 lg:pt-4 sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t -mx-4 lg:-mx-6 px-4 lg:px-6 py-3 lg:py-4 mt-3 lg:mt-4">
+                    <Button variant="outline" onClick={() => setSelectedQuestion(null)} size="sm" className="h-8 lg:h-10 text-xs lg:text-sm">
                       Cancel
                     </Button>
                     <Button
@@ -514,11 +519,13 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
                         setSelectedQuestion(null);
                       }}
                       disabled={isLoading}
+                      size="sm"
+                      className="h-8 lg:h-10 text-xs lg:text-sm"
                     >
                       {isLoading ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <Loader2 className="h-3 w-3 lg:h-4 lg:w-4 lg:mr-2 animate-spin" />
                       ) : (
-                        <Plus className="h-4 w-4 mr-2" />
+                        <Plus className="h-3 w-3 lg:h-4 lg:w-4 lg:mr-2" />
                       )}
                       Add to Contest
                     </Button>
