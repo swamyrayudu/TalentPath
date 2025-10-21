@@ -28,6 +28,7 @@ export default function AdminAptitudePage() {
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [editingQuestionId, setEditingQuestionId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     question: '',
@@ -71,6 +72,7 @@ export default function AdminAptitudePage() {
   // Start editing question by populating form
   function startEdit(question: any) {
     setEditingQuestionId(question.s_no);
+    setShowAddForm(false);
     setFormData({
       question: question.question || '',
       topic: question.topic || '',
@@ -86,6 +88,24 @@ export default function AdminAptitudePage() {
 
   // Cancel editing
   function cancelEdit() {
+    setEditingQuestionId(null);
+    setShowAddForm(false);
+    setFormData({
+      question: '',
+      topic: '',
+      category: '',
+      option_a: '',
+      option_b: '',
+      option_c: '',
+      option_d: '',
+      answer: '',
+      explanation: '',
+    });
+  }
+
+  // Show add form
+  function showAddQuestionForm() {
+    setShowAddForm(true);
     setEditingQuestionId(null);
     setFormData({
       question: '',
@@ -194,28 +214,39 @@ function validateForm() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <header className="mb-8 text-center">
-        <h1 className="text-4xl font-bold">Admin Aptitude Questions</h1>
-        <p className="text-muted-foreground mt-2">Manage aptitude questions by topic</p>
-      </header>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-12">
+        {/* Header */}
 
-<div className="mb-6">
-  <label className="block mb-2 font-semibold">Select Topic</label>
-  <Select value={selectedTopic || ''} onValueChange={(value) => setSelectedTopic(value || null)}>
-    <SelectTrigger className="w-full max-w-xs border rounded p-2">
-      <SelectValue placeholder="-- Select Topic --" />
-    </SelectTrigger>
-    <SelectContent>
-    
-      {topics.map(topic => (
-        <SelectItem key={topic} value={topic}>
-          {topic}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-</div>
+
+        {/* Topic Selection Card */}
+        <Card className="max-w-4xl mx-auto mb-8 shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600">
+                <Plus className="h-5 w-5 text-white" />
+              </div>
+              Select Topic
+            </CardTitle>
+            <CardDescription>
+              Choose a topic to view and manage its questions
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Select value={selectedTopic || ''} onValueChange={(value) => setSelectedTopic(value || null)}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="-- Select Topic --" />
+              </SelectTrigger>
+              <SelectContent>
+                {topics.map(topic => (
+                  <SelectItem key={topic} value={topic}>
+                    {topic.charAt(0).toUpperCase() + topic.slice(1).replace(/-/g, ' ')}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
 
       {loading && (
         <div className="flex justify-center py-8">
@@ -223,114 +254,341 @@ function validateForm() {
         </div>
       )}
 
-      {!loading && selectedTopic && (
-        <>
-          <Card className="mb-6">
-            <CardContent>
-              <CardTitle className="mb-4 text-lg">
-                {editingQuestionId ? 'Edit Question' : 'Add New Question'}
-              </CardTitle>
-
-              <div className="space-y-4">
-                <Input 
-                  name="question" 
-                  placeholder="Question text" 
-                  value={formData.question} 
-                  onChange={handleInput} 
-                  required 
-                />
-                <Input 
-                  name="topic" 
-                  placeholder="Topic" 
-                  value={selectedTopic || formData.topic} 
-                  onChange={handleInput} 
-                  required 
-                  disabled 
-                />
-                <Input 
-                  name="option_a" 
-                  placeholder="Option A" 
-                  value={formData.option_a} 
-                  onChange={handleInput} 
-                />
-                <Input 
-                  name="option_b" 
-                  placeholder="Option B" 
-                  value={formData.option_b} 
-                  onChange={handleInput} 
-                />
-                <Input 
-                  name="option_c" 
-                  placeholder="Option C" 
-                  value={formData.option_c} 
-                  onChange={handleInput} 
-                />
-                <Input 
-                  name="option_d" 
-                  placeholder="Option D" 
-                  value={formData.option_d} 
-                  onChange={handleInput} 
-                />
-                <Input 
-                  name="answer" 
-                  placeholder="Correct Answer (e.g., A, B, C, or D)" 
-                  value={formData.answer} 
-                  onChange={handleInput} 
-                />
-                <Textarea 
-                  name="explanation" 
-                  placeholder="Explanation" 
-                  value={formData.explanation} 
-                  onChange={handleInput} 
-                />
-
-                <div className="flex gap-4">
-                  <Button onClick={submitForm} className="flex items-center gap-2">
-                    {editingQuestionId ? 'Update' : 'Create'} <Plus className="w-4 h-4" />
+        {!loading && selectedTopic && (
+          <>
+            {/* Questions List Header with Add Button */}
+            <div className="max-w-7xl mx-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold">
+                  Questions ({questions.length})
+                </h2>
+                {!showAddForm && !editingQuestionId && (
+                  <Button 
+                    onClick={showAddQuestionForm}
+                    className="gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Question
                   </Button>
-                  {editingQuestionId && (
-                    <Button variant="outline" onClick={cancelEdit}>Cancel</Button>
-                  )}
-                </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
 
-          <div className="space-y-4">
-            {questions.length === 0 && (
-              <p className="text-center text-muted-foreground">No questions for this topic yet.</p>
-            )}
-            {questions.map(q => (
-              <Card key={q.s_no}>
-                <CardContent>
+              {/* Add Question Form (shown when showAddForm is true) */}
+              {showAddForm && (
+                <Card className="mb-6 shadow-lg border-2 border-amber-200">
                   <CardHeader>
-                    <CardTitle>{q.question}</CardTitle>
-                    <CardDescription>{q.explanation}</CardDescription>
+                    <CardTitle className="flex items-center gap-2">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600">
+                        <Plus className="h-5 w-5 text-white" />
+                      </div>
+                      Add New Question
+                    </CardTitle>
+                    <CardDescription>
+                      Fill in the details to create a new question
+                    </CardDescription>
                   </CardHeader>
-                  <Separator className="my-3" />
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    {['option_a', 'option_b', 'option_c', 'option_d'].map((key) =>
-                      q[key] ? (
-                        <div key={key} className="border p-2 rounded">
-                          <strong>{key.replace('option_', '').toUpperCase()}:</strong> {q[key]}
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium mb-1.5 block">Question *</label>
+                        <Textarea 
+                          name="question" 
+                          placeholder="Enter your question here..." 
+                          value={formData.question} 
+                          onChange={handleInput} 
+                          required
+                          rows={3}
+                          className="resize-none"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium mb-1.5 block">Option A</label>
+                          <Input 
+                            name="option_a" 
+                            placeholder="Option A" 
+                            value={formData.option_a} 
+                            onChange={handleInput} 
+                          />
                         </div>
-                      ) : null
-                    )}
-                  </div>
-                  <div className="flex gap-4 mt-4">
-                    <Button size="sm" variant="outline" onClick={() => startEdit(q)} className="flex items-center gap-2">
-                      <Edit className="w-4 h-4" /> Edit
-                    </Button>
-                    <Button size="sm" variant="destructive" onClick={() => deleteQuestion(q.s_no)} className="flex items-center gap-2">
-                      <Trash className="w-4 h-4" /> Delete
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </>
-      )}
+                        <div>
+                          <label className="text-sm font-medium mb-1.5 block">Option B</label>
+                          <Input 
+                            name="option_b" 
+                            placeholder="Option B" 
+                            value={formData.option_b} 
+                            onChange={handleInput} 
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium mb-1.5 block">Option C</label>
+                          <Input 
+                            name="option_c" 
+                            placeholder="Option C" 
+                            value={formData.option_c} 
+                            onChange={handleInput} 
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium mb-1.5 block">Option D</label>
+                          <Input 
+                            name="option_d" 
+                            placeholder="Option D" 
+                            value={formData.option_d} 
+                            onChange={handleInput} 
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium mb-1.5 block">Correct Answer</label>
+                        <Input 
+                          name="answer" 
+                          placeholder="e.g., A, B, C, or D" 
+                          value={formData.answer} 
+                          onChange={handleInput}
+                          maxLength={1}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium mb-1.5 block">Explanation</label>
+                        <Textarea 
+                          name="explanation" 
+                          placeholder="Explain the correct answer..." 
+                          value={formData.explanation} 
+                          onChange={handleInput}
+                          rows={3}
+                          className="resize-none"
+                        />
+                      </div>
+
+                      <div className="flex gap-3 pt-4">
+                        <Button 
+                          onClick={submitForm} 
+                          className="gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Create Question
+                        </Button>
+                        <Button variant="outline" onClick={cancelEdit}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {questions.length === 0 ? (
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <div className="text-muted-foreground">
+                      <Plus className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg font-medium mb-2">No questions yet</p>
+                      <p className="text-sm">Create your first question for this topic above.</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {questions.map((q, index) => (
+                    <Card key={q.s_no} className={`group transition-all duration-300 ${
+                      editingQuestionId === q.s_no ? 'shadow-xl border-2 border-amber-200' : 'hover:shadow-lg'
+                    }`}>
+                      {editingQuestionId === q.s_no ? (
+                        // Edit Mode
+                        <>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600">
+                                <Edit className="h-5 w-5 text-white" />
+                              </div>
+                              Editing Question {index + 1}
+                            </CardTitle>
+                            <CardDescription>
+                              Update the question details below
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-4">
+                              <div>
+                                <label className="text-sm font-medium mb-1.5 block">Question *</label>
+                                <Textarea 
+                                  name="question" 
+                                  placeholder="Enter your question here..." 
+                                  value={formData.question} 
+                                  onChange={handleInput} 
+                                  required
+                                  rows={3}
+                                  className="resize-none"
+                                />
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className="text-sm font-medium mb-1.5 block">Option A</label>
+                                  <Input 
+                                    name="option_a" 
+                                    placeholder="Option A" 
+                                    value={formData.option_a} 
+                                    onChange={handleInput} 
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium mb-1.5 block">Option B</label>
+                                  <Input 
+                                    name="option_b" 
+                                    placeholder="Option B" 
+                                    value={formData.option_b} 
+                                    onChange={handleInput} 
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium mb-1.5 block">Option C</label>
+                                  <Input 
+                                    name="option_c" 
+                                    placeholder="Option C" 
+                                    value={formData.option_c} 
+                                    onChange={handleInput} 
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium mb-1.5 block">Option D</label>
+                                  <Input 
+                                    name="option_d" 
+                                    placeholder="Option D" 
+                                    value={formData.option_d} 
+                                    onChange={handleInput} 
+                                  />
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="text-sm font-medium mb-1.5 block">Correct Answer</label>
+                                <Input 
+                                  name="answer" 
+                                  placeholder="e.g., A, B, C, or D" 
+                                  value={formData.answer} 
+                                  onChange={handleInput}
+                                  maxLength={1}
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-sm font-medium mb-1.5 block">Explanation</label>
+                                <Textarea 
+                                  name="explanation" 
+                                  placeholder="Explain the correct answer..." 
+                                  value={formData.explanation} 
+                                  onChange={handleInput}
+                                  rows={3}
+                                  className="resize-none"
+                                />
+                              </div>
+
+                              <div className="flex gap-3 pt-4">
+                                <Button 
+                                  onClick={submitForm} 
+                                  className="gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                  Update Question
+                                </Button>
+                                <Button variant="outline" onClick={cancelEdit}>
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </>
+                      ) : (
+                        // View Mode
+                        <>
+                          <CardHeader>
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-xs font-semibold px-2 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                                    Q{index + 1}
+                                  </span>
+                                  {q.answer && (
+                                    <span className="text-xs font-semibold px-2 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                      Answer: {q.answer}
+                                    </span>
+                                  )}
+                                </div>
+                                <CardTitle className="text-lg group-hover:text-amber-600 transition-colors">
+                                  {q.question}
+                                </CardTitle>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-4">
+                              {/* Options Grid */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {['option_a', 'option_b', 'option_c', 'option_d'].map((key) =>
+                                  q[key] ? (
+                                    <div 
+                                      key={key} 
+                                      className={`border-2 p-3 rounded-lg transition-all ${
+                                        q.answer?.toLowerCase() === key.replace('option_', '') 
+                                          ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
+                                          : 'border-border hover:border-amber-300'
+                                      }`}
+                                    >
+                                      <span className="font-semibold text-amber-600">
+                                        {key.replace('option_', '').toUpperCase()}.
+                                      </span>{' '}
+                                      {q[key]}
+                                    </div>
+                                  ) : null
+                                )}
+                              </div>
+
+                              {/* Explanation */}
+                              {q.explanation && (
+                                <div className="p-3 rounded-lg bg-muted">
+                                  <p className="text-sm font-medium mb-1">💡 Explanation:</p>
+                                  <p className="text-sm text-muted-foreground">{q.explanation}</p>
+                                </div>
+                              )}
+
+                              <Separator />
+
+                              {/* Action Buttons */}
+                              <div className="flex gap-3">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => startEdit(q)} 
+                                  className="flex items-center gap-2 hover:bg-amber-50 hover:border-amber-300"
+                                >
+                                  <Edit className="w-4 h-4" /> Edit
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive" 
+                                  onClick={() => deleteQuestion(q.s_no)} 
+                                  className="flex items-center gap-2"
+                                >
+                                  <Trash className="w-4 h-4" /> Delete
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </>
+                      )}
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
