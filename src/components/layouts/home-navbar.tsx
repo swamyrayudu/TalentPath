@@ -73,43 +73,70 @@ export default function HomeNavbar() {
   const isAdmin = userRole === 'admin';
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4">
+    <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-amber-600">
-              <Code className="h-6 w-6 text-white" />
+          <Link 
+            href="/" 
+            className="flex items-center space-x-2.5 transition-opacity duration-200 hover:opacity-80"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 via-amber-600 to-orange-600 shadow-md transition-transform duration-200 hover:scale-105">
+              <Code className="h-5 w-5 text-white" />
             </div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-amber-500 to-amber-600 bg-clip-text text-transparent">
+            <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 bg-clip-text text-transparent">
               TalentPath
             </h1>
           </Link>
 
-          {/* Desktop Navigation */}
+          {/* Desktop Navigation - No Icons */}
           <div className="hidden md:flex md:items-center md:space-x-1">
             {navRoutes.map((route) => {
-              const Icon = route.icon;
               const isActive = pathname === route.href;
-              
+
               return (
                 <Link
                   key={route.href}
                   href={route.href}
-                  className={`flex items-center space-x-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground ${
-                    isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
-                  }`}
+                  className="relative px-4 py-2 text-sm font-medium transition-all duration-300 group"
                 >
-                  <Icon className="h-4 w-4" />
-                  <span>{route.name}</span>
+                  <span
+                    className={`relative z-10 transition-colors duration-300 ${
+                      isActive
+                        ? 'text-amber-600 dark:text-amber-400'
+                        : 'text-muted-foreground group-hover:text-foreground'
+                    }`}
+                  >
+                    {route.name}
+                  </span>
+
+                  {/* Bottom border animation */}
+                  <span
+                    className={`absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-amber-500 to-orange-600 transition-all duration-300 ${
+                      isActive
+                        ? 'w-full'
+                        : 'w-0 group-hover:w-full'
+                    }`}
+                  />
+
+                  {/* Hover background */}
+                  <span
+                    className={`absolute inset-0 rounded-lg bg-accent/50 transition-opacity duration-300 ${
+                      isActive
+                        ? 'opacity-0'
+                        : 'opacity-0 group-hover:opacity-100'
+                    }`}
+                  />
                 </Link>
               );
             })}
           </div>
 
           {/* Right Side */}
-          <div className="flex items-center space-x-2">
-            <ModeToggle />
+          <div className="flex items-center space-x-3">
+            <div className="transition-transform duration-200 hover:scale-105">
+              <ModeToggle />
+            </div>
             
             {/* Desktop Auth - Profile Avatar or Sign In Button */}
             <div className="hidden md:block">
@@ -118,22 +145,22 @@ export default function HomeNavbar() {
               ) : session?.user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                      <Avatar className="h-10 w-10 ring-2 ring-amber-500/20">
+                    <button className="relative h-10 w-10 rounded-full transition-transform duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+                      <Avatar className="h-10 w-10 ring-2 ring-amber-500/20 transition-all duration-300 hover:ring-amber-500/40">
                         <AvatarImage 
                           src={session.user.image || ''} 
                           alt={session.user.name || 'User'} 
                         />
-                        <AvatarFallback className="bg-gradient-to-br from-amber-500 to-amber-600 text-white">
+                        <AvatarFallback className="bg-gradient-to-br from-amber-500 to-amber-600 text-white font-semibold">
                           {session.user.name?.charAt(0).toUpperCase() || 'U'}
                         </AvatarFallback>
                       </Avatar>
-                    </Button>
+                    </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-64" align="end" forceMount>
                     <DropdownMenuLabel className="font-normal">
                       <div className="flex flex-col space-y-2">
-                        <p className="text-sm font-medium leading-none">
+                        <p className="text-sm font-semibold leading-none">
                           {session.user.name}
                         </p>
                         <p className="text-xs leading-none text-muted-foreground">
@@ -150,7 +177,10 @@ export default function HomeNavbar() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link href="/dashboard" className="cursor-pointer">
+                      <Link 
+                        href="/dashboard" 
+                        className="cursor-pointer transition-colors duration-200"
+                      >
                         <User className="mr-2 h-4 w-4" />
                         <span>Profile</span>
                       </Link>
@@ -159,7 +189,10 @@ export default function HomeNavbar() {
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
-                          <Link href="/admin" className="cursor-pointer">
+                          <Link 
+                            href="/admin" 
+                            className="cursor-pointer transition-colors duration-200"
+                          >
                             <Shield className="mr-2 h-4 w-4" />
                             <span>Admin Dashboard</span>
                           </Link>
@@ -167,7 +200,10 @@ export default function HomeNavbar() {
                       </>
                     )}
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-red-600 focus:text-red-600">
+                    <DropdownMenuItem 
+                      onClick={handleSignOut} 
+                      className="cursor-pointer text-red-600 focus:text-red-600 transition-colors duration-200"
+                    >
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
                     </DropdownMenuItem>
@@ -176,7 +212,7 @@ export default function HomeNavbar() {
               ) : (
                 <Button 
                   onClick={handleGoogleSignIn}
-                  className="gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700"
+                  className="gap-2 bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 hover:from-amber-600 hover:via-amber-700 hover:to-orange-700 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
                 >
                   <LogIn className="h-4 w-4" />
                   Sign In
@@ -188,15 +224,15 @@ export default function HomeNavbar() {
             <div className="md:hidden">
               <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon">
+                  <button className="inline-flex items-center justify-center rounded-md p-2 transition-all duration-200 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/20">
                     <Menu className="h-6 w-6" />
-                  </Button>
+                  </button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-80">
+                <SheetContent side="right" className="w-80 sm:w-96">
                   <SheetHeader>
                     <SheetTitle className="flex items-center space-x-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-amber-600">
-                        <Code className="h-5 w-5 text-white" />
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 shadow-md">
+                        <Code className="h-4 w-4 text-white" />
                       </div>
                       <span className="bg-gradient-to-r from-amber-500 to-amber-600 bg-clip-text text-transparent">
                         TalentPath
@@ -204,26 +240,26 @@ export default function HomeNavbar() {
                     </SheetTitle>
                   </SheetHeader>
 
-                  <div className="mt-8 flex flex-col space-y-4">
+                  <div className="mt-8 flex flex-col space-y-6">
                     {/* User Info in Mobile (only if logged in) */}
                     {session?.user && (
-                      <div className="rounded-lg border p-4 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900">
+                      <div className="rounded-xl border p-4 bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/20 backdrop-blur-sm transition-all duration-300 hover:shadow-md">
                         <div className="flex items-center space-x-3">
                           <Avatar className="h-12 w-12 ring-2 ring-amber-500/20">
                             <AvatarImage 
                               src={session.user.image || ''} 
                               alt={session.user.name || 'User'} 
                             />
-                            <AvatarFallback className="bg-gradient-to-br from-amber-500 to-amber-600 text-white">
+                            <AvatarFallback className="bg-gradient-to-br from-amber-500 to-amber-600 text-white font-semibold">
                               {session.user.name?.charAt(0).toUpperCase() || 'U'}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 space-y-1">
-                            <p className="text-sm font-medium">{session.user.name}</p>
-                            <p className="text-xs text-muted-foreground">{session.user.email}</p>
+                            <p className="text-sm font-semibold">{session.user.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
                             <Badge 
                               variant={isAdmin ? 'default' : 'secondary'} 
-                              className="w-fit"
+                              className="w-fit text-xs"
                             >
                               <Shield className="mr-1 h-3 w-3" />
                               {userRole.toUpperCase()}
@@ -233,7 +269,7 @@ export default function HomeNavbar() {
                       </div>
                     )}
 
-                    {/* Navigation Links */}
+                    {/* Navigation Links - Keep Icons in Mobile */}
                     <div className="space-y-1">
                       {navRoutes.map((route) => {
                         const Icon = route.icon;
@@ -244,12 +280,19 @@ export default function HomeNavbar() {
                             key={route.href}
                             href={route.href}
                             onClick={() => setMobileMenuOpen(false)}
-                            className={`flex items-center space-x-3 rounded-md px-3 py-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground ${
-                              isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                            className={`group flex items-center justify-between rounded-lg px-4 py-3 text-sm font-medium transition-all duration-300 ${
+                              isActive
+                                ? 'bg-gradient-to-r from-amber-500/10 to-orange-500/10 text-amber-600 dark:text-amber-400 shadow-sm'
+                                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:translate-x-1'
                             }`}
                           >
-                            <Icon className="h-5 w-5" />
-                            <span>{route.name}</span>
+                            <div className="flex items-center space-x-3">
+                              <Icon className="h-5 w-5" />
+                              <span>{route.name}</span>
+                            </div>
+                            {isActive && (
+                              <span className="h-2 w-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 animate-pulse" />
+                            )}
                           </Link>
                         );
                       })}
@@ -260,7 +303,7 @@ export default function HomeNavbar() {
                           <Link
                             href="/admin"
                             onClick={() => setMobileMenuOpen(false)}
-                            className="flex items-center space-x-3 rounded-md px-3 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                            className="flex items-center space-x-3 rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground transition-all duration-300 hover:bg-accent hover:text-accent-foreground hover:translate-x-1"
                           >
                             <Shield className="h-5 w-5" />
                             <span>Admin Dashboard</span>
@@ -278,7 +321,7 @@ export default function HomeNavbar() {
                             setMobileMenuOpen(false);
                           }}
                           variant="destructive"
-                          className="w-full gap-2"
+                          className="w-full gap-2 transition-all duration-300 hover:scale-105"
                         >
                           <LogOut className="h-4 w-4" />
                           Sign Out
@@ -289,7 +332,7 @@ export default function HomeNavbar() {
                             handleGoogleSignIn();
                             setMobileMenuOpen(false);
                           }}
-                          className="w-full gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700"
+                          className="w-full gap-2 bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 hover:from-amber-600 hover:via-amber-700 hover:to-orange-700 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
                         >
                           <LogIn className="h-4 w-4" />
                           Sign In with Google
