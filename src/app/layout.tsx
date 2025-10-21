@@ -39,7 +39,7 @@ export default function RootLayout({
               disableTransitionOnChange
             >
               <ConditionalNavbar />
-              <main className="min-h-screen">{children}</main>
+              <main>{children}</main>
               <Toaster richColors position="top-right" />
             </ThemeProvider>
           </DsaProblemsCacheProvider>
