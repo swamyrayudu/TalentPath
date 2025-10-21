@@ -32,10 +32,12 @@ export default function AdminAptitudePage() {
   const [formData, setFormData] = useState({
     question: '',
     topic: '',
+    category: '',
     option_a: '',
     option_b: '',
     option_c: '',
     option_d: '',
+    answer: '',
     explanation: '',
   });
 
@@ -72,10 +74,12 @@ export default function AdminAptitudePage() {
     setFormData({
       question: question.question || '',
       topic: question.topic || '',
+      category: question.category || '',
       option_a: question.option_a || '',
       option_b: question.option_b || '',
       option_c: question.option_c || '',
       option_d: question.option_d || '',
+      answer: question.answer || '',
       explanation: question.explanation || '',
     });
   }
@@ -86,70 +90,73 @@ export default function AdminAptitudePage() {
     setFormData({
       question: '',
       topic: '',
+      category: '',
       option_a: '',
       option_b: '',
       option_c: '',
       option_d: '',
+      answer: '',
       explanation: '',
     });
   }
 
   // Submit create or update
-async function submitForm() {
-  if (!validateForm()) return;
-  
-  const url = '/api/admin/aptitude';
-  let res;
+  async function submitForm() {
+    if (!validateForm()) return;
+    
+    const url = '/api/admin/aptitude';
+    
+    try {
+      // Use selectedTopic for new questions
+      const questionData = {
+        ...formData,
+        topic: selectedTopic || formData.topic
+      };
 
-  // Use selectedTopic for new questions
-  const questionData = {
-    ...formData,
-    topic: selectedTopic || formData.topic
-  };
-
-  if (editingQuestionId) {
-    res = await fetch(url, {
-      method: 'PATCH',
-      body: JSON.stringify({ s_no: editingQuestionId, ...questionData }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-  } else {
-    res = await fetch(url, {
-      method: 'POST',
-      body: JSON.stringify(questionData),
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  const data = await res.json();
-  if (data.success) {
-    if (selectedTopic) {
-      setLoading(true);
-      fetch(`/api/aptitude?topic=${selectedTopic}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) setQuestions(data.questions);
-        })
-        .finally(() => {
-          setLoading(false);
-          cancelEdit();
+      let res;
+      if (editingQuestionId) {
+        res = await fetch(url, {
+          method: 'PATCH',
+          body: JSON.stringify({ 
+            s_no: editingQuestionId, 
+            ...questionData,
+            topic: selectedTopic  // Ensure topic is passed for table selection
+          }),
+          headers: { 'Content-Type': 'application/json' },
         });
+      } else {
+        res = await fetch(url, {
+          method: 'POST',
+          body: JSON.stringify(questionData),
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      const data = await res.json();
+      
+      if (data.success) {
+        toast.success(editingQuestionId ? 'Question updated successfully' : 'Question created successfully');
+        
+        // Refresh the questions list
+        if (selectedTopic) {
+          setLoading(true);
+          const refreshRes = await fetch(`/api/aptitude?topic=${selectedTopic}`);
+          const refreshData = await refreshRes.json();
+          if (refreshData.success) {
+            setQuestions(refreshData.questions);
+          }
+          setLoading(false);
+        }
+        
+        cancelEdit();
+      } else {
+        toast.error(data.error || 'Failed to save question');
+      }
+    } catch (error: any) {
+      console.error('Error submitting form:', error);
+      toast.error(error.message || 'An unexpected error occurred');
     }
-
-
-  
-    if (data.success) {
-  toast.success(editingQuestionId ? 'Question updated successfully' : 'Question created successfully');
-  // rest is unchanged
-} else {
-  toast.error(data.error || 'Failed to save question');
-}
-
-
-  } else {
-    alert(data.error || 'Failed to save question');
   }
-}
 
 // Validate form before submission
 function validateForm() {
@@ -169,13 +176,20 @@ function validateForm() {
   async function deleteQuestion(id: number) {
     if (!confirm('Are you sure you want to delete this question?')) return;
 
-    const res = await fetch(`/api/admin/aptitude?s_no=${id}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (data.success) {
-      setQuestions(questions.filter(q => q.s_no !== id));
-      if (editingQuestionId === id) cancelEdit();
-    } else {
-      alert('Failed to delete question');
+    try {
+      const res = await fetch(`/api/admin/aptitude?s_no=${id}&topic=${encodeURIComponent(selectedTopic || '')}`, { method: 'DELETE' });
+      const data = await res.json();
+      
+      if (data.success) {
+        toast.success('Question deleted successfully');
+        setQuestions(questions.filter(q => q.s_no !== id));
+        if (editingQuestionId === id) cancelEdit();
+      } else {
+        toast.error(data.error || 'Failed to delete question');
+      }
+    } catch (error: any) {
+      console.error('Error deleting question:', error);
+      toast.error(error.message || 'An unexpected error occurred');
     }
   }
 
@@ -228,7 +242,7 @@ function validateForm() {
                 <Input 
                   name="topic" 
                   placeholder="Topic" 
-                  value={formData.topic} 
+                  value={selectedTopic || formData.topic} 
                   onChange={handleInput} 
                   required 
                   disabled 
@@ -255,6 +269,12 @@ function validateForm() {
                   name="option_d" 
                   placeholder="Option D" 
                   value={formData.option_d} 
+                  onChange={handleInput} 
+                />
+                <Input 
+                  name="answer" 
+                  placeholder="Correct Answer (e.g., A, B, C, or D)" 
+                  value={formData.answer} 
                   onChange={handleInput} 
                 />
                 <Textarea 

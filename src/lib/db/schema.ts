@@ -13,6 +13,7 @@ import {
   integer, 
   boolean,
   bigserial,
+  serial,
   bigint,
   decimal,
   jsonb,
@@ -94,17 +95,20 @@ export const verificationTokens = pgTable('verificationToken', {
 // ============================================
 
 export const questions = pgTable('questions', {
-  s_no: integer('s_no'),
+  s_no: serial('s_no').primaryKey(),
   category: text('category'),
-  question: text('question'),
-  topic: text('topic'),        // Use this to differentiate topics
+  question: text('question').notNull(),
+  topic: text('topic').notNull(),
   option_a: text('option_a').default(''),
   option_b: text('option_b').default(''),
   option_c: text('option_c').default(''),
   option_d: text('option_d').default(''),
   answer: text('answer'),
   explanation: text('explanation'),
-});
+}, (table) => ({
+  topicIdx: index('idx_questions_topic').on(table.topic),
+  categoryIdx: index('idx_questions_category').on(table.category),
+}));
 
 export const jobs = pgTable('jobs', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),

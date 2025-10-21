@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { questions } from '@/lib/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
+
+// Helper function to sanitize table name (prevent SQL injection)
+function sanitizeTableName(topic: string): string {
+  // Convert topic to valid table name (lowercase, replace spaces with hyphens)
+  return topic.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,74 +20,165 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Get max s_no to generate next number
-    const result = await db
-      .select({ maxSNo: sql<number>`COALESCE(MAX(s_no), 0)` })
-      .from(questions);
+    const tableName = sanitizeTableName(data.topic);
+
+    // Insert into the specific topic table using raw SQL
+    const result = await db.execute(sql.raw(`
+      INSERT INTO "${tableName}" (
+        question, 
+        topic,
+        category,
+        option_a, 
+        option_b, 
+        option_c, 
+        option_d, 
+        answer,
+        explanation
+      ) VALUES (
+        '${data.question.replace(/'/g, "''")}',
+        '${data.topic.replace(/'/g, "''")}',
+        ${data.category ? `'${data.category.replace(/'/g, "''")}'` : 'NULL'},
+        '${(data.option_a || '').replace(/'/g, "''")}',
+        '${(data.option_b || '').replace(/'/g, "''")}',
+        '${(data.option_c || '').replace(/'/g, "''")}',
+        '${(data.option_d || '').replace(/'/g, "''")}',
+        ${data.answer ? `'${data.answer.replace(/'/g, "''")}'` : 'NULL'},
+        '${(data.explanation || '').replace(/'/g, "''")}'
+      ) RETURNING *
+    `));
+
+    return NextResponse.json({ 
+      success: true, 
+      question: Array.isArray(result) ? result[0] : result 
+    });
+  } catch (error: any) {
+    console.error('Error creating question:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: error?.message || 'Failed to create question. Make sure the table exists.' 
+    }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const data = await request.json();
+    const { s_no, topic, ...updateData } = data;
     
-    const nextSNo = (result[0]?.maxSNo || 0) + 1;
-
-    // Prepare question data with s_no
-    const questionData = {
-      s_no: nextSNo,
-      question: data.question,
-      topic: data.topic,
-      option_a: data.option_a || '',
-      option_b: data.option_b || '',
-      option_c: data.option_c || '',
-      option_d: data.option_d || '',
-      explanation: data.explanation || '',
-    };
-
-    const inserted = await db
-      .insert(questions)
-      .values(questionData)
-      .returning();
-
-    if (!inserted || inserted.length === 0) {
+    if (!s_no || !topic) {
       return NextResponse.json({ 
         success: false, 
-        error: 'Failed to insert question' 
-      }, { status: 500 });
+        error: 'Missing question s_no or topic' 
+      }, { status: 400 });
+    }
+
+    const tableName = sanitizeTableName(topic);
+    const sNoNum = Number(s_no);
+
+    // Build update query dynamically
+    const updateFields: string[] = [];
+
+    if (updateData.question !== undefined) {
+      updateFields.push(`question = '${updateData.question.replace(/'/g, "''")}'`);
+    }
+    if (updateData.category !== undefined) {
+      updateFields.push(updateData.category ? `category = '${updateData.category.replace(/'/g, "''")}'` : 'category = NULL');
+    }
+    if (updateData.option_a !== undefined) {
+      updateFields.push(`option_a = '${updateData.option_a.replace(/'/g, "''")}'`);
+    }
+    if (updateData.option_b !== undefined) {
+      updateFields.push(`option_b = '${updateData.option_b.replace(/'/g, "''")}'`);
+    }
+    if (updateData.option_c !== undefined) {
+      updateFields.push(`option_c = '${updateData.option_c.replace(/'/g, "''")}'`);
+    }
+    if (updateData.option_d !== undefined) {
+      updateFields.push(`option_d = '${updateData.option_d.replace(/'/g, "''")}'`);
+    }
+    if (updateData.answer !== undefined) {
+      updateFields.push(updateData.answer ? `answer = '${updateData.answer.replace(/'/g, "''")}'` : 'answer = NULL');
+    }
+    if (updateData.explanation !== undefined) {
+      updateFields.push(`explanation = '${updateData.explanation.replace(/'/g, "''")}'`);
+    }
+
+    if (updateFields.length === 0) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'No fields to update' 
+      }, { status: 400 });
+    }
+
+    const result = await db.execute(sql.raw(`
+      UPDATE "${tableName}"
+      SET ${updateFields.join(', ')}
+      WHERE s_no = ${sNoNum}
+      RETURNING *
+    `));
+
+    const updated = Array.isArray(result) ? result : [result];
+    
+    if (!updated || updated.length === 0) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Question not found or not updated' 
+      }, { status: 404 });
     }
 
     return NextResponse.json({ 
       success: true, 
-      question: inserted[0] 
+      question: updated[0] 
     });
   } catch (error: any) {
-    console.error('Error creating question:', error);
+    console.error('Error updating question:', error);
     return NextResponse.json({ 
       success: false, 
       error: error?.message || 'Internal server error' 
     }, { status: 500 });
   }
 }
-
-export async function PATCH(request: NextRequest) {
-  const data = await request.json();
-  const { s_no, ...updateData } = data;
-  if (!s_no) return NextResponse.json({ success: false, error: 'Missing question s_no' }, { status: 400 });
-
-  const sNoNum = Number(s_no);
-
-  const updated = await db
-    .update(questions)
-    .set(updateData)
-    .where(eq(questions.s_no, sNoNum))
-    .returning();
-
-  if (!updated || updated.length === 0) {
-    return NextResponse.json({ success: false, error: 'Question not found or not updated' }, { status: 404 });
-  }
-
-  return NextResponse.json({ success: true, question: updated[0] });
-}
     
 export async function DELETE(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const s_no = searchParams.get('s_no');
-  if (!s_no) return NextResponse.json({ success: false, error: 'Missing question s_no' }, { status: 400 });
-  await db.delete(questions).where(eq(questions.s_no, Number(s_no)));
-  return NextResponse.json({ success: true });
+  try {
+    const { searchParams } = new URL(request.url);
+    const s_no = searchParams.get('s_no');
+    const topic = searchParams.get('topic');
+    
+    if (!s_no || !topic) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Missing question s_no or topic' 
+      }, { status: 400 });
+    }
+
+    const tableName = sanitizeTableName(topic);
+    const sNoNum = Number(s_no);
+
+    const result = await db.execute(sql.raw(`
+      DELETE FROM "${tableName}"
+      WHERE s_no = ${sNoNum}
+      RETURNING *
+    `));
+
+    const deleted = Array.isArray(result) ? result : [result];
+    
+    if (!deleted || deleted.length === 0) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Question not found' 
+      }, { status: 404 });
+    }
+
+    return NextResponse.json({ 
+      success: true,
+      message: 'Question deleted successfully' 
+    });
+  } catch (error: any) {
+    console.error('Error deleting question:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: error?.message || 'Internal server error' 
+    }, { status: 500 });
+  }
 }
