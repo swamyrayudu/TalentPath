@@ -246,7 +246,15 @@ export function AdminContestsManager() {
         limit: 20,
         isActive: true,
       });
-      setQuestions((prev) => [...prev, ...(result.questions || [])]);
+      
+      // Filter out duplicates before adding
+      const newQuestions = result.questions || [];
+      setQuestions((prev) => {
+        const existingIds = new Set(prev.map(q => q.id));
+        const uniqueNewQuestions = newQuestions.filter(q => !existingIds.has(q.id));
+        return [...prev, ...uniqueNewQuestions];
+      });
+      
       setHasMoreQuestions(result.hasMore);
       setQuestionsPage(nextPage);
     } catch (error: any) {
@@ -616,34 +624,34 @@ export function AdminContestsManager() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" suppressHydrationWarning>
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-5">
-        <Card>
+      <div className="grid gap-4 md:grid-cols-5" suppressHydrationWarning>
+        <Card suppressHydrationWarning>
           <CardHeader className="pb-3">
             <CardDescription>Total Contests</CardDescription>
             <CardTitle className="text-3xl">{stats.totalContests}</CardTitle>
           </CardHeader>
         </Card>
-        <Card>
+        <Card suppressHydrationWarning>
           <CardHeader className="pb-3">
             <CardDescription>Active</CardDescription>
             <CardTitle className="text-3xl text-green-600">{stats.activeContests}</CardTitle>
           </CardHeader>
         </Card>
-        <Card>
+        <Card suppressHydrationWarning>
           <CardHeader className="pb-3">
             <CardDescription>Upcoming</CardDescription>
             <CardTitle className="text-3xl text-blue-600">{stats.upcomingContests}</CardTitle>
           </CardHeader>
         </Card>
-        <Card>
+        <Card suppressHydrationWarning>
           <CardHeader className="pb-3">
             <CardDescription>Completed</CardDescription>
             <CardTitle className="text-3xl text-gray-600">{stats.completedContests}</CardTitle>
           </CardHeader>
         </Card>
-        <Card>
+        <Card suppressHydrationWarning>
           <CardHeader className="pb-3">
             <CardDescription>Total Participants</CardDescription>
             <CardTitle className="text-3xl">{stats.totalParticipants}</CardTitle>
@@ -651,16 +659,16 @@ export function AdminContestsManager() {
         </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" suppressHydrationWarning>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="contests">All Contests ({stats.totalContests})</TabsTrigger>
           <TabsTrigger value="questions">Manage Questions</TabsTrigger>
           <TabsTrigger value="create">Create New Contest</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="contests" className="space-y-4">
+        <TabsContent value="contests" className="space-y-4" suppressHydrationWarning>
           {/* Search and Create Button */}
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between" suppressHydrationWarning>
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -669,10 +677,11 @@ export function AdminContestsManager() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9"
+                  suppressHydrationWarning
                 />
               </div>
             </div>
-            <Button onClick={() => setCreateDialogOpen(true)}>
+            <Button onClick={() => setCreateDialogOpen(true)} suppressHydrationWarning>
               <Plus className="h-4 w-4 mr-2" />
               Create Contest
             </Button>
@@ -695,10 +704,14 @@ export function AdminContestsManager() {
           ) : (
             <ScrollArea className="h-[600px] rounded-md border">
               <div className="p-4 space-y-3">
-                {filteredContests.map((contest) => {
+                {filteredContests
+                  .filter((contest, index, self) => 
+                    index === self.findIndex((c) => c.id === contest.id)
+                  )
+                  .map((contest, idx) => {
                   const status = getContestStatus(contest);
                   return (
-                    <Card key={contest.id} className="overflow-hidden hover:border-primary/50 transition-colors">
+                    <Card key={`contest-${contest.id}-${idx}`} className="overflow-hidden hover:border-primary/50 transition-colors">
                       <CardHeader>
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
@@ -793,8 +806,8 @@ export function AdminContestsManager() {
           )}
         </TabsContent>
 
-        <TabsContent value="questions" className="space-y-4">
-          <Card>
+        <TabsContent value="questions" className="space-y-4" suppressHydrationWarning>
+          <Card suppressHydrationWarning>
             <CardHeader>
               <CardTitle>Database Questions & Test Cases</CardTitle>
               <CardDescription>
@@ -803,7 +816,7 @@ export function AdminContestsManager() {
             </CardHeader>
             <CardContent>
               {/* Search Bar */}
-              <div className="mb-4 flex items-center gap-3">
+              <div className="mb-4 flex items-center gap-3" suppressHydrationWarning>
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -811,9 +824,10 @@ export function AdminContestsManager() {
                     value={questionSearch}
                     onChange={(e) => setQuestionSearch(e.target.value)}
                     className="pl-9"
+                    suppressHydrationWarning
                   />
                 </div>
-                <Button onClick={() => setCreateQuestionDialog(true)}>
+                <Button onClick={() => setCreateQuestionDialog(true)} suppressHydrationWarning>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Question
                 </Button>
@@ -825,6 +839,7 @@ export function AdminContestsManager() {
                     setCreateTestCaseDialog(true);
                   }}
                   variant="outline"
+                  suppressHydrationWarning
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Test Case
@@ -876,9 +891,12 @@ export function AdminContestsManager() {
                               ? q.title.toLowerCase().includes(questionSearch.toLowerCase())
                               : true
                           )
-                          .map((question) => (
+                          .filter((question, index, self) => 
+                            index === self.findIndex((q) => q.id === question.id)
+                          )
+                          .map((question, idx) => (
                             <Card
-                              key={question.id}
+                              key={`question-${question.id}-${idx}`}
                               className={`transition-colors hover:border-primary ${
                                 selectedQuestion?.id === question.id
                                   ? "border-primary bg-primary/5"
@@ -1020,8 +1038,12 @@ export function AdminContestsManager() {
                             {selectedQuestion.description}
                           </p>
                         </div>
-                        {testCases.map((testCase, idx) => (
-                          <Card key={testCase.id}>
+                        {testCases
+                          .filter((testCase, index, self) => 
+                            index === self.findIndex((t) => t.id === testCase.id)
+                          )
+                          .map((testCase, idx) => (
+                          <Card key={`testcase-${testCase.id}-${idx}`}>
                             <CardHeader className="pb-3">
                               <div className="flex items-center justify-between">
                                 <CardTitle className="text-sm">
@@ -1105,15 +1127,15 @@ export function AdminContestsManager() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="create" className="space-y-4">
-          <Card>
+        <TabsContent value="create" className="space-y-4" suppressHydrationWarning>
+          <Card suppressHydrationWarning>
             <CardHeader>
               <CardTitle>Create New Contest</CardTitle>
               <CardDescription>
                 Fill in the details below to create a new coding contest.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4" suppressHydrationWarning>
               <div className="space-y-2">
                 <Label htmlFor="title">Contest Title *</Label>
                 <Input
