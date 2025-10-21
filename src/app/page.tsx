@@ -286,9 +286,9 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t bg-muted/30 mt-16">
         <div className="container mx-auto px-4 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            {/* Brand Section */}
-            <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 mb-8">
+            {/* Brand Section - Takes 3 columns */}
+            <div className="md:col-span-3 space-y-4">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600">
                   <Code className="h-5 w-5 text-white" />
@@ -302,8 +302,8 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Platform Links */}
-            <div>
+            {/* Platform Links - Takes 2 columns */}
+            <div className="md:col-span-2">
               <h3 className="font-semibold mb-4">Platform</h3>
               <ul className="space-y-2">
                 <li>
@@ -329,8 +329,8 @@ export default function Home() {
               </ul>
             </div>
 
-            {/* Resources Links */}
-            <div>
+            {/* Resources Links - Takes 2 columns */}
+            <div className="md:col-span-2">
               <h3 className="font-semibold mb-4">Resources</h3>
               <ul className="space-y-2">
                 <li>
@@ -351,8 +351,113 @@ export default function Home() {
               </ul>
             </div>
 
-            {/* Contact & Social */}
+            {/* Connect Section - Takes 2 columns */}
+            <div className="md:col-span-2">
+              <h3 className="font-semibold mb-4">Connect</h3>
+              <a 
+                href="mailto:contact@talentpath.com" 
+                className="text-sm text-muted-foreground hover:text-amber-600 transition-colors duration-200 flex items-center gap-2"
+              >
+                <Mail className="h-4 w-4" />
+                Contact Us
+              </a>
+            </div>
 
+            {/* Crafted by Section - Takes 3 columns */}
+            <div className="md:col-span-3">
+              <h3 className="font-semibold mb-4">Crafted by</h3>
+              <div className="space-y-4">
+                {/* Developer 1 - R.V.V. Swamy */}
+                <div className="space-y-1.5">
+                  <p className="text-sm font-semibold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                    R.V.V. Swamy
+                  </p>
+                  <div className="flex gap-2">
+                    <a 
+                      href="https://github.com/swamyrayudu" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="p-1.5 rounded bg-muted hover:bg-gray-800 hover:text-white dark:hover:bg-gray-700 transition-all duration-200"
+                      aria-label="GitHub - R.V.V. Swamy"
+                    >
+                      <Github className="h-4 w-4" />
+                    </a>
+                    <a 
+                      href="https://www.linkedin.com/in/rayudu-veera-venkata-swamy/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="p-1.5 rounded bg-muted hover:bg-blue-600 hover:text-white transition-all duration-200"
+                      aria-label="LinkedIn - R.V.V. Swamy"
+                    >
+                      <Linkedin className="h-4 w-4" />
+                    </a>
+                    <a 
+                      href="https://www.instagram.com/swamy__rayudu/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="p-1.5 rounded bg-muted hover:bg-gradient-to-br hover:from-purple-600 hover:to-pink-600 hover:text-white transition-all duration-200"
+                      aria-label="Instagram - R.V.V. Swamy"
+                    >
+                      <Instagram className="h-4 w-4" />
+                    </a>
+                    <a 
+                      href="https://wa.me/917288819391" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="p-1.5 rounded bg-muted hover:bg-green-600 hover:text-white transition-all duration-200"
+                      aria-label="WhatsApp - R.V.V. Swamy"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Developer 2 - P.S.V. Siva Durga Prasad */}
+                <div className="space-y-1.5">
+                  <p className="text-sm font-semibold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                    P.S.V. Siva Durga Prasad
+                  </p>
+                  <div className="flex gap-2">
+                    <a 
+                      href="https://github.com/Durga62823" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="p-1.5 rounded bg-muted hover:bg-gray-800 hover:text-white dark:hover:bg-gray-700 transition-all duration-200"
+                      aria-label="GitHub - P.S.V. Siva Durga Prasad"
+                    >
+                      <Github className="h-4 w-4" />
+                    </a>
+                    <a 
+                      href="https://www.linkedin.com/in/durga-prasad-peddapalli-1616a8297/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="p-1.5 rounded bg-muted hover:bg-blue-600 hover:text-white transition-all duration-200"
+                      aria-label="LinkedIn - P.S.V. Siva Durga Prasad"
+                    >
+                      <Linkedin className="h-4 w-4" />
+                    </a>
+                    <a 
+                      href="https://www.instagram.com/the_addicted__person_78/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="p-1.5 rounded bg-muted hover:bg-gradient-to-br hover:from-purple-600 hover:to-pink-600 hover:text-white transition-all duration-200"
+                      aria-label="Instagram - P.S.V. Siva Durga Prasad"
+                    >
+                      <Instagram className="h-4 w-4" />
+                    </a>
+                    <a 
+                      href="https://wa.me/919030512334" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="p-1.5 rounded bg-muted hover:bg-green-600 hover:text-white transition-all duration-200"
+                      aria-label="WhatsApp - P.S.V. Siva Durga Prasad"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Bottom Bar */}
@@ -361,19 +466,13 @@ export default function Home() {
               <p className="text-sm text-muted-foreground">
                 © 2025 TalentPath. All rights reserved.
               </p>
-              <div className="flex flex-col md:flex-row items-center gap-4">
-                <div className="flex gap-6">
-                  <Link href="/privacy" className="text-sm text-muted-foreground hover:text-amber-600 transition-colors duration-200">
-                    Privacy Policy
-                  </Link>
-                  <Link href="/terms" className="text-sm text-muted-foreground hover:text-amber-600 transition-colors duration-200">
-                    Terms of Service
-                  </Link>
-                </div>
-                <div className="hidden md:block h-4 w-px bg-border" />
-                <p className="text-sm text-muted-foreground">
-                  Crafted by <span className="font-semibold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">R.V.V. Swamy</span> & <span className="font-semibold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">P.S.V. Siva Durga Prasad</span>
-                </p>
+              <div className="flex gap-6">
+                <Link href="/privacy" className="text-sm text-muted-foreground hover:text-amber-600 transition-colors duration-200">
+                  Privacy Policy
+                </Link>
+                <Link href="/terms" className="text-sm text-muted-foreground hover:text-amber-600 transition-colors duration-200">
+                  Terms of Service
+                </Link>
               </div>
             </div>
           </div>
