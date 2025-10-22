@@ -1,3 +1,5 @@
+import React from 'react';
+
 import { getContests } from '@/actions/contest.actions';
 import { ContestCard } from '@/components/contest/contest-card';
 import { CreateContestDialog } from '@/components/contest/create-contest-dialog';

@@ -1,5 +1,5 @@
 "use client";
-
+import React from 'react';
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -75,8 +75,9 @@ export function CreateJobForm() {
       await createJob(data);
       toast.success("Job created successfully!");
       router.push("/admin/jobs");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create job");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to create job";
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

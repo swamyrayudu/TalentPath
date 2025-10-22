@@ -1,15 +1,21 @@
 'use client';
+import React from 'react';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AddQuestionForm } from './add-question-form';
 import { QuestionManagementList } from './question-management-list';
 import { ContestSettings } from './contest-settings';
-import { FileText, Settings, Plus, Code2, Sparkles } from 'lucide-react';
+import { FileText, Settings, Plus, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import type { contests, contestQuestions } from '@/lib/db/schema';
+import type { InferSelectModel } from 'drizzle-orm';
+
+type Contest = InferSelectModel<typeof contests>;
+type ContestQuestion = InferSelectModel<typeof contestQuestions>;
 
 interface ContestManagementTabsProps {
-  contest: any;
-  questions: any[];
+  contest: Contest;
+  questions: ContestQuestion[];
   contestSlug: string;
 }
 

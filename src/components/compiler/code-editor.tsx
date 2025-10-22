@@ -1,5 +1,5 @@
 'use client';
-
+import React from 'react';
 import { memo, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -583,7 +583,8 @@ export function CodeEditor() {
       </div>
 
       {/* Custom Scrollbar Styles */}
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .custom-scrollbar::-webkit-scrollbar {
           width: 8px;
           height: 8px;
@@ -599,7 +600,7 @@ export function CodeEditor() {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: linear-gradient(to bottom, #2563eb, #4f46e5);
         }
-      `}</style>
+      `}} />
     </div>
   );
 }

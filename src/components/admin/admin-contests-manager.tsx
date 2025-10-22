@@ -1,5 +1,5 @@
 "use client";
-
+import React from 'react';
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,8 +30,7 @@ import {
   Search, 
   Loader2, 
   Plus, 
-  Calendar, 
-  Users, 
+  Calendar,
   Trophy, 
   Settings, 
   Trash2,
@@ -103,8 +102,8 @@ export function AdminContestsManager() {
   const [questionSearch, setQuestionSearch] = useState("");
   const [questionsPage, setQuestionsPage] = useState(1);
   const [hasMoreQuestions, setHasMoreQuestions] = useState(true);
-  const [testCasesPage, setTestCasesPage] = useState(1);
-  const [hasMoreTestCases, setHasMoreTestCases] = useState(true);
+  const [, setTestCasesPage] = useState(1);
+  const [, setHasMoreTestCases] = useState(true);
   
   // Edit/Delete dialogs
   const [editQuestionDialog, setEditQuestionDialog] = useState(false);
@@ -186,8 +185,9 @@ export function AdminContestsManager() {
       } else {
         toast.error("Failed to load contests");
       }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to load contests");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(errorMessage || "Failed to load contests");
     } finally {
       setLoading(false);
     }
@@ -226,9 +226,10 @@ export function AdminContestsManager() {
       setQuestions(result.questions || []);
       setHasMoreQuestions(result.hasMore);
       setQuestionsPage(1);
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error("Error loading questions:", error); // Debug log
-      toast.error(error.message || "Failed to load questions");
+      toast.error(errorMessage || "Failed to load questions");
       setQuestions([]);
     } finally {
       setLoadingQuestions(false);
@@ -257,9 +258,10 @@ export function AdminContestsManager() {
       
       setHasMoreQuestions(result.hasMore);
       setQuestionsPage(nextPage);
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error("Error loading more questions:", error);
-      toast.error(error.message || "Failed to load more questions");
+      toast.error(errorMessage || "Failed to load more questions");
     } finally {
       setLoadingQuestions(false);
     }
@@ -272,9 +274,10 @@ export function AdminContestsManager() {
       const result = await getAdminTestCases(questionTitle);
       console.log("Test cases loaded:", result);
       setTestCases(result || []);
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error("Error loading test cases:", error);
-      toast.error(error.message || "Failed to load test cases");
+      toast.error(errorMessage || "Failed to load test cases");
       setTestCases([]);
     } finally {
       setLoadingTestCases(false);
@@ -333,9 +336,10 @@ export function AdminContestsManager() {
       if (selectedQuestion?.id === questionToEdit.id) {
         setSelectedQuestion(updatedQuestion);
       }
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error("Error updating question:", error);
-      toast.error(error.message || "Failed to update question");
+      toast.error(errorMessage || "Failed to update question");
     } finally {
       setSavingQuestion(false);
     }
@@ -377,9 +381,10 @@ export function AdminContestsManager() {
         isActive: true,
       });
       await loadQuestions();
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error("Error creating question:", error);
-      toast.error(error.message || "Failed to create question");
+      toast.error(errorMessage || "Failed to create question");
     } finally {
       setCreatingQuestion(false);
     }
@@ -424,9 +429,10 @@ export function AdminContestsManager() {
       if (selectedQuestion && selectedQuestion.title === newTestCase.questionTitle) {
         await loadTestCasesForQuestion(newTestCase.questionTitle);
       }
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error("Error creating test case:", error);
-      toast.error(error.message || "Failed to create test case");
+      toast.error(errorMessage || "Failed to create test case");
     } finally {
       setCreatingTestCase(false);
     }
@@ -446,8 +452,9 @@ export function AdminContestsManager() {
         setSelectedQuestion(null);
         setTestCases([]);
       }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete question");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(errorMessage || "Failed to delete question");
     } finally {
       setSavingQuestion(false);
     }
@@ -481,8 +488,9 @@ export function AdminContestsManager() {
       if (selectedQuestion) {
         loadTestCasesForQuestion(selectedQuestion.title);
       }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update test case");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(errorMessage || "Failed to update test case");
     } finally {
       setSavingTestCase(false);
     }
@@ -500,8 +508,9 @@ export function AdminContestsManager() {
       if (selectedQuestion) {
         loadTestCasesForQuestion(selectedQuestion.title);
       }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete test case");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(errorMessage || "Failed to delete test case");
     } finally {
       setSavingTestCase(false);
     }
@@ -541,8 +550,9 @@ export function AdminContestsManager() {
       } else {
         toast.error(result.error || "Failed to create contest");
       }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create contest");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(errorMessage || "Failed to create contest");
     } finally {
       setCreatingContest(false);
     }
@@ -562,8 +572,9 @@ export function AdminContestsManager() {
       } else {
         toast.error(result.error || "Failed to delete contest");
       }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete contest");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(errorMessage || "Failed to delete contest");
     } finally {
       setDeletingContest(false);
     }
@@ -1695,7 +1706,7 @@ export function AdminContestsManager() {
                 <Select
                   value={newQuestion.difficulty || "MEDIUM"}
                   onValueChange={(value) =>
-                    setNewQuestion({ ...newQuestion, difficulty: value as any })
+                    setNewQuestion({ ...newQuestion, difficulty: value as "EASY" | "MEDIUM" | "HARD" })
                   }
                 >
                   <SelectTrigger>

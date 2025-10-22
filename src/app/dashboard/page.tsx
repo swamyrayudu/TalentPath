@@ -1,4 +1,5 @@
 import { auth } from '../../lib/auth';
+import React from 'react';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import { 
@@ -12,7 +13,6 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Calendar, 
   Code2, 
   Trophy, 
   Target, 

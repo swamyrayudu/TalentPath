@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useState } from 'react';
 import {
   Table,
@@ -45,8 +46,8 @@ export function JobsTable({ jobs }: { jobs: Job[] }) {
       await toggleJobStatus(jobId);
       toast.success('Job status updated');
       window.location.reload();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to update job status');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update job status');
     } finally {
       setIsLoading(null);
     }
@@ -61,8 +62,8 @@ export function JobsTable({ jobs }: { jobs: Job[] }) {
       toast.success('Job deleted successfully');
       setDeleteDialogOpen(false);
       window.location.reload();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to delete job');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete job');
     } finally {
       setIsLoading(null);
       setJobToDelete(null);

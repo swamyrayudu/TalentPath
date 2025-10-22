@@ -127,8 +127,9 @@ export async function getContests() {
     });
 
     return { success: true, data: contestsWithStatus };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -175,8 +176,9 @@ export async function getAllContests() {
     }));
 
     return { success: true, data: contestsWithCounts };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -223,8 +225,9 @@ export async function getContest(slug: string) {
     }
 
     return { success: true, data: { ...contest, status } };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -251,8 +254,9 @@ export async function updateContestStatus(contestId: string) {
     await db.update(contests).set({ status: newStatus }).where(eq(contests.id, contestId));
 
     return { success: true, status: newStatus };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -275,8 +279,9 @@ export async function deleteContest(contestId: string) {
 
     revalidatePath('/contest');
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -363,8 +368,9 @@ export async function getAllQuestionsFromLibrary(params?: {
       page,
       limit,
     };
-  } catch (error: any) {
-    return { success: false, error: error.message, data: [], totalCount: 0, hasMore: false, page: 1, limit: 50 };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage, data: [], totalCount: 0, hasMore: false, page: 1, limit: 50 };
   }
 }
 
@@ -430,8 +436,9 @@ export async function addExistingQuestionToContest(data: {
 
     revalidatePath(`/contest/${contest.slug}`);
     return { success: true, data: newQuestion };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -466,8 +473,9 @@ export async function addContestQuestion(data: {
 
     revalidatePath(`/contest/${contest.slug}`);
     return { success: true, data: question };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -481,8 +489,9 @@ export async function getContestQuestions(contestId: string) {
       .orderBy(asc(contestQuestions.orderIndex));
     
     return { success: true, data: questions };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -500,8 +509,9 @@ export async function getQuestion(questionId: string) {
     }
 
     return { success: true, data: question };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -527,8 +537,9 @@ export async function updateQuestion(questionId: string, data: {
       .returning();
 
     return { success: true, data: question };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -543,8 +554,9 @@ export async function deleteQuestion(questionId: string) {
     await db.delete(contestQuestions).where(eq(contestQuestions.id, questionId));
 
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -570,8 +582,9 @@ export async function addTestCase(data: {
     const [testCase] = await db.insert(contestTestCases).values(data).returning();
 
     return { success: true, data: testCase };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -589,8 +602,9 @@ export async function getAllTestCases(questionId: string) {
       .where(eq(contestTestCases.questionId, questionId));
 
     return { success: true, data: testCases };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -608,8 +622,9 @@ export async function getSampleTestCases(questionId: string) {
       );
 
     return { success: true, data: testCases };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -634,8 +649,9 @@ export async function updateTestCase(testCaseId: string, data: {
       .returning();
 
     return { success: true, data: testCase };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -650,8 +666,9 @@ export async function deleteTestCase(testCaseId: string) {
     await db.delete(contestTestCases).where(eq(contestTestCases.id, testCaseId));
 
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -706,8 +723,9 @@ export async function joinContest(contestId: string, accessCode?: string) {
     revalidatePath('/contest');
     revalidatePath(`/contest/${contest.slug}`);
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -726,8 +744,9 @@ export async function checkParticipation(contestId: string, userId: string) {
       .limit(1);
 
     return { success: true, isParticipant: !!participant };
-  } catch (error: any) {
-    return { success: false, error: error.message, isParticipant: false };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage, isParticipant: false };
   }
 }
 
@@ -747,8 +766,9 @@ export async function getContestParticipants(contestId: string) {
       .where(eq(contestParticipants.contestId, contestId));
 
     return { success: true, data: participants };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -825,7 +845,7 @@ export async function runTestCases(data: {
         }
 
         // Sort both arrays by their string representation for comparison
-        const sortArray = (arr: any[]) => {
+        const sortArray = (arr: unknown[]) => {
           return arr.map(item => JSON.stringify(Array.isArray(item) ? item.sort() : item)).sort();
         };
 
@@ -833,7 +853,7 @@ export async function runTestCases(data: {
         const sortedActual = sortArray(actualArray);
 
         return JSON.stringify(sortedExpected) === JSON.stringify(sortedActual);
-      } catch (e) {
+      } catch {
         // If JSON parsing fails, fall back to string comparison
         return normalizeOutput(expected) === normalizeOutput(actual);
       }
@@ -998,7 +1018,7 @@ export async function submitSolution(data: {
         }
 
         // Sort both arrays by their string representation for comparison
-        const sortArray = (arr: any[]) => {
+        const sortArray = (arr: unknown[]) => {
           return arr.map(item => JSON.stringify(Array.isArray(item) ? item.sort() : item)).sort();
         };
 
@@ -1006,7 +1026,7 @@ export async function submitSolution(data: {
         const sortedActual = sortArray(actualArray);
 
         return JSON.stringify(sortedExpected) === JSON.stringify(sortedActual);
-      } catch (e) {
+      } catch {
         // If JSON parsing fails, fall back to string comparison
         return normalizeOutput(expected) === normalizeOutput(actual);
       }
@@ -1089,7 +1109,7 @@ export async function submitSolution(data: {
             errorMessage = `Expected: "${testCase.expectedOutput.trim()}", Got: "${(result.output || '').trim()}"`;
           }
         }
-      } catch (error) {
+      } catch {
         verdict = 'runtime_error';
         errorMessage = 'Runtime error occurred';
         break;
@@ -1122,8 +1142,9 @@ export async function submitSolution(data: {
 
     revalidatePath(`/contest/${data.contestId}`);
     return { success: true, data: submission };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -1156,8 +1177,9 @@ export async function getUserSubmissions(contestId: string, userId: string) {
       .orderBy(desc(contestSubmissions.submittedAt));
 
     return { success: true, data: submissions };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -1185,8 +1207,9 @@ export async function getQuestionCompletionStatus(contestId: string, userId: str
     );
 
     return { success: true, data: completedQuestionIds };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -1303,8 +1326,9 @@ export async function getLeaderboard(contestId: string) {
       .orderBy(asc(contestLeaderboard.rank));
 
     return { success: true, data: leaderboard };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -1323,8 +1347,9 @@ export async function getUserRank(contestId: string, userId: string) {
       .limit(1);
 
     return { success: true, data: userEntry };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -1402,7 +1427,8 @@ export async function getUserContestStats(userId: string) {
         recentSubmissions: allSubmissions.slice(0, 10),
       },
     };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }

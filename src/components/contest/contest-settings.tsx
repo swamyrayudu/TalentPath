@@ -1,16 +1,19 @@
 'use client';
-
+import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Share2, Copy, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { deleteContest } from '@/actions/contest.actions';
 import { useState, useEffect } from 'react';
+import { Copy, Trash2 } from 'lucide-react';
+import type { contests } from '@/lib/db/schema';
+import type { InferSelectModel } from 'drizzle-orm';
+
+type Contest = InferSelectModel<typeof contests>;
 
 interface ContestSettingsProps {
-  contest: any;
+  contest: Contest;
 }
 
 export function ContestSettings({ contest }: ContestSettingsProps) {

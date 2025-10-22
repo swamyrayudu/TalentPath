@@ -1,5 +1,5 @@
 'use client';
-
+import React from 'react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
@@ -46,7 +46,7 @@ export function RoadmapViewer({
   const [loading, setLoading] = useState<string | null>(null);
 
   const allStepsCompleted = steps.length > 0 && localCompleted.length === steps.length;
-  const progressPercentage = steps.length > 0 ? (localCompleted.length / steps.length) * 100 : 0;
+  
 
   const handleToggleStep = async (stepId: string) => {
     if (!isLoggedIn) {
@@ -66,8 +66,12 @@ export function RoadmapViewer({
         setLocalCompleted([...localCompleted, stepId]);
         toast.success('Step completed! 🎉');
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to update progress');
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message || 'Failed to update progress');
+      } else {
+        toast.error('Failed to update progress');
+      }
     } finally {
       setLoading(null);
     }

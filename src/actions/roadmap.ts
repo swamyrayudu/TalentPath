@@ -61,7 +61,7 @@ export async function createRoadmap(data: {
     throw new Error('Unauthorized: Admin access required');
   }
 
-  if ((session.user as any)?.role !== 'admin') {
+  if ((session.user as { role?: string })?.role !== 'admin') {
     throw new Error('Unauthorized: Admin access required');
   }
 
@@ -93,7 +93,7 @@ export async function addRoadmapStep(data: {
 }) {
   const session = await auth();
 
-  if ((session?.user as any)?.role !== 'admin') {
+  if ((session?.user as { role?: string })?.role !== 'admin') {
     throw new Error('Unauthorized: Admin access required');
   }
 
@@ -181,7 +181,7 @@ export async function toggleStepCompletion(roadmapId: string, stepId: string) {
 export async function deleteRoadmap(roadmapId: string) {
   const session = await auth();
 
-  if ((session?.user as any)?.role !== 'admin') {
+  if ((session?.user as { role?: string })?.role !== 'admin') {
     throw new Error('Unauthorized: Admin access required');
   }
 

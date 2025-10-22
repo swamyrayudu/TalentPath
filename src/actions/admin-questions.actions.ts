@@ -215,7 +215,7 @@ export async function getAllAdminTestCases({
   totalCount: number;
   hasMore: boolean;
 }> {
-  try {
+
     const session = await auth();
     if (!session?.user) {
       throw new Error("Unauthorized");
@@ -262,24 +262,19 @@ export async function getAllAdminTestCases({
       totalCount,
       hasMore,
     };
-  } catch (error) {
-    // Error fetching test cases
-    throw error;
   }
-}
-
 /**
  * Create a new admin question
  */
 export async function createAdminQuestion(
   data: Omit<AdminQuestion, "id" | "createdAt" | "updatedAt">
 ): Promise<AdminQuestion> {
-  try {
+
     const session = await auth();
     if (!session?.user) {
       throw new Error("Unauthorized");
     }
-    // @ts-ignore - role exists on user
+    // @ts-expect-error - role exists on user but not in type definition
     if (session.user.role !== "admin") {
       throw new Error("Unauthorized - Admin access required");
     }
@@ -294,11 +289,7 @@ export async function createAdminQuestion(
 
     revalidatePath("/admin/questions");
     return question as AdminQuestion;
-  } catch (error) {
-    // Error creating admin question
-    throw error;
-  }
-}
+  } 
 
 /**
  * Create admin test case
@@ -306,7 +297,7 @@ export async function createAdminQuestion(
 export async function createAdminTestCase(
   data: Omit<AdminTestCase, "id" | "createdAt">
 ): Promise<AdminTestCase> {
-  try {
+
     const session = await auth();
     if (!session?.user) {
       throw new Error("Unauthorized");
@@ -323,11 +314,7 @@ export async function createAdminTestCase(
 
     revalidatePath("/admin/questions");
     return testCase as AdminTestCase;
-  } catch (error) {
-    // Error creating test case
-    throw error;
-  }
-}
+  } 
 
 /**
  * Bulk import questions from CSV data
@@ -335,12 +322,12 @@ export async function createAdminTestCase(
 export async function bulkImportQuestions(
   questions: Array<Omit<AdminQuestion, "id" | "createdAt" | "updatedAt" | "createdBy">>
 ): Promise<{ success: number; failed: number; errors: string[] }> {
-  try {
+
     const session = await auth();
     if (!session?.user) {
       throw new Error("Unauthorized");
     }
-    // @ts-ignore - role exists on user
+    // @ts-expect-error - role exists on user but not in type definition
     if (session.user.role !== "admin") {
       throw new Error("Unauthorized - Admin access required");
     }
@@ -365,11 +352,7 @@ export async function bulkImportQuestions(
 
     revalidatePath("/admin/questions");
     return { success, failed, errors };
-  } catch (error) {
-    // Error bulk importing questions
-    throw error;
   }
-}
 
 /**
  * Bulk import test cases from CSV data
@@ -377,7 +360,7 @@ export async function bulkImportQuestions(
 export async function bulkImportTestCases(
   testCases: Array<Omit<AdminTestCase, "id" | "createdAt">>
 ): Promise<{ success: number; failed: number; errors: string[] }> {
-  try {
+
     const session = await auth();
     if (!session?.user) {
       throw new Error("Unauthorized");
@@ -404,11 +387,7 @@ export async function bulkImportTestCases(
 
     revalidatePath("/admin/questions");
     return { success, failed, errors };
-  } catch (error) {
-    // Error bulk importing test cases
-    throw error;
   }
-}
 
 /**
  * Get statistics about admin questions
@@ -419,7 +398,7 @@ export async function getAdminQuestionsStats(): Promise<{
   byTopic: Record<string, number>;
   totalTestCases: number;
 }> {
-  try {
+
     const session = await auth();
     if (!session?.user) {
       throw new Error("Unauthorized");
@@ -483,11 +462,7 @@ export async function getAdminQuestionsStats(): Promise<{
       byTopic,
       totalTestCases,
     };
-  } catch (error) {
-    // Error fetching stats
-    throw error;
-  }
-}
+  } 
 
 /**
  * Update admin question

@@ -1,6 +1,14 @@
 // snippets.ts - Language snippets configuration
 
-export const LANGUAGE_SNIPPETS: Record<string, any[]> = {
+interface Snippet {
+  label: string;
+  kind: number;
+  documentation: string;
+  insertText: string;
+  insertTextRules: number;
+}
+
+export const LANGUAGE_SNIPPETS: Record<string, Snippet[]> = {
   python: [
     // Print statements
     {

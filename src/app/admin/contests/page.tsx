@@ -1,3 +1,4 @@
+import React from 'react';
 import { AdminContestsManager } from "@/components/admin/admin-contests-manager";
 
 export default function AdminContestsPage() {

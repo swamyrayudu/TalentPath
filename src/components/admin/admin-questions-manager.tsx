@@ -1,6 +1,6 @@
 "use client";
-
-import { useState, useEffect, useRef, useCallback } from "react";
+import React from 'react';
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -9,8 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Search, Loader2, Upload, FileText, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Search, Loader2, Upload, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import Papa from "papaparse";
+
 import {
   getAdminQuestions,
   getAllTopics,
@@ -230,17 +231,17 @@ export function AdminQuestionsManager() {
       header: true,
       complete: async (results) => {
         try {
-          const parsedQuestions = results.data
-            .filter((row: any) => row.title)
-            .map((row: any) => ({
-              title: row.title?.trim(),
-              description: row.description?.trim() || "",
-              difficulty: (row.difficulty?.toUpperCase() as "EASY" | "MEDIUM" | "HARD") || "MEDIUM",
-              points: parseInt(row.points) || 100,
-              timeLimitSeconds: parseInt(row.timeLimitSeconds) || 2,
-              memoryLimitMb: parseInt(row.memoryLimitMb) || 256,
-              topics: row.topics ? row.topics.split(",").map((t: string) => t.trim()) : [],
-              isActive: row.isActive !== "false",
+          const parsedQuestions = (results.data as Array<Record<string, unknown>>)
+            .filter((row) => row.title)
+            .map((row) => ({
+              title: (row.title as string)?.trim(),
+              description: (row.description as string)?.trim() || "",
+              difficulty: ((row.difficulty as string)?.toUpperCase() as "EASY" | "MEDIUM" | "HARD") || "MEDIUM",
+              points: parseInt(row.points as string) || 100,
+              timeLimitSeconds: parseInt(row.timeLimitSeconds as string) || 2,
+              memoryLimitMb: parseInt(row.memoryLimitMb as string) || 256,
+              topics: (row.topics as string) ? (row.topics as string).split(",").map((t: string) => t.trim()) : [],
+              isActive: (row.isActive as string) !== "false",
             }));
 
           const result = await bulkImportQuestions(parsedQuestions);
@@ -252,11 +253,12 @@ export function AdminQuestionsManager() {
           setHasMoreQuestions(true);
           loadStats();
           loadTopics();
-        } catch (error: any) {
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
           setUploadResult({
             success: 0,
             failed: results.data.length,
-            errors: [error.message],
+            errors: [errorMessage],
           });
         } finally {
           setUploading(false);
@@ -280,15 +282,15 @@ export function AdminQuestionsManager() {
       header: true,
       complete: async (results) => {
         try {
-          const parsedTestCases = results.data
-            .filter((row: any) => row.questionTitle)
-            .map((row: any) => ({
-              questionTitle: row.questionTitle?.trim(),
-              input: row.input?.trim() || "",
-              expectedOutput: row.expectedOutput?.trim() || "",
-              isSample: row.isSample === "true" || row.isSample === "1",
-              isHidden: row.isHidden === "true" || row.isHidden === "1",
-              points: parseInt(row.points) || 10,
+          const parsedTestCases = (results.data as Array<Record<string, unknown>>)
+            .filter((row) => row.questionTitle)
+            .map((row) => ({
+              questionTitle: (row.questionTitle as string)?.trim(),
+              input: (row.input as string)?.trim() || "",
+              expectedOutput: (row.expectedOutput as string)?.trim() || "",
+              isSample: (row.isSample as string) === "true" || (row.isSample as string) === "1",
+              isHidden: (row.isHidden as string) === "true" || (row.isHidden as string) === "1",
+              points: parseInt(row.points as string) || 10,
             }));
 
           const result = await bulkImportTestCases(parsedTestCases);
@@ -299,11 +301,12 @@ export function AdminQuestionsManager() {
           setTestCases([]);
           setHasMoreTestCases(true);
           loadStats();
-        } catch (error: any) {
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
           setUploadResult({
             success: 0,
             failed: results.data.length,
-            errors: [error.message],
+            errors: [errorMessage],
           });
         } finally {
           setUploading(false);
@@ -386,7 +389,7 @@ export function AdminQuestionsManager() {
                 />
               </div>
             </div>
-            <Select value={selectedDifficulty} onValueChange={(value: any) => setSelectedDifficulty(value)}>
+            <Select value={selectedDifficulty} onValueChange={(value: string) => setSelectedDifficulty(value as "all" | "EASY" | "MEDIUM" | "HARD")}>
               <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Difficulty" />
               </SelectTrigger>

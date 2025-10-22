@@ -1,7 +1,9 @@
+'use client';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
 import { LANGUAGE_SNIPPETS } from './snippets';
 import { registerCompletionProviders } from './intellisense';
+import type * as Monaco from 'monaco-editor';
 
 const LANGUAGES = [
   { 
@@ -223,15 +225,14 @@ export function useCodeEditor() {
   const [showInputModal, setShowInputModal] = useState(false);
   const [activeTab, setActiveTab] = useState('editor');
   
-  const editorRef = useRef<any>(null);
-  const monacoRef = useRef<any>(null);
-  const completionProviderRef = useRef<any>(null);
+  const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
+  const monacoRef = useRef<typeof Monaco | null>(null);
+  const completionProviderRef = useRef<Monaco.IDisposable | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Enhanced throttling refs with multiple tracking mechanisms
   const lastKeyPressRef = useRef<number>(0);
-  const keyPressCountRef = useRef<number>(0);
   const keyHoldTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isProcessingRef = useRef<boolean>(false);
   const enterPressCountRef = useRef<number>(0);
@@ -536,8 +537,9 @@ export function useCodeEditor() {
         setOutput(errorOutput);
         toast.error('Execution failed');
       }
-    } catch (error: any) {
-      setOutput(`❌ Network Error\n\n${error.message}\n\nPlease check your connection and try again.`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setOutput(`❌ Network Error\n\n${errorMessage}\n\nPlease check your connection and try again.`);
       toast.error('Failed to execute');
     } finally {
       setIsRunning(false);
@@ -555,8 +557,10 @@ export function useCodeEditor() {
     Object.keys(LANGUAGE_SNIPPETS).forEach((lang) => {
       const monacoLang = LANGUAGES.find(l => l.value === lang)?.monacoLang || lang;
       
+      if (!monacoRef.current) return;
+      
       const provider = monacoRef.current.languages.registerCompletionItemProvider(monacoLang, {
-        provideCompletionItems: (model: any, position: any) => {
+        provideCompletionItems: (model: Monaco.editor.ITextModel, position: Monaco.Position) => {
           const word = model.getWordUntilPosition(position);
           const range = {
             startLineNumber: position.lineNumber,
@@ -565,8 +569,14 @@ export function useCodeEditor() {
             endColumn: word.endColumn,
           };
 
-          const suggestions = LANGUAGE_SNIPPETS[lang].map((snippet: any) => ({
-            ...snippet,
+          const monaco = monacoRef.current;
+          if (!monaco) return { suggestions: [] };
+
+          const suggestions = LANGUAGE_SNIPPETS[lang].map((snippet: { label: string; insertText: string; documentation?: string }) => ({
+            label: snippet.label,
+            kind: monaco.languages.CompletionItemKind.Snippet,
+            insertText: snippet.insertText,
+            documentation: snippet.documentation,
             range: range,
           }));
 
@@ -578,7 +588,7 @@ export function useCodeEditor() {
     });
   }, []);
 
-  const handleEditorDidMount = useCallback((editor: any, monaco: any) => {
+  const handleEditorDidMount = useCallback((editor: Monaco.editor.IStandaloneCodeEditor, monaco: typeof Monaco) => {
     if (editorRef.current) return;
     
     editorRef.current = editor;
@@ -615,7 +625,7 @@ export function useCodeEditor() {
         horizontalScrollbarSize: 10,
       },
       renderLineHighlight: 'gutter',
-      occurrencesHighlight: false,
+      occurrencesHighlight: 'off' as const,
       renderWhitespace: 'none',
       folding: false,
       // Additional performance options

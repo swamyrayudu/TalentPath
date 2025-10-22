@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, Clock, Users, Lock, Globe, PlayCircle, CheckCircle, FileEdit } from 'lucide-react';
 import { format } from 'date-fns';
+import React from 'react';
 
 interface ContestHeaderProps {
   contest: {

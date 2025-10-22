@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useState } from 'react';
 import {
   Table,
@@ -56,11 +57,15 @@ export function UserTable({ users, currentUserId }: { users: UserType[]; current
       toast.success(`User role updated to ${newRole}`, {
         description: 'The changes will be reflected immediately.',
       });
-      // Use router.refresh() instead of full page reload
-      window.location.href = window.location.href;
-    } catch (error: any) {
+      // Reload the page to reflect changes
+      window.location.reload();
+    } catch (error: unknown) {
+      let message = 'Something went wrong';
+      if (error instanceof Error) {
+        message = error.message;
+      }
       toast.error('Failed to update user role', {
-        description: error.message || 'Something went wrong',
+        description: message,
       });
     } finally {
       setIsLoading(null);
@@ -74,13 +79,15 @@ export function UserTable({ users, currentUserId }: { users: UserType[]; current
     try {
       await deleteUser(userToDelete);
       toast.success('User deleted successfully', {
-        description: 'The user has been removed from the system.',
+        description: 'The user has been removed.',
       });
-      setDeleteDialogOpen(false);
-      window.location.reload();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      let message = 'Something went wrong';
+      if (error instanceof Error) {
+        message = error.message;
+      }
       toast.error('Failed to delete user', {
-        description: error.message || 'Something went wrong',
+        description: message,
       });
     } finally {
       setIsLoading(null);

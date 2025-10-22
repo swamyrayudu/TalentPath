@@ -1,4 +1,5 @@
 'use client';
+import React from 'react'
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -69,8 +70,9 @@ export function CreateRoadmapForm() {
       const result = await createRoadmap(data);
       toast.success('Roadmap created successfully!');
       router.push(`/admin/roadmap/${result.id}`);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create roadmap');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to create roadmap';
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }

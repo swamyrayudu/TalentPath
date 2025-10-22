@@ -1,5 +1,5 @@
 'use client';
-
+import React from 'react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -48,8 +48,12 @@ export function RoadmapStepsManager({
       setNewStep({ title: '', description: '', resources: '' });
       toast.success('Step added successfully!');
       router.refresh();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to add step');
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message || 'Failed to add step');
+      } else {
+        toast.error('Failed to add step');
+      }
     } finally {
       setIsAdding(false);
     }

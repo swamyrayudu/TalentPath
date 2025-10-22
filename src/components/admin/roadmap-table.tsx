@@ -1,5 +1,5 @@
 'use client';
-
+import React from 'react';
 import { useState } from 'react';
 import Link from 'next/link';
 import {
@@ -49,8 +49,12 @@ export function RoadmapTable({ roadmaps }: { roadmaps: Roadmap[] }) {
       toast.success('Roadmap deleted successfully');
       setDeleteDialogOpen(false);
       window.location.reload();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to delete roadmap');
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message || 'Failed to delete roadmap');
+      } else {
+        toast.error('Failed to delete roadmap');
+      }
     } finally {
       setIsLoading(null);
       setRoadmapToDelete(null);
