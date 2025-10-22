@@ -9,10 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, ExternalLink, Bookmark, CheckCircle2, Circle, ArrowLeft, Lock, TrendingUp, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { useSession } from 'next-auth/react';
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 50; // Increased for better performance
 
 type Problem = {
   id: number;
@@ -38,28 +37,6 @@ type UserProgress = {
   problemId: number;
   status: 'solved' | 'attempted' | 'bookmarked';
   solvedAt?: Date;
-};
-
-// Optimized animation variants
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.03
-    }
-  }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.2
-    }
-  }
 };
 
 export default function TopicPage() {
@@ -336,14 +313,10 @@ export default function TopicPage() {
   if (loading && displayedProblems.length === 0) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
-        >
+        <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Loading problems...</p>
-        </motion.div>
+        </div>
       </div>
     );
   }
@@ -404,20 +377,13 @@ export default function TopicPage() {
   return (
     <div className="container mx-auto py-8 px-4 max-w-8xl">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="mb-8"
-      >
-        <div className="flex items-center gap-4 mb-4 ">
+      <div className="mb-8">
+        <div className="flex items-center gap-4 mb-4">
           <Link href="/dsasheet">
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <ArrowLeft className="h-4 w-4 " />
-                Back to DSA Sheet
-              </Button>
-            </motion.div>
+            <Button variant="ghost" size="sm" className="gap-2 hover:bg-accent">
+              <ArrowLeft className="h-4 w-4" />
+              Back to DSA Sheet
+            </Button>
           </Link>
         </div>
         
@@ -438,36 +404,32 @@ export default function TopicPage() {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 max-w-8xl mt-6">
           {[
-            { label: 'Total', value: stats.total, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-            { label: 'Easy', value: stats.easy, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-            { label: 'Medium', value: stats.medium, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-            { label: 'Hard', value: stats.hard, color: 'text-rose-500', bg: 'bg-rose-500/10' },
-            { label: 'Avg Accept', value: `${stats.avgAcceptance}%`, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-          ].map((stat, index) => (
-            <motion.div
+            { label: 'Total', value: stats.total, color: 'text-purple-500', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
+            { label: 'Easy', value: stats.easy, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
+            { label: 'Medium', value: stats.medium, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
+            { label: 'Hard', value: stats.hard, color: 'text-rose-500', bg: 'bg-rose-500/10', border: 'border-rose-500/20' },
+            { label: 'Avg Accept', value: `${stats.avgAcceptance}%`, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+          ].map((stat) => (
+            <div
               key={stat.label}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 * index }}
-              whileHover={{ scale: 1.05 }}
-              className={`${stat.bg} border border-border rounded-xl p-4 text-center`}
+              className={cn(
+                "rounded-xl p-4 text-center border-2 transition-all hover:scale-105",
+                stat.bg,
+                stat.border
+              )}
             >
-              <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
-              <p className="text-sm text-muted-foreground">{stat.label}</p>
-            </motion.div>
+              <p className={cn("text-2xl font-bold", stat.color)}>{stat.value}</p>
+              <p className="text-sm text-muted-foreground font-medium">{stat.label}</p>
+            </div>
           ))}
         </div>
-      </motion.div>
+      </div>
 
       {/* Sorting Controls */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <Card className="mb-6 border-2">
+      <div>
+        <Card className="mb-6 border-2 shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Filter className="h-5 w-5" />
               Sort & Filter
             </CardTitle>
@@ -488,21 +450,17 @@ export default function TopicPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-muted-foreground font-medium">
                 Showing {displayedProblems.length} of {stats.total} problems
               </div>
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
 
       {/* Problems List */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-      >
-        <Card className="border-2">
+      <div>
+        <Card className="border-2 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
@@ -511,28 +469,21 @@ export default function TopicPage() {
           </CardHeader>
           <CardContent>
             {displayedProblems.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center py-12"
-              >
+              <div className="text-center py-12">
                 <p className="text-muted-foreground mb-4">No problems found for this topic.</p>
                 <Link href="/dsasheet">
                   <Button variant="outline">
                     Browse All Topics
                   </Button>
                 </Link>
-              </motion.div>
+              </div>
             ) : (
               <>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {displayedProblems.map((problem) => (
-                    <motion.div
+                    <div
                       key={problem.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="flex items-center gap-4 p-4 rounded-xl border-2 bg-card hover:bg-accent/50 transition-colors hover:border-primary/50 hover:shadow-md"
+                      className="flex items-center gap-4 p-4 rounded-xl border-2 bg-card hover:bg-accent/50 transition-all hover:border-primary/50 hover:shadow-md"
                     >
                       {/* Status Icon */}
                       <div className="flex-shrink-0">
@@ -597,38 +548,30 @@ export default function TopicPage() {
 
                       {/* Actions */}
                       <div className="flex items-center gap-2">
-                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => updateProgress(problem.id, 'bookmarked')}
-                            disabled={!session}
-                            className="hover:text-blue-500 transition-transform"
-                          >
-                            <Bookmark className="h-4 w-4" />
-                          </Button>
-                        </motion.div>
-                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                          <Button size="sm" className="gap-2 font-medium" asChild>
-                            <a href={problem.url} target="_blank" rel="noopener noreferrer">
-                              Solve <ExternalLink className="h-3 w-3" />
-                            </a>
-                          </Button>
-                        </motion.div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => updateProgress(problem.id, 'bookmarked')}
+                          disabled={!session}
+                          className="hover:text-blue-500"
+                        >
+                          <Bookmark className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" className="gap-2 font-medium" asChild>
+                          <a href={problem.url} target="_blank" rel="noopener noreferrer">
+                            Solve <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </Button>
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
 
                 {/* Loading More Indicator */}
                 {loadingMore && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex justify-center py-6"
-                  >
+                  <div className="flex justify-center py-6">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  </motion.div>
+                  </div>
                 )}
 
                 {/* Intersection Observer Target */}
@@ -636,20 +579,16 @@ export default function TopicPage() {
 
                 {/* End of List */}
                 {!hasMore && displayedProblems.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-center py-6 text-muted-foreground border-t mt-4"
-                  >
+                  <div className="text-center py-6 text-muted-foreground border-t mt-4">
                     <p className="font-medium">🎉 You&apos;ve reached the end!</p>
                     <p className="text-sm">Great job exploring {displayedProblems.length} problems</p>
-                  </motion.div>
+                  </div>
                 )}
               </>
             )}
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
     </div>
   );
 }

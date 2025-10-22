@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ChevronRight, Trophy, Zap, Building2 } from 'lucide-react';
+import { Loader2, ChevronRight, Trophy, Zap, Building2, Code2, GitBranch, Database, Network, Boxes, Search as SearchIcon, List, Binary } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -30,35 +30,55 @@ type UserProgress = {
 type TopicCard = {
   name: string;
   slug: string;
-  icon: string;
+  icon: React.ReactNode;
   total: number;
   solved: number;
+  color: string;
 };
 
-// Topic categories matching your screenshot
+// Topic categories with icon components instead of emojis
 const BEGINNER_TOPICS = [
-  { name: 'Arrays', slug: 'array', icon: '📊' },
-  { name: 'Strings', slug: 'string', icon: '📝' },
-  { name: 'Linked Lists', slug: 'linked-list', icon: '🔗' },
-  { name: 'Stacks & Queues', slug: 'stack', icon: '📚' },
-  { name: 'Hash Maps & Sets', slug: 'hash-table', icon: '🗂️' },
-  { name: 'Trees', slug: 'tree', icon: '🌳' },
-  { name: 'Sorting & Searching', slug: 'sorting', icon: '🔍' },
+  { name: 'Arrays', slug: 'array', icon: Database, color: 'text-blue-500' },
+  { name: 'Strings', slug: 'string', icon: Code2, color: 'text-purple-500' },
+  { name: 'Linked Lists', slug: 'linked-list', icon: GitBranch, color: 'text-orange-500' },
+  { name: 'Stacks & Queues', slug: 'stack', icon: List, color: 'text-cyan-500' },
+  { name: 'Hash Maps & Sets', slug: 'hash-table', icon: Boxes, color: 'text-pink-500' },
+  { name: 'Trees', slug: 'tree', icon: Network, color: 'text-green-500' },
+  { name: 'Sorting & Searching', slug: 'sorting', icon: SearchIcon, color: 'text-indigo-500' },
 ];
 
 const INTERMEDIATE_TOPICS = [
-  { name: 'Arrays & Hashing', slug: 'array', icon: '🔢' },
-  { name: 'Two Pointers', slug: 'two-pointers', icon: '👉' },
-  { name: 'Linked Lists', slug: 'linked-list', icon: '⛓️' },
-  { name: 'Stacks & Queues', slug: 'stack', icon: '📦' },
-  { name: 'Trees', slug: 'binary-tree', icon: '🌲' },
-  { name: 'Graphs', slug: 'graph', icon: '🕸️' },
-  { name: 'Sorting & Searching', slug: 'binary-search', icon: '🎯' },
-  { name: 'Dynamic Programming', slug: 'dynamic-programming', icon: '⚡' },
+  { name: 'Arrays & Hashing', slug: 'array', icon: Database, color: 'text-blue-500' },
+  { name: 'Two Pointers', slug: 'two-pointers', icon: Binary, color: 'text-violet-500' },
+  { name: 'Linked Lists', slug: 'linked-list', icon: GitBranch, color: 'text-orange-500' },
+  { name: 'Stacks & Queues', slug: 'stack', icon: List, color: 'text-cyan-500' },
+  { name: 'Trees', slug: 'binary-tree', icon: Network, color: 'text-green-500' },
+  { name: 'Graphs', slug: 'graph', icon: Network, color: 'text-emerald-500' },
+  { name: 'Sorting & Searching', slug: 'binary-search', icon: SearchIcon, color: 'text-indigo-500' },
+  { name: 'Dynamic Programming', slug: 'dynamic-programming', icon: Zap, color: 'text-yellow-500' },
 ];
 
+// Skeleton loader component
+function TopicCardSkeleton() {
+  return (
+    <Card className="border-2 h-full">
+      <CardContent className="pt-6">
+        <div className="flex items-start justify-between mb-4">
+          <div className="w-12 h-12 bg-muted rounded-lg animate-pulse" />
+        </div>
+        <div className="h-6 bg-muted rounded animate-pulse mb-3" />
+        <div className="flex items-center justify-between mb-3">
+          <div className="h-4 w-20 bg-muted rounded animate-pulse" />
+          <div className="h-4 w-12 bg-muted rounded animate-pulse" />
+        </div>
+        <div className="w-full h-2 bg-muted rounded animate-pulse" />
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function DsaSheet() {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   
   const [loading, setLoading] = useState(true);
   const [problems, setProblems] = useState<Problem[]>([]);
@@ -66,27 +86,72 @@ export default function DsaSheet() {
   const [beginnerTopics, setBeginnerTopics] = useState<TopicCard[]>([]);
   const [intermediateTopics, setIntermediateTopics] = useState<TopicCard[]>([]);
 
-  // Fetch all problems and user progress
+  // Fetch all problems and user progress with caching
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch problems (API will filter by visibility)
-        const problemsRes = await fetch('/api/problems?limit=10000');
-        const problemsData = await problemsRes.json();
+        // Check cache first
+        const cachedProblems = sessionStorage.getItem('dsa-problems');
+        const cacheTimestamp = sessionStorage.getItem('dsa-problems-timestamp');
+        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-        if (problemsData.success) {
-          setProblems(problemsData.data);
+        let problemsData;
+
+        // Use cache if valid
+        if (cachedProblems && cacheTimestamp) {
+          const age = Date.now() - parseInt(cacheTimestamp);
+          if (age < CACHE_DURATION) {
+            problemsData = JSON.parse(cachedProblems);
+            setProblems(problemsData);
+          }
+        }
+
+        // Fetch fresh data if no cache or expired
+        // Force fetch only approved problems for DSA sheet (even for admins)
+        if (!problemsData) {
+          const problemsRes = await fetch('/api/problems?limit=10000&onlyApproved=true', {
+            next: { revalidate: 300 } // Cache for 5 minutes
+          });
+          const result = await problemsRes.json();
+
+          if (result.success) {
+            problemsData = result.data;
+            setProblems(problemsData);
+            // Cache the data
+            sessionStorage.setItem('dsa-problems', JSON.stringify(problemsData));
+            sessionStorage.setItem('dsa-problems-timestamp', Date.now().toString());
+          }
         }
 
         // Fetch user progress if logged in
         if (session?.user) {
-          const progressRes = await fetch('/api/progress');
-          const progressData = await progressRes.json();
-          
-          if (progressData.success) {
+          const cachedProgress = sessionStorage.getItem(`dsa-progress-${session.user.id}`);
+          const progressTimestamp = sessionStorage.getItem(`dsa-progress-timestamp-${session.user.id}`);
+
+          let progressData;
+
+          if (cachedProgress && progressTimestamp) {
+            const age = Date.now() - parseInt(progressTimestamp);
+            if (age < CACHE_DURATION) {
+              progressData = JSON.parse(cachedProgress);
+            }
+          }
+
+          if (!progressData) {
+            const progressRes = await fetch('/api/progress');
+            const result = await progressRes.json();
+            
+            if (result.success) {
+              progressData = result.data;
+              sessionStorage.setItem(`dsa-progress-${session.user.id}`, JSON.stringify(progressData));
+              sessionStorage.setItem(`dsa-progress-timestamp-${session.user.id}`, Date.now().toString());
+            }
+          }
+
+          if (progressData) {
             const progressMap = new Map();
-            progressData.data.forEach((item: any) => {
+            progressData.forEach((item: any) => {
               if (item.progress?.problemId) {
                 progressMap.set(Number(item.progress.problemId), item.progress);
               }
@@ -101,8 +166,10 @@ export default function DsaSheet() {
       }
     };
 
-    fetchData();
-  }, [session]);
+    if (sessionStatus !== 'loading') {
+      fetchData();
+    }
+  }, [session, sessionStatus]);
 
   // Calculate topic stats
   const topicStats = useMemo(() => {
@@ -136,6 +203,7 @@ export default function DsaSheet() {
       const stats = topicStats.get(topic.slug) || { total: 0, solved: 0 };
       return {
         ...topic,
+        icon: <topic.icon className={cn("w-6 h-6", topic.color)} />,
         total: stats.total,
         solved: stats.solved,
       };
@@ -145,6 +213,7 @@ export default function DsaSheet() {
       const stats = topicStats.get(topic.slug) || { total: 0, solved: 0 };
       return {
         ...topic,
+        icon: <topic.icon className={cn("w-6 h-6", topic.color)} />,
         total: stats.total,
         solved: stats.solved,
       };
@@ -170,11 +239,40 @@ export default function DsaSheet() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading DSA Sheets...</p>
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        {/* Header Skeleton */}
+        <div className="mb-8">
+          <div className="h-12 w-64 bg-muted rounded-lg animate-pulse mb-4" />
+          <div className="h-6 w-96 bg-muted rounded animate-pulse" />
         </div>
+
+        {/* Beginner Topics Skeleton */}
+        <Card className="mb-12 border-2">
+          <CardHeader>
+            <div className="h-8 w-80 bg-muted rounded animate-pulse" />
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {[...Array(7)].map((_, i) => (
+                <TopicCardSkeleton key={i} />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Intermediate Topics Skeleton */}
+        <Card className="border-2">
+          <CardHeader>
+            <div className="h-8 w-80 bg-muted rounded animate-pulse" />
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {[...Array(8)].map((_, i) => (
+                <TopicCardSkeleton key={i} />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -183,40 +281,36 @@ export default function DsaSheet() {
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       {/* Header with Stats */}
       <div className="mb-8">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between mb-4 flex-wrap gap-4"
-        >
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
               DSA Sheets
             </h1>
-            <p className="text-muted-foreground mt-2">
-              Master data structures and algorithms step by step
+            <p className="text-muted-foreground mt-2 text-base md:text-lg">
+              Master data structures and algorithms with curated problem sets
             </p>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <Link href="/companies">
               <Button 
                 size="lg"
-                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 gap-2"
+                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 gap-2 shadow-lg hover:shadow-xl transition-all"
               >
                 <Building2 className="w-5 h-5" />
-                Company-wise Sheet
+                Company-wise
               </Button>
             </Link>
             
             {session?.user && (
-              <Card className="border-2 border-primary/20">
-                <CardContent className="pt-6">
+              <Card className="border-2 border-primary/30 shadow-lg">
+                <CardContent className="pt-6 pb-6 px-6">
                   <div className="text-center">
                     <Trophy className="w-8 h-8 text-primary mx-auto mb-2" />
-                    <div className="text-3xl font-bold text-primary">
+                    <div className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
                       {overallStats.solved}/{overallStats.total}
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-sm text-muted-foreground font-medium">
                       {overallStats.percentage}% Complete
                     </div>
                   </div>
@@ -224,28 +318,23 @@ export default function DsaSheet() {
               </Card>
             )}
           </div>
-        </motion.div>
+        </div>
       </div>
 
       {/* LeetCode Beginner Sheet */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="mb-12"
-      >
-        <Card className="border-2 border-green-500/20 bg-gradient-to-br from-green-500/5 to-transparent">
+      <div className="mb-12">
+        <Card className="border-2 border-green-500/20 bg-gradient-to-br from-green-500/5 via-transparent to-transparent shadow-lg">
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center">
                 <Zap className="w-6 h-6 text-green-500" />
               </div>
               <div>
-                <CardTitle className="text-2xl text-green-600 dark:text-green-400">
-                  LeetCode Beginner Sheet
+                <CardTitle className="text-2xl text-green-600 dark:text-green-400 font-bold">
+                  Beginner Level
                 </CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Start your DSA journey with these fundamental topics
+                  Start with fundamental data structures
                 </p>
               </div>
             </div>
@@ -254,7 +343,7 @@ export default function DsaSheet() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {beginnerTopics.map((topic, index) => (
                 <TopicCardComponent
-                  key={topic.slug}
+                  key={topic.slug + '-beginner'}
                   topic={topic}
                   index={index}
                   level="beginner"
@@ -263,26 +352,22 @@ export default function DsaSheet() {
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
 
       {/* LeetCode Intermediate Sheet */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <Card className="border-2 border-purple-500/20 bg-gradient-to-br from-purple-500/5 to-transparent">
+      <div>
+        <Card className="border-2 border-purple-500/20 bg-gradient-to-br from-purple-500/5 via-transparent to-transparent shadow-lg">
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
                 <Trophy className="w-6 h-6 text-purple-500" />
               </div>
               <div>
-                <CardTitle className="text-2xl text-purple-600 dark:text-purple-400">
-                  LeetCode Intermediate Sheet
+                <CardTitle className="text-2xl text-purple-600 dark:text-purple-400 font-bold">
+                  Intermediate Level
                 </CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Level up with advanced problem-solving techniques
+                  Master advanced algorithms and techniques
                 </p>
               </div>
             </div>
@@ -291,7 +376,7 @@ export default function DsaSheet() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {intermediateTopics.map((topic, index) => (
                 <TopicCardComponent
-                  key={topic.slug}
+                  key={topic.slug + '-intermediate'}
                   topic={topic}
                   index={index}
                   level="intermediate"
@@ -300,7 +385,7 @@ export default function DsaSheet() {
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
     </div>
   );
 }
@@ -319,73 +404,67 @@ function TopicCardComponent({
     ? Math.round((topic.solved / topic.total) * 100) 
     : 0;
 
-  const levelColor = level === 'beginner' ? 'green' : 'purple';
   const isComplete = progressPercentage === 100;
 
   return (
-    <Link href={`/topics/${topic.slug}`}>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: index * 0.05 }}
-        whileHover={{ scale: 1.02, y: -4 }}
-        className="group"
-      >
-        <Card className={cn(
-          "border-2 transition-all cursor-pointer h-full",
-          "hover:shadow-xl hover:border-primary",
-          isComplete && level === 'beginner' && "border-green-500/50 bg-green-500/5",
-          isComplete && level === 'intermediate' && "border-purple-500/50 bg-purple-500/5"
-        )}>
-          <CardContent className="pt-6">
-            <div className="flex items-start justify-between mb-4">
-              <div className="text-4xl">{topic.icon}</div>
-              {isComplete && (
-                <Badge className={level === 'beginner' ? 'bg-green-500' : 'bg-purple-500'}>
-                  <Trophy className="w-3 h-3 mr-1" />
-                  Done
-                </Badge>
-              )}
+    <Link href={`/topics/${topic.slug}`} prefetch={true}>
+      <Card className={cn(
+        "border-2 transition-all cursor-pointer h-full group hover:shadow-xl",
+        "hover:border-primary/50 hover:-translate-y-1",
+        isComplete && level === 'beginner' && "border-green-500/50 bg-green-500/5",
+        isComplete && level === 'intermediate' && "border-purple-500/50 bg-purple-500/5"
+      )}>
+        <CardContent className="pt-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="p-3 bg-muted/50 rounded-xl group-hover:scale-110 transition-transform">
+              {topic.icon}
             </div>
-
-            <h3 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors">
-              {topic.name}
-            </h3>
-
-            <div className="flex items-center justify-between text-sm mb-3">
-              <span className="text-muted-foreground">
-                {topic.solved}/{topic.total} solved
-              </span>
-              <span className={cn(
-                "font-semibold",
-                progressPercentage > 0 
-                  ? level === 'beginner' ? 'text-green-600' : 'text-purple-600'
-                  : "text-muted-foreground"
+            {isComplete && (
+              <Badge className={cn(
+                "shadow-sm",
+                level === 'beginner' ? 'bg-green-500 hover:bg-green-600' : 'bg-purple-500 hover:bg-purple-600'
               )}>
-                {progressPercentage}%
-              </span>
-            </div>
+                <Trophy className="w-3 h-3 mr-1" />
+                Done
+              </Badge>
+            )}
+          </div>
 
-            {/* Progress Bar */}
-            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${progressPercentage}%` }}
-                transition={{ duration: 0.8, delay: index * 0.05 }}
-                className={cn(
-                  "h-full rounded-full",
-                  level === 'beginner' ? "bg-green-500" : "bg-purple-500"
-                )}
-              />
-            </div>
+          <h3 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors line-clamp-2">
+            {topic.name}
+          </h3>
 
-            <div className="mt-4 flex items-center text-xs text-muted-foreground group-hover:text-primary transition-colors">
-              <span>View problems</span>
-              <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+          <div className="flex items-center justify-between text-sm mb-3">
+            <span className="text-muted-foreground font-medium">
+              {topic.solved}/{topic.total} solved
+            </span>
+            <span className={cn(
+              "font-bold text-base",
+              progressPercentage > 0 
+                ? level === 'beginner' ? 'text-green-600 dark:text-green-400' : 'text-purple-600 dark:text-purple-400'
+                : "text-muted-foreground"
+            )}>
+              {progressPercentage}%
+            </span>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden mb-4 shadow-inner">
+            <div
+              style={{ width: `${progressPercentage}%` }}
+              className={cn(
+                "h-full rounded-full transition-all duration-500",
+                level === 'beginner' ? "bg-gradient-to-r from-green-500 to-green-600" : "bg-gradient-to-r from-purple-500 to-purple-600"
+              )}
+            />
+          </div>
+
+          <div className="flex items-center text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors">
+            <span>View problems</span>
+            <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+          </div>
+        </CardContent>
+      </Card>
     </Link>
   );
 }

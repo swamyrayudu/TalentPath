@@ -21,9 +21,10 @@ export async function GET(request: NextRequest) {
     const sortOrder = searchParams.get('sortOrder') || 'desc';
     const limit = parseInt(searchParams.get('limit') || '200');
     const offset = parseInt(searchParams.get('offset') || '0');
+    const onlyApproved = searchParams.get('onlyApproved') === 'true'; // Force approved filter
 
     console.log('🔍 Fetching problems with filters:', { 
-      topic, company, difficulty, platform, hasSession: !!session?.user?.id 
+      topic, company, difficulty, platform, onlyApproved, hasSession: !!session?.user?.id 
     });
 
     // Check admin role
@@ -43,11 +44,15 @@ export async function GET(request: NextRequest) {
 
     const conditions = [];
 
-    // ✅ Always apply admin approval filter for non-admins
-    if (!isAdmin) {
+    // ✅ Apply admin approval filter for non-admins OR if onlyApproved is explicitly requested
+    if (!isAdmin || onlyApproved) {
       try {
         conditions.push(eq(problems.isVisibleToUsers, true));
-        console.log('✅ Applied admin approval filter for non-admin user');
+        if (onlyApproved) {
+          console.log('✅ Applied admin approval filter (onlyApproved=true)');
+        } else {
+          console.log('✅ Applied admin approval filter for non-admin user');
+        }
       } catch (err) {
         console.error('⚠️ WARNING: isApproved column may not exist yet!');
         console.error('⚠️ Please ensure migration is applied.');
