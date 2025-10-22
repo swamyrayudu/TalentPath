@@ -1,9 +1,10 @@
 'use client';
 
+import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Brain, Trophy, Target, TrendingUp } from 'lucide-react';
+import { Brain, Target, TrendingUp } from 'lucide-react';
 
 interface AptitudeStats {
   totalTests: number;

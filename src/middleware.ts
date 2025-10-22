@@ -1,3 +1,7 @@
+interface AuthToken {
+  role?: string;
+  [key: string]: unknown;
+}
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
@@ -30,7 +34,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // If token exists but role is not admin, block access at the edge
-  const role = (token as any).role ?? 'user';
+  const role = (token as AuthToken)?.role ?? 'user';
   if (String(role).toLowerCase() !== 'admin') {
     return NextResponse.redirect(new URL('/', request.url));
   }

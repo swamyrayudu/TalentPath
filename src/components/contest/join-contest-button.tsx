@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react'
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -46,8 +47,8 @@ export function JoinContestButton({ contestId, visibility }: JoinContestButtonPr
       } else {
         toast.error(result.error || 'Failed to join contest');
       }
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: Error | unknown) {
+      toast.error(error instanceof Error ? error.message : 'An error occurred');
     } finally {
       setIsLoading(false);
     }

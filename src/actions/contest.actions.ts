@@ -199,6 +199,7 @@ export async function getContest(slug: string) {
         accessCode: contests.accessCode,
         createdBy: contests.createdBy,
         createdAt: contests.createdAt,
+        updatedAt: contests.updatedAt,
         creatorName: users.name,
       })
       .from(contests)

@@ -1,3 +1,6 @@
+
+import React from 'react';
+
 import { notFound } from 'next/navigation';
 import { getContest, getContestQuestions, getLeaderboard, checkParticipation, getQuestionCompletionStatus, getUserSubmissions } from '@/actions/contest.actions';
 import { ContestHeader } from '@/components/contest/contest-header';
@@ -50,11 +53,29 @@ export default async function ContestDetailPage({
   }
 
   // Get user submissions for this contest
-  let userSubmissions: any[] = [];
+  let userSubmissions: Array<{
+    id: string;
+    questionId: string;
+    questionTitle: string | null;
+    code: string;
+    language: string;
+    verdict: string;
+    score: number;
+    passedTestCases: number;
+    totalTestCases: number;
+    executionTimeMs: number | null;
+    errorMessage: string | null;
+    submittedAt: Date;
+  }> = [];
   if (session?.user?.id && isParticipant) {
     const submissionsResult = await getUserSubmissions(contest.id, session.user.id);
     if (submissionsResult.success && submissionsResult.data) {
-      userSubmissions = submissionsResult.data;
+      userSubmissions = submissionsResult.data.map(sub => ({
+        ...sub,
+        score: sub.score ?? 0,
+        passedTestCases: sub.passedTestCases ?? 0,
+        totalTestCases: sub.totalTestCases ?? 0,
+      }));
     }
   }
 

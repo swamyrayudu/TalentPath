@@ -1,3 +1,6 @@
+
+import React from 'react';
+
 import { getAllRoadmaps } from '@/actions/roadmap';
 import { auth } from '@/lib/auth';
 import { getUserProgress } from '@/actions/roadmap';
@@ -24,9 +27,9 @@ import {
   Lock
 } from 'lucide-react';
 import Link from 'next/link';
-import { signIn } from 'next-auth/react';
 
-const categoryIcons: Record<string, any> = {
+import type { LucideIcon } from 'lucide-react';
+const categoryIcons: Record<string, LucideIcon> = {
   frontend: Code,
   backend: Server,
   fullstack: Database,

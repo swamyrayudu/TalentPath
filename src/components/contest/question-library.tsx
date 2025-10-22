@@ -1,12 +1,12 @@
 'use client';
-
+'use client';
+import React from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Dialog, 
   DialogContent, 
@@ -132,9 +132,9 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
   const loadTopics = async () => {
     try {
       const topicsList = await getAllTopics();
-      setTopics(topicsList);
-    } catch (error: any) {
-      console.error('Failed to load topics:', error);
+        setTopics(topicsList);
+  } catch (error) {
+        console.error('Failed to load topics:', error instanceof Error ? error.message : String(error));
     }
   };
 
@@ -169,8 +169,8 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
       } else {
         toast.error('Failed to load questions');
       }
-    } catch (error: any) {
-      toast.error(error.message);
+  } catch (error) {
+        toast.error(error instanceof Error ? error.message : String(error));
     } finally {
       setIsLoading(false);
       setLoadingMore(false);
@@ -184,8 +184,8 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
       // Show only sample test cases (first 2)
       const sampleTestCases = testCases.filter(tc => tc.isSample).slice(0, 2);
       setSelectedTestCases(sampleTestCases);
-    } catch (error: any) {
-      console.error('Failed to load test cases:', error);
+  } catch (error) {
+        console.error('Failed to load test cases:', error instanceof Error ? error.message : String(error));
       setSelectedTestCases([]);
     } finally {
       setLoadingTestCases(false);
@@ -213,8 +213,8 @@ export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps)
       } else {
         toast.error(result.error || 'Failed to add question');
       }
-    } catch (error: any) {
-      toast.error(error.message);
+  } catch (error) {
+        toast.error(error instanceof Error ? error.message : String(error));
     } finally {
       setIsLoading(false);
     }

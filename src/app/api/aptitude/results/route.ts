@@ -45,11 +45,12 @@ export async function POST(request: NextRequest) {
       success: true, 
       result: result[0] 
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('Error saving aptitude result:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error?.message || 'Internal server error' 
+      error: errorMessage || 'Internal server error' 
     }, { status: 500 });
   }
 }
@@ -90,11 +91,12 @@ export async function GET(request: NextRequest) {
       success: true, 
       results 
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('Error fetching aptitude results:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error?.message || 'Internal server error' 
+      error: errorMessage || 'Internal server error' 
     }, { status: 500 });
   }
 }

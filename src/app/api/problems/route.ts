@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
         } else {
           console.log('✅ Applied admin approval filter for non-admin user');
         }
-      } catch (err) {
+      } catch {
         console.error('⚠️ WARNING: isApproved column may not exist yet!');
         console.error('⚠️ Please ensure migration is applied.');
       }
@@ -69,12 +69,12 @@ export async function GET(request: NextRequest) {
     if (difficulty && difficulty !== 'all') {
       // Normalize difficulty to uppercase to match enum
       const difficultyUpper = difficulty.toUpperCase();
-      conditions.push(eq(problems.difficulty, difficultyUpper as any));
+      conditions.push(eq(problems.difficulty, difficultyUpper as 'EASY' | 'MEDIUM' | 'HARD'));
       console.log(`🎯 Filtering by difficulty: ${difficultyUpper}`);
     }
 
     if (platform && platform !== 'all') {
-      conditions.push(eq(problems.platform, platform.toUpperCase().trim() as any));
+      conditions.push(eq(problems.platform, platform.toUpperCase().trim() as 'LEETCODE' | 'CODEFORCES' | 'HACKERRANK' | 'GEEKSFORGEEKS'));
     }
 
     if (topic && topic !== 'all' && topic !== 'undefined') {
@@ -157,9 +157,9 @@ export async function GET(request: NextRequest) {
     
     // Debug: Show sample difficulties from results
     if (difficulty && result.length > 0) {
-      const difficulties = result.slice(0, 5).map((p: any) => p.difficulty);
+      const difficulties = result.slice(0, 5).map((p: { difficulty: string }) => p.difficulty);
       console.log('📊 Sample difficulties from results:', difficulties);
-      const uniqueDifficulties = [...new Set(result.map((p: any) => p.difficulty))];
+      const uniqueDifficulties = [...new Set(result.map((p: { difficulty: string }) => p.difficulty))];
       console.log('🎯 Unique difficulties in results:', uniqueDifficulties);
     }
 

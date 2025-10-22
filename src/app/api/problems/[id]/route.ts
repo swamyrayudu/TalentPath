@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { problems, users } from '@/lib/db/schema';
@@ -17,7 +17,7 @@ async function isAdmin(userId: string) {
   return user[0]?.role === 'admin';
 }
 
-export async function PUT(request: Request, { params }: { params: any }) {
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
     const session = await auth();
 
@@ -79,7 +79,7 @@ export async function PUT(request: Request, { params }: { params: any }) {
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: any }) {
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const session = await auth();
 

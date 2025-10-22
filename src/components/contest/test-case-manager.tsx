@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react'
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,9 +14,19 @@ import { addTestCase } from '@/actions/contest.actions';
 import { toast } from 'sonner';
 import { Loader2, Plus, Eye, EyeOff } from 'lucide-react';
 
+
+interface TestCase {
+  id: string;
+  input: string;
+  expectedOutput: string;
+  isSample: boolean;
+  isHidden: boolean;
+  points: number;
+}
+
 interface TestCaseManagerProps {
   questionId: string;
-  testCases: any[];
+  testCases: TestCase[];
 }
 
 export function TestCaseManager({ questionId, testCases }: TestCaseManagerProps) {
@@ -53,8 +64,8 @@ export function TestCaseManager({ questionId, testCases }: TestCaseManagerProps)
       } else {
         toast.error(result.error || 'Failed to add test case');
       }
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
     } finally {
       setIsLoading(false);
     }

@@ -1,3 +1,6 @@
+'use client';
+import React from 'react';
+
 import { db } from '@/lib/db';
 import { jobs } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -16,7 +19,6 @@ import {
   ArrowLeft,
   CheckCircle2,
   Lock,
-  LogIn
 } from 'lucide-react';
 import Link from 'next/link';
 import { SignInButton } from '../../../components/auth/sign-in-button';

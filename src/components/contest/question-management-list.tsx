@@ -1,22 +1,33 @@
 'use client';
 
+import React from 'react';
 import { useState } from 'react';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2, TestTube, Code2, Trophy, Clock, Target, Zap, Award } from 'lucide-react';
+import { Trash2, TestTube, Code2, Trophy, Clock, Target, Zap, Award } from 'lucide-react';
 import { deleteQuestion } from '@/actions/contest.actions';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
+
+interface Question {
+  id: string;
+  title: string;
+  description: string;
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+  points: number;
+  timeLimitSeconds: number;
+}
+
 interface QuestionManagementListProps {
-  questions: any[];
+  questions: Question[];
   contestId: string;
   contestSlug: string;
 }
 
-export function QuestionManagementList({ questions, contestId, contestSlug }: QuestionManagementListProps) {
+export function QuestionManagementList({ questions, contestSlug }: QuestionManagementListProps) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -32,8 +43,8 @@ export function QuestionManagementList({ questions, contestId, contestSlug }: Qu
       } else {
         toast.error(result.error || 'Failed to delete question');
       }
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
     } finally {
       setDeletingId(null);
     }

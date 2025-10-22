@@ -52,8 +52,9 @@ export async function POST(request: NextRequest) {
     const problem = await createProblem(problemData);
 
     return NextResponse.json(problem, { status: 201 });
-  } catch (error: any) {
-    console.error('Error creating problem:', error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error creating problem:', errorMessage);
     return NextResponse.json(
       { error: 'Failed to create problem' },
       { status: 500 }

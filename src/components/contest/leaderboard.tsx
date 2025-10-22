@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Trophy, Medal, Award, Clock } from 'lucide-react';
-
+import React from 'react'
 interface LeaderboardProps {
   leaderboard: Array<{
     rank: number | null;

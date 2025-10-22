@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { problems } from '@/lib/db/schema';
-import { sql } from 'drizzle-orm';
+import { problems, users } from '@/lib/db/schema';
+import { sql, eq } from 'drizzle-orm';
+import { auth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 600; // Cache for 10 minutes
@@ -12,7 +13,7 @@ export const revalidate = 600; // Cache for 10 minutes
  */
 export async function GET(
   request: Request,
-  { params }: { params: any }
+  { params }: { params: { company: string } }
 ) {
   try {
     const { searchParams } = new URL(request.url);

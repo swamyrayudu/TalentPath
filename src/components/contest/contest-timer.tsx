@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Clock, PlayCircle, StopCircle } from 'lucide-react';
@@ -14,7 +15,7 @@ interface ContestTimerProps {
 }
 
 export function ContestTimer({ contest }: ContestTimerProps) {
-  const [timeLeft, setTimeLeft] = useState<string>('');
+  const [, setTimeLeft] = useState<string>('');
   const [timeUnits, setTimeUnits] = useState<{ value: string; unit: string }[]>([]);
   const [isLive, setIsLive] = useState(false);
 

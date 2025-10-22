@@ -2,14 +2,23 @@
 "use client";
 import React, { createContext, useContext, useState } from 'react';
 
+export interface Problem {
+  id: string;
+  title: string;
+  description: string;
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+  points: number;
+  createdAt: Date;
+}
+
 export interface AdminProblemsCache {
-  allProblems: any[];
-  setAllProblems: (problems: any[]) => void;
+  allProblems: Problem[];
+  setAllProblems: (problems: Problem[]) => void;
 }
 const AdminProblemsCacheContext = createContext<AdminProblemsCache | null>(null);
 
 export function AdminProblemsCacheProvider({ children }: { children: React.ReactNode }) {
-  const [allProblems, setAllProblems] = useState<any[]>([]);
+  const [allProblems, setAllProblems] = useState<Problem[]>([]);
   return (
     <AdminProblemsCacheContext.Provider value={{ allProblems, setAllProblems }}>
       {children}

@@ -8,6 +8,19 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Loader2, CheckCircle2, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
+interface Question {
+  s_no?: number;
+  id?: string;
+  question: string;
+  option_a?: string;
+  option_b?: string;
+  option_c?: string;
+  option_d?: string;
+  answer: string;
+  explanation?: string;
+  [key: string]: string | number | undefined;
+}
+
 const PLATFORMS = [
   { value: 'INDIABIX', label: 'IndiaBIX', color: 'text-amber-600 border-amber-600', gradient: 'from-yellow-400 to-amber-600' },
 ];
@@ -17,7 +30,7 @@ const QUESTIONS_PER_PAGE = 5;
 export default function AptitudePage() {
   const [topics, setTopics] = useState<string[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
-  const [questions, setQuestions] = useState<any[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState(PLATFORMS[0].value);
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
@@ -258,7 +271,7 @@ export default function AptitudePage() {
                       </div>
                       <Separator className="mb-4" />
                       {['option_a', 'option_b', 'option_c', 'option_d'].map((optKey, idx) => {
-                        const optValue = q[optKey];
+                        const optValue = q[optKey] as string | undefined;
                         if (!optValue) return null;
 
                         const isSelected = userAnswers[actualIndex] === optValue;

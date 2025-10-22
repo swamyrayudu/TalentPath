@@ -1,5 +1,5 @@
 'use client';
-
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Briefcase, MapPin, Building2, Clock } from 'lucide-react';
@@ -34,9 +34,6 @@ export default function JobsCard({ jobs }: JobsCardProps) {
     }
   };
 
-  const getJobTypeLabel = (type: string) => {
-    return type.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-  };
 
   return (
     <Card className="hover:shadow-lg transition-shadow">

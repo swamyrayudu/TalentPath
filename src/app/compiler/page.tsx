@@ -1,8 +1,7 @@
 'use client';
-
+import React from 'react'
 import { CodeEditor } from '@/components/compiler/code-editor';
-import { Card, CardContent } from '@/components/ui/card';
-import { Code2, Zap, Shield, Cpu } from 'lucide-react';
+
 
 export default function Compiler() {
   return (

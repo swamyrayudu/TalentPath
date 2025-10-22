@@ -1,3 +1,6 @@
+
+import React from 'react';
+
 import { redirect } from 'next/navigation';
 import { getContest, getContestQuestions } from '@/actions/contest.actions';
 import { auth } from '@/lib/auth';

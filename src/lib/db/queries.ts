@@ -1,8 +1,7 @@
 // lib/db/queries.ts - NEW FILE
-import { string } from 'zod';
 import { db } from './index';
-import { problems, userProgress, users } from './schema';
-import { eq, desc, lt, and, or, ilike, sql, inArray } from 'drizzle-orm';
+import { problems, userProgress } from './schema';
+import { eq, desc, lt, and, or, ilike, sql } from 'drizzle-orm';
 
 export interface ProblemFilters {
   cursor?: string;
@@ -39,11 +38,11 @@ export async function getProblems(filters: ProblemFilters = {}) {
   }
 
   if (difficulty) {
-    conditions.push(eq(problems.difficulty, difficulty.toUpperCase() as any));
+    conditions.push(eq(problems.difficulty, difficulty.toUpperCase() as 'EASY' | 'MEDIUM' | 'HARD'));
   }
 
   if (platform) {
-    conditions.push(eq(problems.platform, platform.toUpperCase() as any));
+    conditions.push(eq(problems.platform, platform.toUpperCase() as 'LEETCODE' | 'CODEFORCES' | 'HACKERRANK' | 'GEEKSFORGEEKS'));
   }
 
   if (company) {
@@ -64,7 +63,8 @@ export async function getProblems(filters: ProblemFilters = {}) {
   }
 
   if (conditions.length > 0) {
-    query = query.where(and(...conditions)!) as any;
+    // @ts-expect-error: drizzle-orm query typing limitation
+    query = query.where(and(...conditions)!);
   }
 
   const result = await query;
@@ -194,9 +194,9 @@ export async function getUserStats(userId: string) {
   const solved = allProgress.filter((p) => p.status === 'solved');
   const attempted = allProgress.filter((p) => p.status === 'attempted');
 
-  const easy = solved.filter((p) => 
-    allProgress.find((pr) => pr.problemId === p.problemId)
-  ).length;
+  // const easy = solved.filter((p) => 
+  //   allProgress.find((pr) => pr.problemId === p.problemId)
+  // ).length;
 
   return {
     totalSolved: solved.length,

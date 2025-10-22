@@ -1,18 +1,27 @@
 'use client';
 import React, { createContext, useContext, useState } from 'react';
 
+export interface DsaProblem {
+  id: string;
+  title: string;
+  description: string;
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+  points: number;
+  createdAt: Date;
+}
+
 export interface DsaProblemsCache {
-  allProblems: any[];
-  setAllProblems: React.Dispatch<React.SetStateAction<any[]>>;
-  userProgress: Map<number, any>;
-  setUserProgress: React.Dispatch<React.SetStateAction<Map<number, any>>>;
+  allProblems: DsaProblem[];
+  setAllProblems: React.Dispatch<React.SetStateAction<DsaProblem[]>>;
+  userProgress: Map<number, boolean>;
+  setUserProgress: React.Dispatch<React.SetStateAction<Map<number, boolean>>>;
 }
 
 const DsaProblemsCacheContext = createContext<DsaProblemsCache | null>(null);
 
 export function DsaProblemsCacheProvider({ children }: { children: React.ReactNode }) {
-  const [allProblems, setAllProblems] = useState<any[]>([]);
-  const [userProgress, setUserProgress] = useState<Map<number, any>>(new Map());
+  const [allProblems, setAllProblems] = useState<DsaProblem[]>([]);
+  const [userProgress, setUserProgress] = useState<Map<number, boolean>>(new Map());
 
   return (
     <DsaProblemsCacheContext.Provider value={{ allProblems, setAllProblems, userProgress, setUserProgress }}>

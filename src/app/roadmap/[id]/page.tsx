@@ -1,3 +1,5 @@
+import React from 'react';
+
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { roadmaps, roadmapSteps } from '@/lib/db/schema';
@@ -5,7 +7,7 @@ import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { getUserProgress } from '@/actions/roadmap';
 import { RoadmapViewer } from '@/components/roadmap/roadmap-viewer';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -21,11 +23,12 @@ import {
   Database,
   Shield,
   Brain,
-  Map
+  Map,
+  LucideIcon
 } from 'lucide-react';
 import Link from 'next/link';
 
-const categoryIcons: Record<string, any> = {
+const categoryIcons: Record<string, LucideIcon> = {
   frontend: Code,
   backend: Server,
   fullstack: Database,

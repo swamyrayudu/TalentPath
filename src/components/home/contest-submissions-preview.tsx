@@ -1,8 +1,8 @@
 'use client';
-
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Send, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Trophy, CheckCircle2, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 

@@ -74,7 +74,11 @@ export function ContestManagementTabs({ contest, questions, contestSlug }: Conte
 
             {/* Questions List */}
             <QuestionManagementList 
-              questions={questions} 
+              questions={questions.map(q => ({
+                ...q,
+                timeLimitSeconds: q.timeLimitSeconds ?? 0,
+                memoryLimitMb: q.memoryLimitMb ?? 0,
+              }))} 
               contestId={contest.id} 
               contestSlug={contestSlug} 
             />

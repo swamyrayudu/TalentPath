@@ -133,16 +133,16 @@ export async function POST(request: NextRequest) {
         message = 'All problems are now hidden from users';
         break;
 
-      case 'show_filtered':
+      case 'show_filtered': {
         // Show filtered problems (by difficulty, platform, etc.)
         const conditions = [];
         
         if (difficulty) {
-          conditions.push(eq(problems.difficulty, difficulty as any));
+          conditions.push(eq(problems.difficulty, difficulty as 'EASY' | 'MEDIUM' | 'HARD'));
         }
         
         if (platform) {
-          conditions.push(eq(problems.platform, platform as any));
+          conditions.push(eq(problems.platform, platform as 'LEETCODE' | 'CODEFORCES' | 'HACKERRANK' | 'GEEKSFORGEEKS'));
         }
 
         if (conditions.length === 0) {
@@ -177,6 +177,7 @@ export async function POST(request: NextRequest) {
         
         message = `Showing ${matchingProblems.length} problem(s) matching filters`;
         break;
+      }
 
       default:
         return NextResponse.json(

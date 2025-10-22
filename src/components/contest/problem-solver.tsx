@@ -1,5 +1,5 @@
 'use client';
-
+import React from 'react';
 import { useState, useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,7 +21,7 @@ import { Play, Loader2, Send, CheckCircle2, XCircle, Clock, Trophy, Award, Arrow
 import { submitSolution, runTestCases } from '@/actions/contest.actions';
 import { toast } from 'sonner';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+// import { useRouter } from 'next/navigation'; // Unused
 
 const LANGUAGES = [
   { 
@@ -59,18 +59,50 @@ interface Submission {
   errorMessage?: string;
 }
 
-export function ProblemSolver({ contest, question, sampleTestCases, userId }: any) {
-  const router = useRouter();
+interface Contest {
+  id: string;
+  slug: string;
+  endTime: string | Date;
+}
+interface Question {
+  id: string;
+  title: string;
+  description: string;
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+  points: number;
+  timeLimitSeconds: number;
+  memoryLimitMb: number;
+}
+interface TestCase {
+  id: string;
+  input: string;
+  expectedOutput: string;
+  points: number;
+}
+interface TestResult {
+  passed: boolean;
+  actual: string;
+  expected: string;
+  error?: string;
+}
+
+export function ProblemSolver({ contest, question, sampleTestCases, userId }: {
+  contest: Contest;
+  question: Question;
+  sampleTestCases: TestCase[];
+  userId: string;
+}) {
+  // const router = useRouter(); // Unused
   const [language, setLanguage] = useState('python');
   const [code, setCode] = useState(LANGUAGES[0].default);
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [testResults, setTestResults] = useState<any[]>([]);
-  const [submissionResult, setSubmissionResult] = useState<any>(null);
+  const [testResults, setTestResults] = useState<TestResult[]>([]);
+  // const [submissionResult, setSubmissionResult] = useState<Submission | null>(null); // Unused
   const [allSubmissions, setAllSubmissions] = useState<Submission[]>([]);
-  const [activeTab, setActiveTab] = useState('description');
+  const [activeTab, setActiveTab] = useState<'description' | 'submissions'>('description');
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
-  const editorRef = useRef<any>(null);
+  // const editorRef = useRef<typeof Editor | null>(null); // Unused
   const [timeLeft, setTimeLeft] = useState<string>('');
   const [isContestEnded, setIsContestEnded] = useState(() => {
     // Check if contest has already ended on mount
@@ -91,10 +123,10 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
     const stored = localStorage.getItem(storageKey);
     if (stored) {
       try {
-        const submissions = JSON.parse(stored);
+        const submissions: Submission[] = JSON.parse(stored);
         setAllSubmissions(submissions);
       } catch (error) {
-        console.error('Failed to parse stored submissions:', error);
+        console.error('Failed to parse stored submissions:', error instanceof Error ? error.message : String(error));
       }
     }
   }, [contest.id, question.id, userId]);
@@ -208,22 +240,22 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
         questionId: question.id,
         code,
         language,
-        testCaseIds: sampleTestCases.map((tc: any) => tc.id),
+        testCaseIds: sampleTestCases.map((tc: TestCase) => tc.id),
       });
 
       if (result.success && result.data) {
-        setTestResults(result.data);
-        const passed = result.data.filter((r: any) => r.passed).length;
-        if (passed === result.data.length) {
+        setTestResults(result.data as TestResult[]);
+        const passed = (result.data as TestResult[]).filter((r) => r.passed).length;
+        if (passed === (result.data as TestResult[]).length) {
           toast.success(`All ${passed} test cases passed! 🎉`);
         } else {
-          toast.warning(`${passed}/${result.data.length} test cases passed`);
+          toast.warning(`${passed}/${(result.data as TestResult[]).length} test cases passed`);
         }
       } else {
         toast.error(result.error || 'Failed to run tests');
       }
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
     } finally {
       setIsRunning(false);
     }
@@ -245,7 +277,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
   const confirmSubmit = async () => {
     setShowSubmitDialog(false);
     setIsSubmitting(true);
-    setSubmissionResult(null);
+  // setSubmissionResult(null); // Removed unused
 
     try {
       const result = await submitSolution({
@@ -256,7 +288,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
       });
 
       if (result.success && result.data) {
-        setSubmissionResult(result.data);
+  // setSubmissionResult(result.data); // Removed unused
         
         // Create submission object
         const newSubmission: Submission = {
@@ -287,8 +319,8 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
       } else {
         toast.error(result.error || 'Submission failed');
       }
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -394,7 +426,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
         {/* Left Panel - Problem Description - Desktop Only */}
         <div className="hidden lg:flex flex-col h-full overflow-hidden">
           <div className="flex-1 overflow-y-auto p-4 lg:p-6 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs value={activeTab} onValueChange={v => setActiveTab(v as 'description' | 'submissions')} className="w-full">
               <TabsList className="mb-4">
                 <TabsTrigger value="description">Description</TabsTrigger>
                 <TabsTrigger value="submissions">
@@ -430,7 +462,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
                             Just use <code className="bg-blue-500/20 px-1 rounded">input().split()</code> in Python or <code className="bg-blue-500/20 px-1 rounded">Scanner</code> in Java. No manual parsing needed!
                           </p>
                         </div>
-                        {sampleTestCases.map((testCase: any, index: number) => (
+                        {sampleTestCases.map((testCase: TestCase, index: number) => (
                           <Card key={testCase.id} className="border-2">
                             <CardHeader className="pb-3">
                               <CardTitle className="text-sm flex items-center justify-between">
@@ -602,7 +634,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
               <span className="text-xs text-muted-foreground hidden group-open:inline">Tap to collapse</span>
             </summary>
             <div className="max-h-[50vh] overflow-y-auto p-4 bg-background">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <Tabs value={activeTab} onValueChange={v => setActiveTab(v as 'description' | 'submissions')} className="w-full">
                 <TabsList className="mb-4 w-full">
                   <TabsTrigger value="description" className="flex-1">Description</TabsTrigger>
                   <TabsTrigger value="submissions" className="flex-1">
@@ -637,7 +669,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
                               💡 Arrays are auto-converted to space-separated format
                             </p>
                           </div>
-                          {sampleTestCases.map((testCase: any, index: number) => (
+                          {sampleTestCases.map((testCase: TestCase, index: number) => (
                             <Card key={testCase.id} className="border-2">
                               <CardHeader className="pb-2 p-3">
                                 <CardTitle className="text-xs flex items-center justify-between">
@@ -687,7 +719,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
                     <div className="space-y-3">
                       {allSubmissions.slice(0, 3).map((submission, index) => {
                         const isLatest = index === 0;
-                        const submissionDate = new Date(submission.timestamp);
+                        // const submissionDate = new Date(submission.timestamp); // Unused
                         
                         return (
                           <Card 
@@ -813,7 +845,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: an
                   </Button>
                 </div>
               <div className="space-y-2">
-                {testResults.map((result: any, index: number) => (
+                {testResults.map((result: TestResult, index: number) => (
                   <Card 
                     key={index} 
                     className={`border-2 ${result.passed ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 'border-red-500 bg-red-50 dark:bg-red-950/20'}`}

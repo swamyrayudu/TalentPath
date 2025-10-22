@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     const formattedCode = formatCode(code, language);
-    const formattedStdin = preprocessInput(stdin || '', language);
+    const formattedStdin = preprocessInput(stdin || '');
 
     // Setup timeout with AbortController
     const controller = new AbortController();
@@ -186,11 +186,11 @@ export async function POST(request: NextRequest) {
         outputSize: output.length,
       });
 
-    } catch (fetchError: any) {
+    } catch (fetchError) {
       clearTimeout(timeoutId);
       
       // Handle AbortError (timeout)
-      if (fetchError.name === 'AbortError') {
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
         return NextResponse.json({
           success: false,
           output: '',
@@ -209,14 +209,15 @@ export async function POST(request: NextRequest) {
       throw fetchError;
     }
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Compile API error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown server error';
     return NextResponse.json(
       { 
         success: false, 
-        error: error.message || 'Unknown server error',
+        error: errorMessage,
         output: '',
-        stderr: `❌ Server Error\n\n${error.message || 'An unexpected error occurred'}\n\nPlease try again.`,
+        stderr: `❌ Server Error\n\n${errorMessage}\n\nPlease try again.`,
       },
       { status: 500 }
     );
@@ -226,12 +227,12 @@ export async function POST(request: NextRequest) {
 /**
  * Preprocess stdin input - handles arrays, objects, and special formats
  */
-function preprocessInput(input: string, language: string): string {
+function preprocessInput(input: string): string {
   if (!input) return '';
   
   try {
     // Convert escaped characters to actual characters
-    let processed = input
+    const processed = input
       .replace(/\\n/g, '\n')
       .replace(/\\t/g, '\t')
       .replace(/\\r/g, '\r');
@@ -324,7 +325,7 @@ function formatCode(code: string, language: string): string {
     }
     
     return lines.join('\n');
-  } catch (error) {
+  } catch {
     return code;
   }
 }

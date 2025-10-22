@@ -1,5 +1,8 @@
+
+import React from 'react';
+
 import { redirect } from 'next/navigation';
-import { getQuestion, getAllTestCases, getContest } from '@/actions/contest.actions';
+import { getQuestion, getAllTestCases } from '@/actions/contest.actions';
 import { auth } from '@/lib/auth';
 import { TestCaseManager } from '@/components/contest/test-case-manager';
 import { Button } from '@/components/ui/button';

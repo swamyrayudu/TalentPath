@@ -1,3 +1,4 @@
+
 import { auth } from '../../lib/auth';
 import React from 'react';
 import { redirect } from 'next/navigation';

@@ -1,5 +1,5 @@
 'use client';
-
+import React from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import {
@@ -63,7 +63,7 @@ export default function Navbar() {
     }
   };
 
-  const userRole = (session?.user as any)?.role || 'user';
+  const userRole = (session?.user as { role?: string })?.role || 'user';
   const isAdmin = userRole === 'admin';
 
   return (

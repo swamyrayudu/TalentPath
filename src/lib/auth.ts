@@ -1,3 +1,11 @@
+interface UserSession {
+  id?: string;
+  name?: string;
+  email?: string;
+  image?: string;
+  role?: string;
+  emailVerified?: boolean | string | null;
+}
 import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
@@ -90,12 +98,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
-        session.user.name = token.name as string;
-        session.user.email = token.email as string;
-        session.user.image = token.picture as string;
-        (session.user as any).role = token.role || 'user';
-        (session.user as any).emailVerified = token.emailVerified;
+        const userSession = session.user as UserSession;
+        userSession.id = token.id as string;
+        userSession.name = token.name as string;
+        userSession.email = token.email as string;
+        userSession.image = token.picture as string;
+        userSession.role = typeof token.role === 'string' ? token.role : 'user';
+        userSession.emailVerified = typeof token.emailVerified === 'boolean' || typeof token.emailVerified === 'string' || token.emailVerified === null
+          ? token.emailVerified
+          : null;
       }
       return session;
     },

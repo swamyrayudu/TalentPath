@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
       // Fix: result is an array directly, not result.rows
       const topics = result
-  .map((row: any) => row.table_name)
+  .map((row: Record<string, unknown>) => row.table_name as string)
   .filter((name: string) => {
     // Exclude system/app tables
     const excludedTables = [
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     
   } catch (error: unknown) {
     console.error('API Error:', error);
-    const msg = (error as any)?.message ?? String(error);
+    const msg = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }

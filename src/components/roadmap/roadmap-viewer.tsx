@@ -1,5 +1,5 @@
 'use client';
-
+import React from 'react';
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -58,8 +58,8 @@ export function RoadmapViewer({
         setLocalCompleted([...localCompleted, stepId]);
         toast.success('Step completed! 🎉');
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to update progress');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error) || 'Failed to update progress');
     } finally {
       setLoading(null);
     }

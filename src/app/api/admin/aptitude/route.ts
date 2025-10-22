@@ -51,11 +51,12 @@ export async function POST(request: NextRequest) {
       success: true, 
       question: Array.isArray(result) ? result[0] : result 
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('Error creating question:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error?.message || 'Failed to create question. Make sure the table exists.' 
+      error: errorMessage || 'Failed to create question. Make sure the table exists.' 
     }, { status: 500 });
   }
 }
@@ -130,11 +131,12 @@ export async function PATCH(request: NextRequest) {
       success: true, 
       question: updated[0] 
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('Error updating question:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error?.message || 'Internal server error' 
+      error: errorMessage || 'Internal server error' 
     }, { status: 500 });
   }
 }
@@ -174,11 +176,12 @@ export async function DELETE(request: NextRequest) {
       success: true,
       message: 'Question deleted successfully' 
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('Error deleting question:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error?.message || 'Internal server error' 
+      error: errorMessage || 'Internal server error' 
     }, { status: 500 });
   }
 }

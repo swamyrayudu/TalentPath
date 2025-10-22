@@ -1,3 +1,6 @@
+
+import React from 'react';
+
 import { notFound, redirect } from 'next/navigation';
 import { getContest, getQuestion, getSampleTestCases, checkParticipation } from '@/actions/contest.actions';
 import { ProblemSolver } from '@/components/contest/problem-solver';
@@ -42,7 +45,12 @@ export default async function ProblemPage({
     notFound();
   }
 
-  const question = questionResult.data;
+  const questionRaw = questionResult.data;
+  const question = {
+    ...questionRaw,
+    timeLimitSeconds: questionRaw.timeLimitSeconds ?? 0,
+    memoryLimitMb: questionRaw.memoryLimitMb ?? 0,
+  };
   const testCasesResult = await getSampleTestCases(questionId);
   const sampleTestCases = testCasesResult.success && testCasesResult.data ? testCasesResult.data : [];
 

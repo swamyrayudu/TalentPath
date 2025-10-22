@@ -1,5 +1,5 @@
 'use client';
-
+import React from 'react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +24,7 @@ interface QuestionsListProps {
   contestEndTime: Date;
 }
 
-export function QuestionsList({ questions, contestId, contestSlug, isParticipant, completedQuestionIds, contestStatus, contestEndTime }: QuestionsListProps) {
+export function QuestionsList({ questions, contestSlug, isParticipant, completedQuestionIds, contestStatus, contestEndTime }: QuestionsListProps) {
   const [isContestEnded, setIsContestEnded] = useState(false);
 
   useEffect(() => {

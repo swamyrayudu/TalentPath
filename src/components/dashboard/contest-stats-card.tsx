@@ -1,8 +1,8 @@
 'use client';
-
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Send, CheckCircle2, XCircle } from 'lucide-react';
+import { Trophy, Send, CheckCircle2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ContestStatsCardProps {
