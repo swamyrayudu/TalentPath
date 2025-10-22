@@ -7,6 +7,7 @@ import ConditionalNavbar from '../components/layouts/conditional-navbar';
 import AuthProvider from '@/components/providers/session-provider';
 import { DsaProblemsCacheProvider } from '@/components/context/DsaProblemsCacheContext';
 import { Toaster } from 'sonner';
+import AIChatbot from '@/components/ai-chatbot';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -42,6 +43,7 @@ export default function RootLayout({
               <ConditionalNavbar />
               <main>{children}</main>
               <Toaster richColors position="top-right" />
+              <AIChatbot />
             </ThemeProvider>
           </DsaProblemsCacheProvider>
         </AuthProvider>
