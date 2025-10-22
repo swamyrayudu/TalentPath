@@ -4,11 +4,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ChevronRight, Trophy, Zap, Building2, Code2, GitBranch, Database, Network, Boxes, Search as SearchIcon, List, Binary } from 'lucide-react';
+import { Loader2, ChevronRight, Trophy, Zap, Building2, Code2, GitBranch, Database, Network, Boxes, Search as SearchIcon, List, Binary, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 type Problem = {
   id: number;
@@ -85,6 +86,12 @@ export default function DsaSheet() {
   const [userProgress, setUserProgress] = useState<Map<number, UserProgress>>(new Map());
   const [beginnerTopics, setBeginnerTopics] = useState<TopicCard[]>([]);
   const [intermediateTopics, setIntermediateTopics] = useState<TopicCard[]>([]);
+  const [advancedTopics, setAdvancedTopics] = useState<TopicCard[]>([]);
+  
+  // Collapsible states
+  const [isBeginnerOpen, setIsBeginnerOpen] = useState(true);
+  const [isIntermediateOpen, setIsIntermediateOpen] = useState(true);
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(true);
 
   // Fetch all problems and user progress with caching
   useEffect(() => {
@@ -110,7 +117,7 @@ export default function DsaSheet() {
         // Fetch fresh data if no cache or expired
         // Force fetch only approved problems for DSA sheet (even for admins)
         if (!problemsData) {
-          const problemsRes = await fetch('/api/problems?limit=10000&onlyApproved=true', {
+          const problemsRes = await fetch('/api/problems?limit=10000&bypassVisibility=true', {
             next: { revalidate: 300 } // Cache for 5 minutes
           });
           const result = await problemsRes.json();
@@ -171,19 +178,32 @@ export default function DsaSheet() {
     }
   }, [session, sessionStatus]);
 
-  // Calculate topic stats
+  // Calculate topic stats by difficulty
   const topicStats = useMemo(() => {
-    const stats = new Map<string, { total: number; solved: number }>();
+    const statsByDifficulty = {
+      easy: new Map<string, { total: number; solved: number }>(),
+      medium: new Map<string, { total: number; solved: number }>(),
+      hard: new Map<string, { total: number; solved: number }>(),
+    };
 
-    // Initialize all topics
+    // Initialize all topics for each difficulty
     [...BEGINNER_TOPICS, ...INTERMEDIATE_TOPICS].forEach(topic => {
-      stats.set(topic.slug, { total: 0, solved: 0 });
+      statsByDifficulty.easy.set(topic.slug, { total: 0, solved: 0 });
+      statsByDifficulty.medium.set(topic.slug, { total: 0, solved: 0 });
+      statsByDifficulty.hard.set(topic.slug, { total: 0, solved: 0 });
     });
 
-    // Count problems per topic
+    // Count problems per topic by difficulty
     problems.forEach(problem => {
+      const difficulty = problem.difficulty.toLowerCase();
+      const statsMap = difficulty === 'easy' 
+        ? statsByDifficulty.easy 
+        : difficulty === 'medium' 
+        ? statsByDifficulty.medium 
+        : statsByDifficulty.hard;
+
       problem.topicSlugs?.forEach(slug => {
-        const current = stats.get(slug);
+        const current = statsMap.get(slug);
         if (current) {
           current.total++;
           const progress = userProgress.get(problem.id);
@@ -194,13 +214,14 @@ export default function DsaSheet() {
       });
     });
 
-    return stats;
+    return statsByDifficulty;
   }, [problems, userProgress]);
 
-  // Build topic cards with stats
+  // Build topic cards with stats by difficulty
   useEffect(() => {
+    // Beginner: Easy problems only
     const beginner = BEGINNER_TOPICS.map(topic => {
-      const stats = topicStats.get(topic.slug) || { total: 0, solved: 0 };
+      const stats = topicStats.easy.get(topic.slug) || { total: 0, solved: 0 };
       return {
         ...topic,
         icon: <topic.icon className={cn("w-6 h-6", topic.color)} />,
@@ -209,8 +230,20 @@ export default function DsaSheet() {
       };
     });
 
+    // Intermediate: Medium problems only
     const intermediate = INTERMEDIATE_TOPICS.map(topic => {
-      const stats = topicStats.get(topic.slug) || { total: 0, solved: 0 };
+      const stats = topicStats.medium.get(topic.slug) || { total: 0, solved: 0 };
+      return {
+        ...topic,
+        icon: <topic.icon className={cn("w-6 h-6", topic.color)} />,
+        total: stats.total,
+        solved: stats.solved,
+      };
+    });
+
+    // Advanced: Hard problems only
+    const advanced = INTERMEDIATE_TOPICS.map(topic => {
+      const stats = topicStats.hard.get(topic.slug) || { total: 0, solved: 0 };
       return {
         ...topic,
         icon: <topic.icon className={cn("w-6 h-6", topic.color)} />,
@@ -221,6 +254,7 @@ export default function DsaSheet() {
 
     setBeginnerTopics(beginner);
     setIntermediateTopics(intermediate);
+    setAdvancedTopics(advanced);
   }, [topicStats]);
 
   // Calculate overall progress
@@ -239,7 +273,7 @@ export default function DsaSheet() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="container mx-auto px-4 py-8 max-w-8xl">
         {/* Header Skeleton */}
         <div className="mb-8">
           <div className="h-12 w-64 bg-muted rounded-lg animate-pulse mb-4" />
@@ -278,7 +312,7 @@ export default function DsaSheet() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
+    <div className="container mx-auto px-4 py-8 max-w-8xl">
       {/* Header with Stats */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
@@ -295,7 +329,7 @@ export default function DsaSheet() {
             <Link href="/companies">
               <Button 
                 size="lg"
-                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 gap-2 shadow-lg hover:shadow-xl transition-all"
+                className="bg-gradient-to-r bg-yellow-500 hover:from-yellow-600 hover:to-yellow-700 hover:text-black gap-2 shadow-lg hover:shadow-xl transition-all"
               >
                 <Building2 className="w-5 h-5" />
                 Company-wise
@@ -321,71 +355,140 @@ export default function DsaSheet() {
         </div>
       </div>
 
-      {/* LeetCode Beginner Sheet */}
-      <div className="mb-12">
+      {/* Beginner Sheet - Easy Problems */}
+      <Collapsible open={isBeginnerOpen} onOpenChange={setIsBeginnerOpen} className="mb-6">
         <Card className="border-2 border-green-500/20 bg-gradient-to-br from-green-500/5 via-transparent to-transparent shadow-lg">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center">
-                <Zap className="w-6 h-6 text-green-500" />
-              </div>
-              <div>
-                <CardTitle className="text-2xl text-green-600 dark:text-green-400 font-bold">
-                  Beginner Level
-                </CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Start with fundamental data structures
-                </p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {beginnerTopics.map((topic, index) => (
-                <TopicCardComponent
-                  key={topic.slug + '-beginner'}
-                  topic={topic}
-                  index={index}
-                  level="beginner"
+          <CollapsibleTrigger className="w-full">
+            <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors rounded-t-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center">
+                    <Zap className="w-6 h-6 text-green-500" />
+                  </div>
+                  <div className="text-left">
+                    <CardTitle className="text-2xl text-green-600 dark:text-green-400 font-bold">
+                      Beginner Sheet
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Easy level problems - Start with fundamentals
+                    </p>
+                  </div>
+                </div>
+                <ChevronDown 
+                  className={cn(
+                    "w-6 h-6 text-muted-foreground transition-transform duration-200",
+                    isBeginnerOpen && "transform rotate-180"
+                  )}
                 />
-              ))}
-            </div>
-          </CardContent>
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {beginnerTopics.map((topic) => (
+                  <TopicCardComponent
+                    key={topic.slug + '-beginner'}
+                    topic={topic}
+                    level="beginner"
+                    difficulty="Easy"
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </CollapsibleContent>
         </Card>
-      </div>
+      </Collapsible>
 
-      {/* LeetCode Intermediate Sheet */}
-      <div>
-        <Card className="border-2 border-purple-500/20 bg-gradient-to-br from-purple-500/5 via-transparent to-transparent shadow-lg">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                <Trophy className="w-6 h-6 text-purple-500" />
-              </div>
-              <div>
-                <CardTitle className="text-2xl text-purple-600 dark:text-purple-400 font-bold">
-                  Intermediate Level
-                </CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Master advanced algorithms and techniques
-                </p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {intermediateTopics.map((topic, index) => (
-                <TopicCardComponent
-                  key={topic.slug + '-intermediate'}
-                  topic={topic}
-                  index={index}
-                  level="intermediate"
+      {/* Intermediate Sheet - Medium Problems */}
+      <Collapsible open={isIntermediateOpen} onOpenChange={setIsIntermediateOpen} className="mb-6">
+        <Card className="border-2 border-orange-500/20 bg-gradient-to-br from-orange-500/5 via-transparent to-transparent shadow-lg">
+          <CollapsibleTrigger className="w-full">
+            <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors rounded-t-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                    <Trophy className="w-6 h-6 text-orange-500" />
+                  </div>
+                  <div className="text-left">
+                    <CardTitle className="text-2xl text-orange-600 dark:text-orange-400 font-bold">
+                      Intermediate Sheet
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Medium level problems - Enhance your skills
+                    </p>
+                  </div>
+                </div>
+                <ChevronDown 
+                  className={cn(
+                    "w-6 h-6 text-muted-foreground transition-transform duration-200",
+                    isIntermediateOpen && "transform rotate-180"
+                  )}
                 />
-              ))}
-            </div>
-          </CardContent>
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {intermediateTopics.map((topic) => (
+                  <TopicCardComponent
+                    key={topic.slug + '-intermediate'}
+                    topic={topic}
+                    level="intermediate"
+                    difficulty="Medium"
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </CollapsibleContent>
         </Card>
-      </div>
+      </Collapsible>
+
+      {/* Advanced Sheet - Hard Problems */}
+      <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
+        <Card className="border-2 border-red-500/20 bg-gradient-to-br from-red-500/5 via-transparent to-transparent shadow-lg">
+          <CollapsibleTrigger className="w-full">
+            <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors rounded-t-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center">
+                    <Zap className="w-6 h-6 text-red-500" />
+                  </div>
+                  <div className="text-left">
+                    <CardTitle className="text-2xl text-red-600 dark:text-red-400 font-bold">
+                      Advanced Sheet
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Hard level problems - Master complex algorithms
+                    </p>
+                  </div>
+                </div>
+                <ChevronDown 
+                  className={cn(
+                    "w-6 h-6 text-muted-foreground transition-transform duration-200",
+                    isAdvancedOpen && "transform rotate-180"
+                  )}
+                />
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {advancedTopics.map((topic) => (
+                  <TopicCardComponent
+                    key={topic.slug + '-advanced'}
+                    topic={topic}
+                    level="advanced"
+                    difficulty="Hard"
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
     </div>
   );
 }
@@ -393,12 +496,12 @@ export default function DsaSheet() {
 // Topic Card Component
 function TopicCardComponent({ 
   topic, 
-  index,
-  level 
+  level,
+  difficulty 
 }: { 
   topic: TopicCard; 
-  index: number;
-  level: 'beginner' | 'intermediate';
+  level: 'beginner' | 'intermediate' | 'advanced';
+  difficulty: 'Easy' | 'Medium' | 'Hard';
 }) {
   const progressPercentage = topic.total > 0 
     ? Math.round((topic.solved / topic.total) * 100) 
@@ -406,28 +509,52 @@ function TopicCardComponent({
 
   const isComplete = progressPercentage === 100;
 
+  const levelColors = {
+    beginner: {
+      border: 'border-green-500/50 bg-green-500/5',
+      badge: 'bg-green-500 hover:bg-green-600',
+      text: 'text-green-600 dark:text-green-400',
+      progress: 'bg-gradient-to-r from-green-500 to-green-600'
+    },
+    intermediate: {
+      border: 'border-orange-500/50 bg-orange-500/5',
+      badge: 'bg-orange-500 hover:bg-orange-600',
+      text: 'text-orange-600 dark:text-orange-400',
+      progress: 'bg-gradient-to-r from-orange-500 to-orange-600'
+    },
+    advanced: {
+      border: 'border-red-500/50 bg-red-500/5',
+      badge: 'bg-red-500 hover:bg-red-600',
+      text: 'text-red-600 dark:text-red-400',
+      progress: 'bg-gradient-to-r from-red-500 to-red-600'
+    }
+  };
+
+  const colors = levelColors[level];
+
   return (
-    <Link href={`/topics/${topic.slug}`} prefetch={true}>
+    <Link href={`/topics/${topic.slug}?difficulty=${difficulty}`} prefetch={true}>
       <Card className={cn(
         "border-2 transition-all cursor-pointer h-full group hover:shadow-xl",
         "hover:border-primary/50 hover:-translate-y-1",
-        isComplete && level === 'beginner' && "border-green-500/50 bg-green-500/5",
-        isComplete && level === 'intermediate' && "border-purple-500/50 bg-purple-500/5"
+        isComplete && colors.border
       )}>
         <CardContent className="pt-6">
           <div className="flex items-start justify-between mb-4">
             <div className="p-3 bg-muted/50 rounded-xl group-hover:scale-110 transition-transform">
               {topic.icon}
             </div>
-            {isComplete && (
-              <Badge className={cn(
-                "shadow-sm",
-                level === 'beginner' ? 'bg-green-500 hover:bg-green-600' : 'bg-purple-500 hover:bg-purple-600'
-              )}>
-                <Trophy className="w-3 h-3 mr-1" />
-                Done
+            <div className="flex flex-col gap-1 items-end">
+              <Badge variant="outline" className="text-xs">
+                {difficulty}
               </Badge>
-            )}
+              {isComplete && (
+                <Badge className={cn("shadow-sm", colors.badge)}>
+                  <Trophy className="w-3 h-3 mr-1" />
+                  Done
+                </Badge>
+              )}
+            </div>
           </div>
 
           <h3 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors line-clamp-2">
@@ -440,9 +567,7 @@ function TopicCardComponent({
             </span>
             <span className={cn(
               "font-bold text-base",
-              progressPercentage > 0 
-                ? level === 'beginner' ? 'text-green-600 dark:text-green-400' : 'text-purple-600 dark:text-purple-400'
-                : "text-muted-foreground"
+              progressPercentage > 0 ? colors.text : "text-muted-foreground"
             )}>
               {progressPercentage}%
             </span>
@@ -452,10 +577,7 @@ function TopicCardComponent({
           <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden mb-4 shadow-inner">
             <div
               style={{ width: `${progressPercentage}%` }}
-              className={cn(
-                "h-full rounded-full transition-all duration-500",
-                level === 'beginner' ? "bg-gradient-to-r from-green-500 to-green-600" : "bg-gradient-to-r from-purple-500 to-purple-600"
-              )}
+              className={cn("h-full rounded-full transition-all duration-500", colors.progress)}
             />
           </div>
 

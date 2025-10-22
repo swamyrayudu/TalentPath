@@ -15,7 +15,7 @@ export function useIntersectionObserver({
   const targetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!enabled || !targetRef.current) return;
+    if (!enabled || !targetRef.current) {return;}
 
     const observer = new IntersectionObserver(
       (entries) => {

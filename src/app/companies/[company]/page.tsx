@@ -57,7 +57,7 @@ type CachedData<T> = {
 // Enhanced localStorage with compression and error handling
 const storage = {
   set: <T,>(key: string, data: T): void => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {return;}
     try {
       const cached: CachedData<T> = { data, timestamp: Date.now() };
       localStorage.setItem(`${STORAGE_PREFIX}${key}`, JSON.stringify(cached));
@@ -77,10 +77,10 @@ const storage = {
   },
 
   get: <T,>(key: string): T | null => {
-    if (typeof window === 'undefined') return null;
+    if (typeof window === 'undefined') {return null;}
     try {
       const item = localStorage.getItem(`${STORAGE_PREFIX}${key}`);
-      if (!item) return null;
+      if (!item) {return null;}
       
       const cached: CachedData<T> = JSON.parse(item);
       const age = Date.now() - cached.timestamp;
@@ -98,7 +98,7 @@ const storage = {
   },
 
   remove: (key: string): void => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {return;}
     try {
       localStorage.removeItem(`${STORAGE_PREFIX}${key}`);
     } catch (e) {
@@ -107,7 +107,7 @@ const storage = {
   },
 
   clearOld: (): void => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {return;}
     try {
       const keys = Object.keys(localStorage);
       const now = Date.now();
@@ -355,7 +355,7 @@ export default function CompanyPage() {
     () => debounce((platform: string, topic?: string) => {
       const params = new URLSearchParams();
       params.set('platform', platform);
-      if (topic) params.set('topic', topic);
+      if (topic) {params.set('topic', topic);}
       router.replace(`/companies/${companySlug}?${params.toString()}`, { scroll: false });
     }, 300),
     [companySlug, router]
@@ -363,7 +363,7 @@ export default function CompanyPage() {
 
   // Fetch topics with aggressive caching
   const fetchTopics = useCallback(async (platform: string) => {
-    if (!companySlug) return;
+    if (!companySlug) {return;}
     
     const cacheKey = `topics_${companySlug}_${platform}`;
     const cached = storage.get<TopicData[]>(cacheKey);
@@ -396,7 +396,7 @@ export default function CompanyPage() {
 
   // Fetch user progress with caching
   const fetchUserProgress = useCallback(async () => {
-    if (!session?.user) return;
+    if (!session?.user) {return;}
     
     const cacheKey = 'user_progress';
     const cached = storage.get<any[]>(cacheKey);
@@ -436,7 +436,7 @@ export default function CompanyPage() {
     topic?: string, 
     platform?: string
   ) => {
-    if (!companySlug || isFetchingRef.current) return;
+    if (!companySlug || isFetchingRef.current) {return;}
     
     const cacheKey = `problems_${companySlug}_${topic}_${platform}_${sortBy}_${pageNum}`;
     
@@ -452,8 +452,8 @@ export default function CompanyPage() {
     }
     
     isFetchingRef.current = true;
-    if (pageNum === 1) setLoading(true);
-    else setLoadingMore(true);
+    if (pageNum === 1) {setLoading(true);}
+    else {setLoadingMore(true);}
 
     try {
       const limit = ITEMS_PER_PAGE;
@@ -466,7 +466,7 @@ export default function CompanyPage() {
         `/api/problems?company=${companySlug}&sortBy=${sortParam}&sortOrder=desc&limit=${limit}&offset=${offset}${topicParam}${platformParam}`
       );
       
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      if (!res.ok) {throw new Error(`HTTP error! status: ${res.status}`);}
       
       const data = await res.json();
 
@@ -474,7 +474,7 @@ export default function CompanyPage() {
         if (pageNum === 1) {
           setProblems(data.data);
           setDisplayedProblems(data.data);
-          if (data.total !== undefined) setTotalCount(data.total);
+          if (data.total !== undefined) {setTotalCount(data.total);}
           storage.set(cacheKey, { data: data.data, total: data.total });
         } else {
           setProblems(prev => [...prev, ...data.data]);
@@ -498,7 +498,7 @@ export default function CompanyPage() {
 
   // Prefetch both platforms
   useEffect(() => {
-    if (!companySlug || typeof window === 'undefined') return;
+    if (!companySlug || typeof window === 'undefined') {return;}
     
     const prefetch = () => {
       if ('requestIdleCallback' in window) {
@@ -543,12 +543,12 @@ export default function CompanyPage() {
       fetchProblems(1, sortKey, selectedTopic, selectedPlatform);
     }
     
-    if (session?.user) fetchUserProgress();
+    if (session?.user) {fetchUserProgress();}
   }, [companySlug, sortKey, selectedTopic, selectedPlatform, fetchTopics, fetchProblems, fetchUserProgress, session]);
 
   // Intersection observer for infinite scroll
   useEffect(() => {
-    if (!selectedTopic) return;
+    if (!selectedTopic) {return;}
     
     const observer = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting && hasMore && !loadingMore && !loading && !isFetchingRef.current) {
@@ -556,10 +556,10 @@ export default function CompanyPage() {
       }
     }, { threshold: 0.1, rootMargin: '200px' });
 
-    if (observerTarget.current) observer.observe(observerTarget.current);
+    if (observerTarget.current) {observer.observe(observerTarget.current);}
 
     return () => {
-      if (observerTarget.current) observer.unobserve(observerTarget.current);
+      if (observerTarget.current) {observer.unobserve(observerTarget.current);}
       observer.disconnect();
     };
   }, [hasMore, loadingMore, loading, fetchProblems, page, sortKey, selectedTopic, selectedPlatform]);
@@ -619,7 +619,7 @@ export default function CompanyPage() {
   }, [companySlug, router, selectedPlatform]);
 
   const handlePlatformChange = useCallback((platform: 'LEETCODE' | 'GEEKSFORGEEKS') => {
-    if (platform === selectedPlatform) return;
+    if (platform === selectedPlatform) {return;}
     setSelectedPlatform(platform);
     updateUrlDebounced(platform, selectedTopic || undefined);
   }, [selectedPlatform, selectedTopic, updateUrlDebounced]);
@@ -637,10 +637,10 @@ export default function CompanyPage() {
     }
 
     const progress = userProgress.get(problemId);
-    if (!progress) return <Circle className="h-5 w-5 text-gray-400" />;
-    if (progress.status === 'solved') return <CheckCircle2 className="h-5 w-5 text-emerald-500" />;
-    if (progress.status === 'attempted') return <Circle className="h-5 w-5 text-amber-500 fill-amber-500" />;
-    if (progress.status === 'bookmarked') return <Bookmark className="h-5 w-5 text-blue-500 fill-blue-500" />;
+    if (!progress) {return <Circle className="h-5 w-5 text-gray-400" />;}
+    if (progress.status === 'solved') {return <CheckCircle2 className="h-5 w-5 text-emerald-500" />;}
+    if (progress.status === 'attempted') {return <Circle className="h-5 w-5 text-amber-500 fill-amber-500" />;}
+    if (progress.status === 'bookmarked') {return <Bookmark className="h-5 w-5 text-blue-500 fill-blue-500" />;}
   }, [session, userProgress]);
 
   // ==================== RENDER ====================

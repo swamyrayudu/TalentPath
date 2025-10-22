@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { userProgress, problems, users } from '@/lib/db/schema';
@@ -22,9 +22,10 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '200');
     const offset = parseInt(searchParams.get('offset') || '0');
     const onlyApproved = searchParams.get('onlyApproved') === 'true'; // Force approved filter
+    const bypassVisibility = searchParams.get('bypassVisibility') === 'true'; // Bypass visibility for difficulty sheets
 
     console.log('🔍 Fetching problems with filters:', { 
-      topic, company, difficulty, platform, onlyApproved, hasSession: !!session?.user?.id 
+      topic, company, difficulty, platform, onlyApproved, bypassVisibility, hasSession: !!session?.user?.id 
     });
 
     // Check admin role
@@ -45,7 +46,8 @@ export async function GET(request: NextRequest) {
     const conditions = [];
 
     // ✅ Apply admin approval filter for non-admins OR if onlyApproved is explicitly requested
-    if (!isAdmin || onlyApproved) {
+    // UNLESS bypassVisibility is true (for difficulty-based DSA sheets)
+    if ((!isAdmin || onlyApproved) && !bypassVisibility) {
       try {
         conditions.push(eq(problems.isVisibleToUsers, true));
         if (onlyApproved) {
@@ -57,13 +59,18 @@ export async function GET(request: NextRequest) {
         console.error('⚠️ WARNING: isApproved column may not exist yet!');
         console.error('⚠️ Please ensure migration is applied.');
       }
+    } else if (bypassVisibility) {
+      console.log('⚠️ Bypassing visibility filter for difficulty-based sheet');
     } else {
       console.log('🔓 Admin user - showing all problems');
     }
 
     // Apply Filters
     if (difficulty && difficulty !== 'all') {
-      conditions.push(eq(problems.difficulty, difficulty.toUpperCase() as any));
+      // Normalize difficulty to uppercase to match enum
+      const difficultyUpper = difficulty.toUpperCase();
+      conditions.push(eq(problems.difficulty, difficultyUpper as any));
+      console.log(`🎯 Filtering by difficulty: ${difficultyUpper}`);
     }
 
     if (platform && platform !== 'all') {
@@ -104,6 +111,11 @@ export async function GET(request: NextRequest) {
 
     // Combine filters with AND
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    
+    console.log(`📋 Total conditions applied: ${conditions.length}`);
+    if (difficulty) {
+      console.log(`🔍 Difficulty filter active: ${difficulty.toUpperCase()}`);
+    }
 
     // Dynamic sorting
     let orderByClause;
@@ -142,6 +154,14 @@ export async function GET(request: NextRequest) {
       .offset(offset);
 
     console.log(`✅ Returned ${result.length} problems (Total: ${total})`);
+    
+    // Debug: Show sample difficulties from results
+    if (difficulty && result.length > 0) {
+      const difficulties = result.slice(0, 5).map((p: any) => p.difficulty);
+      console.log('📊 Sample difficulties from results:', difficulties);
+      const uniqueDifficulties = [...new Set(result.map((p: any) => p.difficulty))];
+      console.log('🎯 Unique difficulties in results:', uniqueDifficulties);
+    }
 
     return NextResponse.json({
       success: true,

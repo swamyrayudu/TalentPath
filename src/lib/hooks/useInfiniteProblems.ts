@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Problem } from '@/lib/db/schema';
+import { type Problem } from '@/lib/db/schema';
 
 interface UseInfiniteProblemsProps {
   initialProblems?: Problem[];
@@ -33,7 +33,7 @@ export function useInfiniteProblems({
   }, [JSON.stringify(filters), initialProblems]);
 
   const loadMore = useCallback(async () => {
-    if (loading || !hasMore) return;
+    if (loading || !hasMore) {return;}
 
     setLoading(true);
     setError(null);
