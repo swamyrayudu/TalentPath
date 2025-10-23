@@ -12,11 +12,12 @@ export const revalidate = 600; // Cache for 10 minutes
  */
 export async function GET(
   request: Request,
-  { params }: { params: { company: string } }
+  { params }: { params: Promise<{ company: string }> }
 ) {
   try {
     const { searchParams } = new URL(request.url);
-    const companySlug = params.company;
+    const { company } = await params;
+    const companySlug = company;
     const companyName = companySlug.replace(/-/g, ' ');
     const platform = searchParams.get('platform');
 

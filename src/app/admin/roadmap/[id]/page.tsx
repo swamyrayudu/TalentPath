@@ -21,9 +21,9 @@ interface UserSession {
   emailVerified?: boolean | string | null;
 }
 
-export default async function EditRoadmap({ params }: { params: { id: string } | Promise<{ id: string }> }) {
+export default async function EditRoadmap({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  const { id } = await params as { id: string };
+  const { id } = await params;
 
   if (!session?.user) {
     redirect('/');

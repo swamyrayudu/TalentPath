@@ -79,7 +79,7 @@ interface DifficultyStats {
 export default function CompanyDSAPage({
   params,
 }: {
-  params: { company: string };
+  params: Promise<{ company: string }>;
 }) {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -98,7 +98,17 @@ export default function CompanyDSAPage({
   const [currentPage, setCurrentPage] = useState(1);
   const [totalProblems, setTotalProblems] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [paramsCompany, setParamsCompany] = useState<string>('');
   const itemsPerPage = 20;
+
+  useEffect(() => {
+    // Resolve the async params
+    if (params && typeof params === 'object' && 'then' in params) {
+      params.then((p: { company: string }) => {
+        setParamsCompany(p.company);
+      });
+    }
+  }, [params]);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -107,12 +117,12 @@ export default function CompanyDSAPage({
       return;
     }
     fetchCompanyProblems();
-  }, [status, session, router, selectedDifficulty, selectedPlatform, sortBy, currentPage, searchQuery]);
+  }, [status, session, router, selectedDifficulty, selectedPlatform, sortBy, currentPage, searchQuery, paramsCompany]);
 
   const fetchCompanyProblems = useCallback(async () => {
     try {
       setLoading(true);
-      const decodedCompany = decodeURIComponent(params.company);
+      const decodedCompany = decodeURIComponent(paramsCompany);
       const offset = (currentPage - 1) * itemsPerPage;
 
       const queryParams = new URLSearchParams({
@@ -157,7 +167,7 @@ export default function CompanyDSAPage({
     } finally {
       setLoading(false);
     }
-  }, [params.company, selectedDifficulty, selectedPlatform, sortBy, currentPage, searchQuery]);
+  }, [paramsCompany, selectedDifficulty, selectedPlatform, sortBy, currentPage, searchQuery]);
 
   // Calculate statistics
   const stats = useMemo(() => {

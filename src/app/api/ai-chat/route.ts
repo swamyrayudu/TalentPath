@@ -116,6 +116,7 @@ Keep responses concise, clear, and beginner-friendly. Use code examples when hel
       );
     }
 
+
     const data = await response.json();
     const fullResponse = data.choices?.[0]?.message?.content || 'No response generated';
     

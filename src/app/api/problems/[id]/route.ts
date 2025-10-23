@@ -17,7 +17,7 @@ async function isAdmin(userId: string) {
   return user[0]?.role === 'admin';
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth();
 
@@ -29,8 +29,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
     }
 
-    const id = parseInt(params.id);
-    if (isNaN(id)) {
+    const { id } = await params;
+    const parsedId = parseInt(id);
+    if (isNaN(parsedId)) {
       return NextResponse.json({ success: false, error: 'Invalid problem ID' }, { status: 400 });
     }
 
@@ -59,7 +60,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const result = await db
       .update(problems)
       .set(problemData)
-      .where(eq(problems.id, id))
+      .where(eq(problems.id, parsedId))
       .returning();
 
     if (result.length === 0) {
@@ -79,7 +80,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth();
 
@@ -91,14 +92,15 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
     }
 
-    const id = parseInt(params.id);
-    if (isNaN(id)) {
+    const { id } = await params;
+    const parsedId = parseInt(id);
+    if (isNaN(parsedId)) {
       return NextResponse.json({ success: false, error: 'Invalid problem ID' }, { status: 400 });
     }
 
     const result = await db
       .delete(problems)
-      .where(eq(problems.id, id))
+      .where(eq(problems.id, parsedId))
       .returning();
 
     if (result.length === 0) {

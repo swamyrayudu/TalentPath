@@ -23,12 +23,13 @@ import {
 import Link from 'next/link';
 import { SignInButton } from '../../../components/auth/sign-in-button';
 
-export default async function JobDetailPage({ params }: { params: { id: string } }) {
+export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   const isLoggedIn = !!session?.user;
+  const { id } = await params;
 
   const job = await db.query.jobs.findFirst({
-    where: eq(jobs.id, params.id),
+    where: eq(jobs.id, id),
   });
 
   if (!job || !job.isActive) {

@@ -43,10 +43,10 @@ const categoryIcons: Record<string, LucideIcon> = {
 export default async function RoadmapDetailPage({ 
   params 
 }: { 
-  params: { id: string } | Promise<{ id: string }> 
+  params: Promise<{ id: string }> 
 }) {
   const session = await auth();
-  const { id } = await params as { id: string };
+  const { id } = await params;
 
   const roadmap = await db.query.roadmaps.findFirst({
     where: eq(roadmaps.id, id),

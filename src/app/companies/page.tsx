@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState ,useMemo, memo,useCallback} from 'react';
+import React, { useEffect, useState ,useMemo, memo,useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +16,7 @@ type CompanyData = {
 
 const COMPANIES_PER_PAGE = 12;
 
-export default function CompaniesPage() {
+function CompaniesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [companies, setCompanies] = useState<CompanyData[]>([]);
@@ -301,5 +302,17 @@ CompanyLogo.displayName = 'CompanyLogo';
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function CompaniesPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    }>
+      <CompaniesContent />
+    </Suspense>
   );
 }

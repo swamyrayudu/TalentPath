@@ -7,7 +7,7 @@ import { eq, asc } from 'drizzle-orm';
 // Get messages for a conversation
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -19,7 +19,8 @@ export async function GET(
       );
     }
 
-    const conversationId = params.id;
+    const { id } = await params;
+    const conversationId = id;
 
     // Verify the conversation belongs to the user
     const [conversation] = await db
@@ -54,7 +55,7 @@ export async function GET(
 // Add a message to a conversation
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -66,7 +67,8 @@ export async function POST(
       );
     }
 
-    const conversationId = params.id;
+    const { id } = await params;
+    const conversationId = id;
     const { role, content, reasoning } = await request.json();
 
     // Verify the conversation belongs to the user
