@@ -13,7 +13,8 @@ import {
   CheckCircle2, 
   ChevronRight,
   Code2,
-  Target
+  Target,
+  Building2
 } from 'lucide-react';
 
 interface TopicStats {
@@ -147,6 +148,16 @@ export default function DSASheetPage() {
             <p className="text-sm text-muted-foreground">
               Track your progress across {totalPlatformProgress.total} curated problems
             </p>
+          </div>
+
+          {/* Navigation */}
+          <div className="flex gap-2 flex-wrap">
+            <Link href="/companies" className="flex-1 min-w-[200px]">
+              <Button variant="outline" size="sm" className="w-full gap-2">
+                <Building2 className="h-4 w-4" />
+                Company-wise Questions
+              </Button>
+            </Link>
           </div>
 
           {/* Platform Selector */}

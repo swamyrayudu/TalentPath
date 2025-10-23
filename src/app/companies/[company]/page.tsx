@@ -61,10 +61,10 @@ const storage = {
     try {
       const cached: CachedData<T> = { data, timestamp: Date.now() };
       localStorage.setItem(`${STORAGE_PREFIX}${key}`, JSON.stringify(cached));
-    } catch (e) {
-      console.warn('Storage set failed:', e);
+    } catch (err) {
+      console.warn('Storage set failed:', err);
       // Clear old cache if quota exceeded
-      if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+      if (err instanceof DOMException && err.name === 'QuotaExceededError') {
         storage.clearOld();
         try {
           const cached: CachedData<T> = { data, timestamp: Date.now() };
@@ -91,8 +91,8 @@ const storage = {
       }
       
       return cached.data;
-    } catch (e) {
-      console.warn('Storage get failed:', e);
+    } catch (err) {
+      console.warn('Storage get failed:', err);
       return null;
     }
   },
@@ -101,8 +101,8 @@ const storage = {
     if (typeof window === 'undefined') {return;}
     try {
       localStorage.removeItem(`${STORAGE_PREFIX}${key}`);
-    } catch (e) {
-      console.warn('Storage remove failed:', e);
+    } catch (err) {
+      console.warn('Storage remove failed:', err);
     }
   },
 
@@ -121,23 +121,23 @@ const storage = {
                 localStorage.removeItem(key);
               }
             }
-          } catch (e) {
+          } catch {
             localStorage.removeItem(key);
           }
         }
       });
-    } catch (e) {
-      console.warn('Storage clearOld failed:', e);
+    } catch (err) {
+      console.warn('Storage clearOld failed:', err);
     }
   }
 };
 
 // Debounce function for URL updates
-const debounce = <T extends (...args: any[]) => any>(func: T, wait: number) => {
+const debounce = (func: (platform: string, topic?: string) => void, wait: number) => {
   let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
+  return (platform: string, topic?: string) => {
     clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
+    timeout = setTimeout(() => func(platform, topic), wait);
   };
 };
 
@@ -225,7 +225,7 @@ const ProblemCard = memo(({
 }: { 
   problem: Problem;
   userProgress: Map<number, UserProgress>;
-  session: any;
+  session: { user?: { id?: string; email?: string | null; name?: string | null } } | null;
   onUpdateProgress: (id: number, status: 'solved' | 'attempted' | 'bookmarked') => void;
   getDifficultyColor: (difficulty: string) => string;
   getStatusIcon: (problemId: number) => React.ReactNode;
@@ -324,7 +324,6 @@ export default function CompanyPage() {
   const { data: session } = useSession();
 
   const [topics, setTopics] = useState<TopicData[]>([]);
-  const [problems, setProblems] = useState<Problem[]>([]);
   const [displayedProblems, setDisplayedProblems] = useState<Problem[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [userProgress, setUserProgress] = useState<Map<number, UserProgress>>(new Map());
@@ -399,11 +398,11 @@ export default function CompanyPage() {
     if (!session?.user) {return;}
     
     const cacheKey = 'user_progress';
-    const cached = storage.get<any[]>(cacheKey);
+    const cached = storage.get<{ progress: UserProgress }[]>(cacheKey);
     
     if (cached) {
       const progressMap = new Map();
-      cached.forEach((item: any) => {
+      cached.forEach((item: { progress: UserProgress }) => {
         if (item.progress?.problemId) {
           progressMap.set(Number(item.progress.problemId), item.progress);
         }
@@ -416,7 +415,7 @@ export default function CompanyPage() {
       const data = await res.json();
       if (data.success) {
         const progressMap = new Map();
-        data.data.forEach((item: any) => {
+        data.data.forEach((item: { progress: UserProgress }) => {
           if (item.progress?.problemId) {
             progressMap.set(Number(item.progress.problemId), item.progress);
           }
@@ -443,7 +442,6 @@ export default function CompanyPage() {
     if (pageNum === 1) {
       const cached = storage.get<{ data: Problem[]; total: number }>(cacheKey);
       if (cached) {
-        setProblems(cached.data);
         setDisplayedProblems(cached.data);
         setTotalCount(cached.total);
         setLoading(false);
@@ -472,12 +470,10 @@ export default function CompanyPage() {
 
       if (data.success) {
         if (pageNum === 1) {
-          setProblems(data.data);
           setDisplayedProblems(data.data);
           if (data.total !== undefined) {setTotalCount(data.total);}
           storage.set(cacheKey, { data: data.data, total: data.total });
         } else {
-          setProblems(prev => [...prev, ...data.data]);
           setDisplayedProblems(prev => [...prev, ...data.data]);
         }
         setHasMore(data.data.length === limit);

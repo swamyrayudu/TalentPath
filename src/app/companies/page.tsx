@@ -3,7 +3,6 @@
 import React, { useEffect, useState ,useMemo, memo,useCallback} from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -95,6 +94,7 @@ export default function CompaniesPage() {
       </div>
     );
   }
+
 const CompanyLogo = memo(({ companyName }: { companyName: string }) => {
   const [logoError, setLogoError] = useState(false);
   const [logoLoading, setLogoLoading] = useState(true);
@@ -144,6 +144,8 @@ const CompanyLogo = memo(({ companyName }: { companyName: string }) => {
     </div>
   );
 });
+
+CompanyLogo.displayName = 'CompanyLogo';
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
