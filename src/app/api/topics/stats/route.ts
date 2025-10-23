@@ -1,8 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { problems, users } from '@/lib/db/schema';
-import { sql, eq } from 'drizzle-orm';
-import { auth } from '@/lib/auth';
+import { problems } from '@/lib/db/schema';
+import { sql } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 300; // Cache for 5 minutes
@@ -21,25 +20,6 @@ export async function GET(request: NextRequest) {
 
     console.log('📊 Fetching topic stats...', { difficulty, platform, bypassVisibility });
     const startTime = Date.now();
-
-    // Check if user is admin
-    const session = await auth();
-    let isAdmin = false;
-
-    if (session?.user?.id) {
-      const user = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, session.user.id))
-        .limit(1);
-      isAdmin = user[0]?.role === 'admin';
-    }
-
-    // Visibility filter
-    const visibilityCondition =
-      !isAdmin && !bypassVisibility
-        ? sql`AND is_visible_to_users = true`
-        : sql``;
 
     // Difficulty filter
     const difficultyCondition = difficulty
@@ -69,7 +49,6 @@ export async function GET(request: NextRequest) {
         unnest(p.topic_slugs) as topic_slug
       WHERE 
         TRIM(topic) != ''
-        ${visibilityCondition}
         ${difficultyCondition}
         ${platformCondition}
       GROUP BY 
@@ -119,7 +98,6 @@ export async function GET(request: NextRequest) {
       {
         success: true,
         data: statsByDifficulty,
-        isAdmin,
       },
       {
         headers: {

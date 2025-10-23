@@ -22,11 +22,24 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 
+interface Question {
+  s_no: number;
+  question: string;
+  topic: string;
+  category: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  answer: string;
+  explanation: string;
+  [key: string]: string | number;
+}
 
 export default function AdminAptitudePage() {
   const [topics, setTopics] = useState<string[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
-  const [questions, setQuestions] = useState<any[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingQuestionId, setEditingQuestionId] = useState<number | null>(null);
@@ -70,7 +83,7 @@ export default function AdminAptitudePage() {
   }
 
   // Start editing question by populating form
-  function startEdit(question: any) {
+  function startEdit(question: Question) {
     setEditingQuestionId(question.s_no);
     setShowAddForm(false);
     setFormData({
@@ -172,9 +185,10 @@ export default function AdminAptitudePage() {
       } else {
         toast.error(data.error || 'Failed to save question');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error submitting form:', error);
-      toast.error(error.message || 'An unexpected error occurred');
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      toast.error(errorMessage);
     }
   }
 
@@ -207,9 +221,10 @@ function validateForm() {
       } else {
         toast.error(data.error || 'Failed to delete question');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting question:', error);
-      toast.error(error.message || 'An unexpected error occurred');
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      toast.error(errorMessage);
     }
   }
 

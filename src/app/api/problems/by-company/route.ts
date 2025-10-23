@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { userProgress, problems, users } from '@/lib/db/schema';
+import { userProgress, problems } from '@/lib/db/schema';
 import { eq, and, desc, sql, or, ilike } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
@@ -50,25 +50,8 @@ export async function GET(request: NextRequest) {
       hasSession: !!session?.user?.id,
     });
 
-    // Check admin role for visibility filtering
-    let isAdmin = false;
-    if (session?.user?.id) {
-      const user = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, session.user.id))
-        .limit(1);
-
-      isAdmin = user[0]?.role === 'admin';
-    }
-
     // Build WHERE conditions
     const conditions = [];
-
-    // Add visibility filter for non-admin users
-    if (!isAdmin) {
-      conditions.push(eq(problems.isVisibleToUsers, true));
-    }
 
     // Filter by company - decode the company name from URL
     const decodedCompany = decodeURIComponent(company).replace(/-/g, ' ').trim();
@@ -209,7 +192,6 @@ export async function GET(request: NextRequest) {
       total,
       company: decodedCompany,
       difficultyBreakdown,
-      isAdmin,
       pagination: {
         limit,
         offset,

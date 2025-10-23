@@ -1,3 +1,7 @@
+'use client';
+
+import React from 'react'
+
 import { AdminQuestionsManager } from "@/components/admin/admin-questions-manager";
 
 export default function AdminQuestionsPage() {

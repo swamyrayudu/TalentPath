@@ -28,42 +28,7 @@ export async function GET(request: NextRequest) {
       topic, company, difficulty, platform, onlyApproved, bypassVisibility, hasSession: !!session?.user?.id 
     });
 
-    // Check admin role
-    let isAdmin = false;
-    if (session?.user?.id) {
-      const user = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, session.user.id))
-        .limit(1);
-
-      isAdmin = user[0]?.role === 'admin';
-      console.log('👤 User role:', isAdmin ? 'ADMIN' : 'USER');
-    } else {
-      console.log('👤 No session - treating as regular user');
-    }
-
     const conditions = [];
-
-    // ✅ Apply admin approval filter for non-admins OR if onlyApproved is explicitly requested
-    // UNLESS bypassVisibility is true (for difficulty-based DSA sheets)
-    if ((!isAdmin || onlyApproved) && !bypassVisibility) {
-      try {
-        conditions.push(eq(problems.isVisibleToUsers, true));
-        if (onlyApproved) {
-          console.log('✅ Applied admin approval filter (onlyApproved=true)');
-        } else {
-          console.log('✅ Applied admin approval filter for non-admin user');
-        }
-      } catch {
-        console.error('⚠️ WARNING: isApproved column may not exist yet!');
-        console.error('⚠️ Please ensure migration is applied.');
-      }
-    } else if (bypassVisibility) {
-      console.log('⚠️ Bypassing visibility filter for difficulty-based sheet');
-    } else {
-      console.log('🔓 Admin user - showing all problems');
-    }
 
     // Apply Filters
     if (difficulty && difficulty !== 'all') {
@@ -168,7 +133,6 @@ export async function GET(request: NextRequest) {
       data: result,
       count: result.length,
       total,
-      isAdmin
     });
   } catch (error) {
     console.error('❌ Error fetching problems:', error);

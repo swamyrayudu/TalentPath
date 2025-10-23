@@ -1,3 +1,6 @@
+'use client';
+import React from 'react';
+
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/lib/auth';
@@ -13,7 +16,7 @@ export default async function AdminJobs() {
   if (!session?.user) {
     redirect('/');
   }
-  const role = (session.user as any)?.role ?? 'user';
+  const role = ((session.user as Record<string, unknown>)?.role as string) ?? 'user';
   if (String(role).toLowerCase() !== 'admin') {
     // Redirect non-admin users to home (or a 403 page if you prefer)
     redirect('/');

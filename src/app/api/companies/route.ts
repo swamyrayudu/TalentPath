@@ -1,8 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { problems, users } from '@/lib/db/schema';
-import { sql, eq } from 'drizzle-orm';
-import { auth } from '@/lib/auth';
+import { problems } from '@/lib/db/schema';
+import { sql } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 600; // Cache for 10 minutes
@@ -22,23 +21,9 @@ export async function GET(request: NextRequest) {
     console.log('📊 Fetching companies list...', { limit, offset, search });
     const startTime = Date.now();
 
-    // Check if user is admin
-    const session = await auth();
-    let isAdmin = false;
-    
-    if (session?.user?.id) {
-      const user = await db.select().from(users).where(eq(users.id, session.user.id)).limit(1);
-      isAdmin = user[0]?.role === 'admin';
-    }
-
-    // Build WHERE clause for search and visibility
+    // Build WHERE clause for search
     const searchCondition = search 
       ? sql`AND LOWER(TRIM(company)) LIKE LOWER(${'%' + search + '%'})`
-      : sql``;
-    
-    // Add visibility filter for non-admin users
-    const visibilityCondition = !isAdmin 
-      ? sql`AND is_visible_to_users = true`
       : sql``;
 
     // Get total count for pagination
@@ -47,7 +32,6 @@ export async function GET(request: NextRequest) {
       FROM ${problems},
            unnest(company_tags) as company
       WHERE TRIM(company) != ''
-      ${visibilityCondition}
       ${searchCondition}
     `);
 
@@ -63,7 +47,6 @@ export async function GET(request: NextRequest) {
         unnest(company_tags) as company
       WHERE 
         TRIM(company) != ''
-        ${visibilityCondition}
         ${searchCondition}
       GROUP BY 
         TRIM(company)

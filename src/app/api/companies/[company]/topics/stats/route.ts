@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { problems, users } from '@/lib/db/schema';
-import { sql, eq } from 'drizzle-orm';
-import { auth } from '@/lib/auth';
+import { problems } from '@/lib/db/schema';
+import { sql } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 300; // Cache for 5 minutes
@@ -24,23 +23,6 @@ export async function GET(
 
     console.log('📊 Fetching optimized topic stats for company:', companyName, 'platform:', platform);
     const startTime = Date.now();
-
-    // Check if user is admin
-    const session = await auth();
-    let isAdmin = false;
-    if (session?.user?.id) {
-      const user = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, session.user.id))
-        .limit(1);
-      isAdmin = user[0]?.role === 'admin';
-    }
-
-    // Apply approval + visibility filter
-    const approvalCondition = !isAdmin
-      ? sql`AND p.is_visible_to_users = true`
-      : sql``;
 
     const platformCondition = platform
       ? sql`AND p.platform = ${platform}`
@@ -68,7 +50,6 @@ export async function GET(
           WHERE LOWER(TRIM(company_tag)) = LOWER(${companyName})
         )
         AND TRIM(topic) != ''
-        ${approvalCondition}
         ${platformCondition}
       GROUP BY 
         TRIM(topic), p.difficulty, p.platform
@@ -117,7 +98,6 @@ export async function GET(
         data: topics,
         company: companyName,
         count: topics.length,
-        isAdmin,
       },
       {
         headers: {
