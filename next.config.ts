@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
     // Optimize client-side routing and reduce unnecessary fetches
     optimizePackageImports: ['next-auth'],
   },
+  // Tell Next.js that these packages should only run on the server
+  serverExternalPackages: ['postgres', 'drizzle-orm'],
   webpack: (config, { isServer }) => {
     if (!isServer) {
       // Exclude Node.js modules from client bundle
