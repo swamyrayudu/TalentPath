@@ -170,6 +170,57 @@ export const problems = pgTable('problems', {
 }));
 
 
+// ============================================
+// VISIBLE PROBLEMS TABLE (User-facing optimized table)
+// ============================================
+
+export const visibleProblems = pgTable('visible_problems', {
+  id: integer('id').primaryKey(),
+  title: text('title').notNull(),
+  slug: text('slug').notNull().unique(),
+  difficulty: difficultyEnum('difficulty').notNull(),
+  platform: platformEnum('platform').notNull(),
+  likes: integer('likes').default(0),
+  dislikes: integer('dislikes').default(0),
+  acceptanceRate: text('acceptance_rate'),
+  url: text('url').notNull(),
+  topicTags: text('topic_tags').array(),
+  companyTags: text('company_tags').array(),
+  mainTopics: text('main_topics').array(),
+  topicSlugs: text('topic_slugs').array(),
+  accepted: integer('accepted').default(0),
+  submissions: integer('submissions').default(0),
+  isPremium: boolean('is_premium').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => ({
+  difficultyIdx: index('visible_problems_difficulty_idx').on(table.difficulty),
+  platformIdx: index('visible_problems_platform_idx').on(table.platform),
+  slugIdx: index('visible_problems_slug_idx').on(table.slug),
+  topicSlugsIdx: index('visible_problems_topic_slugs_idx').on(table.topicSlugs),
+  compositeIdx: index('visible_problems_platform_difficulty_idx').on(table.platform, table.difficulty),
+}));
+
+// ============================================
+// DSA TOPIC STATS TABLE (Optimized counts)
+// ============================================
+
+export const dsaTopicStats = pgTable('dsa_topic_stats', {
+  id: serial('id').primaryKey(),
+  topicSlug: text('topic_slug').notNull(),
+  topicName: text('topic_name').notNull(),
+  difficulty: difficultyEnum('difficulty').notNull(),
+  platform: platformEnum('platform').notNull(),
+  totalCount: integer('total_count').default(0),
+  lastUpdated: timestamp('last_updated').defaultNow(),
+}, (table) => ({
+  slugIdx: index('topic_stats_slug_idx').on(table.topicSlug),
+  platformIdx: index('topic_stats_platform_idx').on(table.platform),
+  difficultyIdx: index('topic_stats_difficulty_idx').on(table.difficulty),
+  compositeIdx: index('topic_stats_composite_idx').on(table.topicSlug, table.difficulty, table.platform),
+}));
+
+
 export const userProgress = pgTable('user_progress', {
   id: bigserial('id', { mode: 'number' }).primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),

@@ -3,12 +3,26 @@
 import React, { createContext, useContext, useState } from 'react';
 
 export interface Problem {
-  id: string;
+  id: string | number;
   title: string;
   description: string;
   difficulty: 'EASY' | 'MEDIUM' | 'HARD';
   points: number;
   createdAt: Date;
+  platform?: string;
+  slug?: string;
+  likes?: number;
+  dislikes?: number;
+  acceptanceRate?: string;
+  url?: string;
+  topicTags?: string[];
+  companyTags?: string[];
+  mainTopics?: string[];
+  topicSlugs?: string[];
+  accepted?: number;
+  submissions?: number;
+  isPremium?: boolean;
+  isVisibleToUsers?: boolean;
 }
 
 export interface AdminProblemsCache {

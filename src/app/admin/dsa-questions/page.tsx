@@ -13,28 +13,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, Edit, Trash2, Search, Download, AlertCircle, CheckCircle, Loader2, ExternalLink, Eye, EyeOff, ChevronDown } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Download, AlertCircle, CheckCircle, Loader2, ExternalLink, Eye, EyeOff } from 'lucide-react';
 import { useAdminProblemsCache } from '@/components/context/AdminProblemsCacheContext';
+import type { Problem } from '@/components/context/AdminProblemsCacheContext';
 
-interface Problem {
-  id: number;
-  title: string;
-  slug: string;
-  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
-  platform: 'LEETCODE' | 'CODEFORCES' | 'HACKERRANK' | 'GEEKSFORGEEKS';
-  likes: number;
-  dislikes: number;
-  acceptanceRate: string;
-  url: string;
-  topicTags: string[];
-  companyTags: string[];
-  mainTopics: string[];
-  topicSlugs: string[];
-  accepted: number;
-  submissions: number;
-  isPremium: boolean;
-  isVisibleToUsers: boolean;
-}
+// ...existing code...
 interface ProblemFormData {
   title: string;
   slug: string;
@@ -51,7 +34,55 @@ interface ProblemFormData {
   accepted: string;
   submissions: string;
   isPremium: boolean;
+  selectedTopic: string; // New field for single topic selection
 }
+
+// All available topics organized by platform and difficulty
+const ALL_TOPICS = {
+  LEETCODE: {
+    EASY: [
+      { name: 'Arrays', slug: 'array' },
+      { name: 'Strings', slug: 'string' },
+      { name: 'Linked Lists', slug: 'linked-list' },
+      { name: 'Stacks & Queues', slug: 'stack' },
+      { name: 'Hash Maps & Sets', slug: 'hash-table' },
+      { name: 'Trees', slug: 'tree' },
+      { name: 'Sorting & Searching', slug: 'sorting' },
+    ],
+    MEDIUM: [
+      { name: 'Arrays & Hashing', slug: 'array' },
+      { name: 'Two Pointers', slug: 'two-pointers' },
+      { name: 'Linked Lists', slug: 'linked-list' },
+      { name: 'Stacks & Queues', slug: 'stack' },
+      { name: 'Trees', slug: 'tree' },
+      { name: 'Graphs', slug: 'graph' },
+      { name: 'Sorting & Searching', slug: 'binary-search' },
+      { name: 'Dynamic Programming', slug: 'dynamic-programming' },
+    ],
+    HARD: [
+      { name: 'Dynamic Programming', slug: 'dynamic-programming' },
+      { name: 'Graphs', slug: 'graph' },
+      { name: 'Trees & Tries', slug: 'tree' },
+      { name: 'Arrays & Strings', slug: 'array' },
+      { name: 'Greedy', slug: 'greedy' },
+      { name: 'Bit Manipulation', slug: 'bit-manipulation' },
+      { name: 'Advanced Data Structures', slug: 'heap' },
+    ],
+  },
+  GEEKSFORGEEKS: {
+    EASY: [
+      { name: 'Arrays', slug: 'array' },
+      { name: 'Strings', slug: 'string' },
+    ],
+    MEDIUM: [
+      { name: 'Linked List', slug: 'linked-list' },
+      { name: 'Stacks & Queues', slug: 'stack' },
+    ],
+    HARD: [
+      { name: 'Dynamic Programming', slug: 'dynamic-programming' },
+    ],
+  },
+};
 const ITEMS_PER_PAGE = 50;
 
 export default function AdminProblemsPage() {
@@ -61,6 +92,8 @@ export default function AdminProblemsPage() {
 
   const [displayedProblems, setDisplayedProblems] = useState<Problem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [platformFilter, setPlatformFilter] = useState<string>('ALL');
+  const [topicFilter, setTopicFilter] = useState<string>('ALL');
   const [loading, setLoading] = useState<boolean>(allProblems.length === 0);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [error, setError] = useState('');
@@ -70,7 +103,7 @@ export default function AdminProblemsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [page, setPage] = useState<number>(1);
   const [hasMore, setHasMore] = useState<boolean>(true);
-  const [toggleLoading, setToggleLoading] = useState<number | null>(null); // Track which problem is being toggled
+  const [toggleLoading, setToggleLoading] = useState<string | null>(null); // Track which problem is being toggled
 
   const observerTarget = useRef<HTMLDivElement>(null);
 
@@ -78,17 +111,16 @@ export default function AdminProblemsPage() {
     title: '', slug: '', difficulty: 'EASY', platform: 'LEETCODE',
     likes: '0', dislikes: '0', acceptanceRate: '0', url: '',
     topicTags: '', companyTags: '', mainTopics: '', topicSlugs: '',
-    accepted: '0', submissions: '0', isPremium: false
+    accepted: '0', submissions: '0', isPremium: false, selectedTopic: ''
   });
 
   useEffect(() => {
     if (status === 'loading') return;
     if (!session?.user) { router.push('/auth/signin'); return; }
-    if ((session.user as any).role !== 'admin') { router.push('/dashboard'); return; }
+    if ((session.user as { role?: string }).role !== 'admin') { router.push('/dashboard'); return; }
     if (allProblems.length === 0) fetchProblems();
     else setLoading(false);
-    // eslint-disable-next-line
-  }, [status, session, router]);
+  }, [status, session, router, allProblems]);
 
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -103,8 +135,7 @@ export default function AdminProblemsPage() {
     setDisplayedProblems(filtered.slice(0, ITEMS_PER_PAGE));
     setPage(1);
     setHasMore(filtered.length > ITEMS_PER_PAGE);
-    // eslint-disable-next-line
-  }, [allProblems, searchQuery]);
+  }, [allProblems, searchQuery, platformFilter, topicFilter]);
 
   const fetchProblems = async () => {
     try {
@@ -113,7 +144,7 @@ export default function AdminProblemsPage() {
       const data = await response.json();
       if (data.success) setAllProblems(data.data);
       else setError(data.error || 'Failed to fetch problems');
-    } catch (error) {
+    } catch {
       setError('Failed to fetch problems');
     } finally {
       setLoading(false);
@@ -132,18 +163,50 @@ export default function AdminProblemsPage() {
       setHasMore(end < filtered.length);
       setLoadingMore(false);
     }, 200);
-  }, [page, loadingMore, hasMore, allProblems, searchQuery]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  }, [page, loadingMore, hasMore, allProblems, searchQuery]) as any;
 
   const getFilteredProblems = () => {
-    if (searchQuery.trim() === '') return allProblems;
-    return allProblems.filter(
-      (p: Problem) =>
-        p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.topicTags.some(tag =>
-          tag.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-    );
+    let filtered = allProblems;
+    // Apply platform filter
+    if (platformFilter !== 'ALL') {
+      filtered = filtered.filter(p => p.platform === platformFilter);
+    }
+    // Apply topic filter
+    if (topicFilter !== 'ALL') {
+      filtered = filtered.filter(p => Array.isArray(p.topicSlugs) && p.topicSlugs?.includes(topicFilter));
+    }
+    // Apply search filter
+    if (searchQuery.trim() !== '') {
+      filtered = filtered.filter(
+        (p: Problem) =>
+          p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (p.slug?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (Array.isArray(p.topicTags) && p.topicTags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())))
+      );
+    }
+    return filtered;
+  };
+
+  // Clear DSA sheet cache so user side updates immediately
+  const clearDsaStatsCache = () => {
+    const difficulties = ['EASY', 'MEDIUM', 'HARD'];
+    const platforms = ['LEETCODE', 'GEEKSFORGEEKS'];
+    
+    difficulties.forEach(diff => {
+      // Clear stats for each difficulty + platform combination (new optimized cache keys)
+      platforms.forEach(platform => {
+        sessionStorage.removeItem(`dsa-stats-v2-${diff}-${platform}`);
+        sessionStorage.removeItem(`dsa-stats-v2-${diff}-${platform}-timestamp`);
+      });
+      // Clear stats without platform (old keys for backward compatibility)
+      sessionStorage.removeItem(`dsa-stats-${diff}`);
+      sessionStorage.removeItem(`dsa-stats-${diff}-timestamp`);
+      sessionStorage.removeItem(`dsa-stats-v2-${diff}`);
+      sessionStorage.removeItem(`dsa-stats-v2-${diff}-timestamp`);
+    });
+    
+    console.log('✅ DSA stats cache cleared - user side will fetch fresh data from optimized table');
   };
 
   // -------------- CRUD Handlers ----------------
@@ -153,6 +216,11 @@ export default function AdminProblemsPage() {
     setError('');
     setSuccess('');
     try {
+      // Use selectedTopic as the primary topic
+      const selectedTopicSlug = formData.selectedTopic;
+      const topicSlugsArray = selectedTopicSlug ? [selectedTopicSlug] : [];
+      const mainTopicsArray = selectedTopicSlug ? [selectedTopicSlug] : [];
+      
       const payload = {
         title: formData.title,
         slug: formData.slug,
@@ -164,8 +232,8 @@ export default function AdminProblemsPage() {
         url: formData.url,
         topicTags: formData.topicTags.split(',').map(t => t.trim()).filter(Boolean),
         companyTags: formData.companyTags.split(',').map(t => t.trim()).filter(Boolean),
-        mainTopics: formData.mainTopics.split(',').map(t => t.trim()).filter(Boolean),
-        topicSlugs: formData.topicSlugs.split(',').map(t => t.trim()).filter(Boolean),
+        mainTopics: mainTopicsArray,
+        topicSlugs: topicSlugsArray,
         accepted: parseInt(formData.accepted) || 0,
         submissions: parseInt(formData.submissions) || 0,
         isPremium: formData.isPremium,
@@ -191,6 +259,8 @@ export default function AdminProblemsPage() {
         } else {
           setAllProblems([data.data, ...allProblems]);
         }
+        // Clear DSA stats cache so user side updates immediately
+        clearDsaStatsCache();
         setTimeout(() => setSuccess(''), 3000);
       } else {
         console.error('API Error:', data); // Debug log
@@ -203,27 +273,30 @@ export default function AdminProblemsPage() {
 
   const handleEdit = (problem: Problem) => {
     setEditingProblem(problem);
+    // Extract the first topic slug if available
+    const firstTopicSlug = Array.isArray(problem.topicSlugs) && problem.topicSlugs.length > 0 ? problem.topicSlugs[0] : '';
     setFormData({
       title: problem.title,
-      slug: problem.slug,
+      slug: problem.slug ?? '',
       difficulty: problem.difficulty,
-      platform: problem.platform,
-      likes: problem.likes.toString(),
-      dislikes: problem.dislikes.toString(),
-      acceptanceRate: problem.acceptanceRate,
-      url: problem.url,
-      topicTags: problem.topicTags.join(', '),
-      companyTags: problem.companyTags.join(', '),
-      mainTopics: problem.mainTopics.join(', '),
-      topicSlugs: problem.topicSlugs.join(', '),
-      accepted: problem.accepted.toString(),
-      submissions: problem.submissions.toString(),
-      isPremium: problem.isPremium,
+      platform: problem.platform ?? '',
+      likes: problem.likes !== undefined ? problem.likes.toString() : '0',
+      dislikes: problem.dislikes !== undefined ? problem.dislikes.toString() : '0',
+      acceptanceRate: problem.acceptanceRate ?? '',
+      url: problem.url ?? '',
+      topicTags: Array.isArray(problem.topicTags) ? problem.topicTags.join(', ') : '',
+      companyTags: Array.isArray(problem.companyTags) ? problem.companyTags.join(', ') : '',
+      mainTopics: Array.isArray(problem.mainTopics) ? problem.mainTopics.join(', ') : '',
+      topicSlugs: Array.isArray(problem.topicSlugs) ? problem.topicSlugs.join(', ') : '',
+      accepted: problem.accepted !== undefined ? problem.accepted.toString() : '0',
+      submissions: problem.submissions !== undefined ? problem.submissions.toString() : '0',
+      isPremium: problem.isPremium ?? false,
+      selectedTopic: firstTopicSlug,
     });
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string | number) => {
     if (!confirm('Are you sure you want to delete this problem?')) return;
     try {
       const response = await fetch(`/api/problems/${id}`, { method: 'DELETE' });
@@ -232,14 +305,15 @@ export default function AdminProblemsPage() {
       
       if (response.ok && data.success) {
         setSuccess('Problem deleted successfully!');
-        setAllProblems(allProblems.filter(p => p.id !== id));
+        setAllProblems(allProblems.filter(p => String(p.id) !== String(id)));
+        // Clear DSA stats cache so user side updates immediately
+        clearDsaStatsCache();
         setTimeout(() => setSuccess(''), 3000);
       } else {
         console.error('Delete Error:', data); // Debug log
         setError(data.error || 'Failed to delete problem');
       }
-    } catch (error) {
-      console.error('Delete Exception:', error); // Debug log
+    } catch {
       setError('Failed to delete problem');
     }
   };
@@ -249,7 +323,7 @@ export default function AdminProblemsPage() {
       title: '', slug: '', difficulty: 'EASY', platform: 'LEETCODE',
       likes: '0', dislikes: '0', acceptanceRate: '0', url: '',
       topicTags: '', companyTags: '', mainTopics: '', topicSlugs: '',
-      accepted: '0', submissions: '0', isPremium: false
+      accepted: '0', submissions: '0', isPremium: false, selectedTopic: ''
     });
     setEditingProblem(null);
   };
@@ -257,16 +331,15 @@ export default function AdminProblemsPage() {
   const handleExportCSV = () => {
     const csv = [
       [
-        'title','slug','is_premium','difficulty','platform','likes','dislikes','acceptance_rate','url','topic_tags','company_tags','main_topics','topic_slugs','accepted','submissions'
+        'id','title','difficulty','createdAt','isVisibleToUsers'
       ].join(','),
       ...allProblems.map((p) =>
         [
-          `"${p.title}"`, p.slug, p.isPremium, p.difficulty, p.platform, p.likes, p.dislikes, p.acceptanceRate, p.url,
-          `"{${p.topicTags.join(',')}}"`,
-          `"{${p.companyTags.join(',')}}"`,
-          `"{${p.mainTopics.join(',')}}"`,
-          `"{${p.topicSlugs.join(',')}}"`,
-          p.accepted, p.submissions,
+          `"${p.id}"`,
+          `"${p.title}"`,
+          p.difficulty,
+          p.createdAt instanceof Date ? p.createdAt.toISOString() : p.createdAt,
+          p.isVisibleToUsers ?? '',
         ].join(',')
       ),
     ].join('\n');
@@ -287,9 +360,9 @@ export default function AdminProblemsPage() {
     }
   };
 
-  const handleToggleSingleVisibility = async (problemId: number, currentVisibility: boolean) => {
+  const handleToggleSingleVisibility = async (problemId: string | number, currentVisibility: boolean | undefined) => {
     try {
-      setToggleLoading(problemId);
+      setToggleLoading(String(problemId));
       const response = await fetch('/api/admin/problems/visibility', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -300,13 +373,15 @@ export default function AdminProblemsPage() {
         setSuccess(data.message);
         // Update local cache
         setAllProblems(allProblems.map(p => 
-          p.id === problemId ? { ...p, isVisibleToUsers: !currentVisibility } : p
+          String(p.id) === String(problemId) ? { ...p, isVisibleToUsers: !currentVisibility } : p
         ));
+        // Clear DSA stats cache so user side updates immediately
+        clearDsaStatsCache();
         setTimeout(() => setSuccess(''), 3000);
       } else {
         setError(data.error || 'Failed to update visibility');
       }
-    } catch (error) {
+    } catch {
       setError('Failed to update visibility');
     } finally {
       setToggleLoading(null);
@@ -385,6 +460,84 @@ export default function AdminProblemsPage() {
                       </Select>
                     </div>
                   </div>
+                  
+                  {/* Topic Selection - Shows topics based on selected platform and difficulty */}
+                  <div className="grid gap-2">
+                    <Label>DSA Sheet Topic *</Label>
+                    <Select 
+                      value={formData.selectedTopic} 
+                      onValueChange={v => setFormData({ ...formData, selectedTopic: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a topic for this question" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {formData.platform === 'LEETCODE' && formData.difficulty === 'EASY' && (
+                          <>
+                            {ALL_TOPICS.LEETCODE.EASY.map(topic => (
+                              <SelectItem key={topic.slug} value={topic.slug}>
+                                {topic.name} ({topic.slug})
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
+                        {formData.platform === 'LEETCODE' && formData.difficulty === 'MEDIUM' && (
+                          <>
+                            {ALL_TOPICS.LEETCODE.MEDIUM.map(topic => (
+                              <SelectItem key={topic.slug} value={topic.slug}>
+                                {topic.name} ({topic.slug})
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
+                        {formData.platform === 'LEETCODE' && formData.difficulty === 'HARD' && (
+                          <>
+                            {ALL_TOPICS.LEETCODE.HARD.map(topic => (
+                              <SelectItem key={topic.slug} value={topic.slug}>
+                                {topic.name} ({topic.slug})
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
+                        {formData.platform === 'GEEKSFORGEEKS' && formData.difficulty === 'EASY' && (
+                          <>
+                            {ALL_TOPICS.GEEKSFORGEEKS.EASY.map(topic => (
+                              <SelectItem key={topic.slug} value={topic.slug}>
+                                {topic.name} ({topic.slug})
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
+                        {formData.platform === 'GEEKSFORGEEKS' && formData.difficulty === 'MEDIUM' && (
+                          <>
+                            {ALL_TOPICS.GEEKSFORGEEKS.MEDIUM.map(topic => (
+                              <SelectItem key={topic.slug} value={topic.slug}>
+                                {topic.name} ({topic.slug})
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
+                        {formData.platform === 'GEEKSFORGEEKS' && formData.difficulty === 'HARD' && (
+                          <>
+                            {ALL_TOPICS.GEEKSFORGEEKS.HARD.map(topic => (
+                              <SelectItem key={topic.slug} value={topic.slug}>
+                                {topic.name} ({topic.slug})
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
+                        {(formData.platform === 'CODEFORCES' || formData.platform === 'HACKERRANK') && (
+                          <SelectItem value="" disabled>
+                            Topic selection only available for LeetCode and GeeksforGeeks
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      This question will appear in the <span className="font-semibold">{formData.platform}</span> - <span className="font-semibold">{formData.difficulty}</span> sheet under the selected topic
+                    </p>
+                  </div>
+
                   <div className="grid gap-2">
                     <Label htmlFor="url">Problem URL *</Label>
                     <Input id="url" type="url" value={formData.url} onChange={e => setFormData({ ...formData, url: e.target.value })} required />
@@ -414,20 +567,12 @@ export default function AdminProblemsPage() {
                     </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="topicTags">Topic Tags (comma-separated)</Label>
-                    <Textarea id="topicTags" value={formData.topicTags} onChange={e => setFormData({ ...formData, topicTags: e.target.value })} />
+                    <Label htmlFor="topicTags">Additional Topic Tags (comma-separated, optional)</Label>
+                    <Textarea id="topicTags" value={formData.topicTags} onChange={e => setFormData({ ...formData, topicTags: e.target.value })} placeholder="e.g., hash-table, sorting, two-pointers" />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="companyTags">Company Tags (comma-separated)</Label>
-                    <Textarea id="companyTags" value={formData.companyTags} onChange={e => setFormData({ ...formData, companyTags: e.target.value })} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="mainTopics">Main Topics (comma-separated)</Label>
-                    <Textarea id="mainTopics" value={formData.mainTopics} onChange={e => setFormData({ ...formData, mainTopics: e.target.value })} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="topicSlugs">Topic Slugs (comma-separated)</Label>
-                    <Textarea id="topicSlugs" value={formData.topicSlugs} onChange={e => setFormData({ ...formData, topicSlugs: e.target.value })} />
+                    <Label htmlFor="companyTags">Company Tags (comma-separated, optional)</Label>
+                    <Textarea id="companyTags" value={formData.companyTags} onChange={e => setFormData({ ...formData, companyTags: e.target.value })} placeholder="e.g., Google, Amazon, Microsoft" />
                   </div>
                   <div className="flex items-center gap-2">
                     <input type="checkbox" id="isPremium" checked={formData.isPremium} onChange={e => setFormData({ ...formData, isPremium: e.target.checked })} className="h-4 w-4" />
@@ -457,12 +602,104 @@ export default function AdminProblemsPage() {
         <AlertDescription className="text-green-500">{success}</AlertDescription>
       </Alert>)}
     
-      <Card className="mb-4"><CardContent className="pt-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search problems by title, slug, or topics..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
-        </div>
-      </CardContent></Card>
+      {/* Search and Filters */}
+      <Card className="mb-4">
+        <CardContent className="pt-6">
+          <div className="grid gap-4">
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Search problems by title, slug, or topics..." 
+                value={searchQuery} 
+                onChange={e => setSearchQuery(e.target.value)} 
+                className="pl-10" 
+              />
+            </div>
+            
+            {/* Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Platform Filter */}
+              <div className="grid gap-2">
+                <Label>Platform</Label>
+                <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Platforms" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Platforms</SelectItem>
+                    <SelectItem value="LEETCODE">LeetCode</SelectItem>
+                    <SelectItem value="GEEKSFORGEEKS">GeeksforGeeks</SelectItem>
+                    <SelectItem value="CODEFORCES">Codeforces</SelectItem>
+                    <SelectItem value="HACKERRANK">HackerRank</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Topic Filter */}
+              <div className="grid gap-2">
+                <Label>Topic</Label>
+                <Select value={topicFilter} onValueChange={setTopicFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Topics" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    <SelectItem value="ALL">All Topics</SelectItem>
+                    
+                    {/* Common Topics (LeetCode + GFG) */}
+                    <SelectItem value="array">Arrays</SelectItem>
+                    <SelectItem value="string">Strings</SelectItem>
+                    <SelectItem value="linked-list">Linked Lists</SelectItem>
+                    <SelectItem value="stack">Stacks & Queues</SelectItem>
+                    <SelectItem value="dynamic-programming">Dynamic Programming</SelectItem>
+                    
+                    {/* LeetCode Only Topics */}
+                    <SelectItem value="hash-table">Hash Table</SelectItem>
+                    <SelectItem value="tree">Trees</SelectItem>
+                    <SelectItem value="graph">Graphs</SelectItem>
+                    <SelectItem value="two-pointers">Two Pointers</SelectItem>
+                    <SelectItem value="binary-search">Binary Search</SelectItem>
+                    <SelectItem value="greedy">Greedy</SelectItem>
+                    <SelectItem value="bit-manipulation">Bit Manipulation</SelectItem>
+                    <SelectItem value="heap">Heap</SelectItem>
+                    <SelectItem value="sorting">Sorting</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            {/* Active Filters Display */}
+            {(platformFilter !== 'ALL' || topicFilter !== 'ALL') && (
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-sm text-muted-foreground">Active Filters:</span>
+                {platformFilter !== 'ALL' && (
+                  <Badge variant="secondary" className="gap-1">
+                    Platform: {platformFilter}
+                    <button onClick={() => setPlatformFilter('ALL')} className="ml-1 hover:bg-destructive/20 rounded-full">
+                      ×
+                    </button>
+                  </Badge>
+                )}
+                {topicFilter !== 'ALL' && (
+                  <Badge variant="secondary" className="gap-1">
+                    Topic: {topicFilter}
+                    <button onClick={() => setTopicFilter('ALL')} className="ml-1 hover:bg-destructive/20 rounded-full">
+                      ×
+                    </button>
+                  </Badge>
+                )}
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={() => { setPlatformFilter('ALL'); setTopicFilter('ALL'); }}
+                >
+                  Clear All
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Visible Questions Section */}
       <Card className="mb-6">
@@ -513,12 +750,19 @@ export default function AdminProblemsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {problem.topicTags.slice(0, 2).map((tag) => (
+                        {/* Primary DSA Sheet Topic */}
+                        {problem.topicSlugs && problem.topicSlugs.length > 0 && (
+                          <Badge className="bg-primary text-primary-foreground border-primary">
+                            📌 {problem.topicSlugs[0]}
+                          </Badge>
+                        )}
+                        {/* Additional tags */}
+                        {(problem.topicTags ?? []).slice(0, 1).map((tag) => (
                           <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
                         ))}
-                        {problem.topicTags.length > 2 && (
+                        {(problem.topicTags ?? []).length > 1 && (
                           <span className="text-xs text-muted-foreground">
-                            +{problem.topicTags.length - 2}
+                            +{(problem.topicTags ?? []).length - 1}
                           </span>
                         )}
                       </div>
@@ -534,10 +778,10 @@ export default function AdminProblemsPage() {
                         size="sm"
                         variant="default"
                         onClick={() => handleToggleSingleVisibility(problem.id, problem.isVisibleToUsers)}
-                        disabled={toggleLoading === problem.id}
+                        disabled={toggleLoading === String(problem.id)}
                         className="bg-green-600 hover:bg-green-700"
                       >
-                        {toggleLoading === problem.id ? (
+                        {toggleLoading === String(problem.id) ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <>
@@ -620,12 +864,19 @@ export default function AdminProblemsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {problem.topicTags.slice(0, 2).map((tag) => (
+                        {/* Primary DSA Sheet Topic */}
+                        {problem.topicSlugs && problem.topicSlugs.length > 0 && (
+                          <Badge className="bg-primary text-primary-foreground border-primary">
+                            📌 {problem.topicSlugs[0]}
+                          </Badge>
+                        )}
+                        {/* Additional tags */}
+                        {(problem.topicTags ?? []).slice(0, 1).map((tag) => (
                           <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
                         ))}
-                        {problem.topicTags.length > 2 && (
+                        {(problem.topicTags ?? []).length > 1 && (
                           <span className="text-xs text-muted-foreground">
-                            +{problem.topicTags.length - 2}
+                            +{(problem.topicTags ?? []).length - 1}
                           </span>
                         )}
                       </div>
@@ -641,9 +892,9 @@ export default function AdminProblemsPage() {
                         size="sm"
                         variant="outline"
                         onClick={() => handleToggleSingleVisibility(problem.id, problem.isVisibleToUsers)}
-                        disabled={toggleLoading === problem.id}
+                        disabled={toggleLoading === String(problem.id)}
                       >
-                        {toggleLoading === problem.id ? (
+                        {toggleLoading === String(problem.id) ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <>
