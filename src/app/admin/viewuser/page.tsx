@@ -1,9 +1,21 @@
+'use client';
+import React from 'react';
+
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { getAllUsers } from '@/actions/user';
 import { UserTable } from '@/components/admin/user-table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, Users, UserCheck, UserX } from 'lucide-react';
+
+interface UserSession {
+  id?: string;
+  name?: string;
+  email?: string;
+  image?: string;
+  role?: string;
+  emailVerified?: boolean | string | null;
+}
 
 export default async function Viewusers() {
   const session = await auth();
@@ -12,7 +24,7 @@ export default async function Viewusers() {
   if (!session?.user) {
     redirect('/');
   }
-  const role = (session.user as any)?.role ?? 'user';
+  const role = (session.user as UserSession)?.role ?? 'user';
   if (String(role).toLowerCase() !== 'admin') {
     // Redirect non-admin users to home (or a 403 page if you prefer)
     redirect('/');

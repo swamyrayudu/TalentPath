@@ -1,3 +1,4 @@
+import React from 'react'
 import { AdminProblemsCacheProvider } from '@/components/context/AdminProblemsCacheContext';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

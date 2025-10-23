@@ -1,3 +1,6 @@
+'use client';
+import React from 'react';
+
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/lib/auth';
@@ -8,6 +11,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Map } from 'lucide-react';
 
+interface UserSession {
+  id?: string;
+  name?: string;
+  email?: string;
+  image?: string;
+  role?: string;
+  emailVerified?: boolean | string | null;
+}
+
 export default async function AdminRoadmaps() {
   const session = await auth();
 
@@ -15,7 +27,7 @@ export default async function AdminRoadmaps() {
   if (!session?.user) {
     redirect('/');
   }
-  const role = (session.user as any)?.role ?? 'user';
+  const role = (session.user as UserSession)?.role ?? 'user';
   if (String(role).toLowerCase() !== 'admin') {
     redirect('/');
   }

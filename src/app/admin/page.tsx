@@ -1,3 +1,7 @@
+'use client';
+import React from 'react'
+
+
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/lib/auth';
@@ -18,6 +22,15 @@ import {
   Bell
 } from 'lucide-react';
 
+interface UserSession {
+  id?: string;
+  name?: string;
+  email?: string;
+  image?: string;
+  role?: string;
+  emailVerified?: boolean | string | null;
+}
+
 export default async function AdminDashboard() {
   const session = await auth();
 
@@ -26,7 +39,7 @@ export default async function AdminDashboard() {
     redirect('/');
   }
   // Enforce admin role: only users with role 'admin' may access this page
-  const role = (session.user as any)?.role ?? 'user';
+  const role = (session.user as UserSession)?.role ?? 'user';
   if (String(role).toLowerCase() !== 'admin') {
     // Redirect non-admin users to home (or a 403 page if you prefer)
     redirect('/');

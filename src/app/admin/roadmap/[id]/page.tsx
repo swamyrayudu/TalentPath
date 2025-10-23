@@ -12,6 +12,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Map, Eye } from 'lucide-react';
 
+interface UserSession {
+  id?: string;
+  name?: string;
+  email?: string;
+  image?: string;
+  role?: string;
+  emailVerified?: boolean | string | null;
+}
+
 export default async function EditRoadmap({ params }: { params: { id: string } | Promise<{ id: string }> }) {
   const session = await auth();
   const { id } = await params as { id: string };
@@ -20,7 +29,7 @@ export default async function EditRoadmap({ params }: { params: { id: string } |
     redirect('/');
   }
 
-  const userRole = (session.user as any)?.role;
+  const userRole = (session.user as UserSession)?.role;
   if (userRole !== 'admin') {
     redirect('/dashboard');
   }
