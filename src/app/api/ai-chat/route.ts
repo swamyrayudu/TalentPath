@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
+import { db } from '@/lib/db';
+import { chatConversations, chatMessages } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +18,7 @@ export async function POST(request: NextRequest) {
     //   );
     // }
 
-    const { messages } = await request.json();
+    const { messages, conversationId } = await request.json();
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(
@@ -49,6 +52,7 @@ Your role is to:
 Keep responses concise, clear, and beginner-friendly. Use code examples when helpful, formatted in markdown with triple backticks.`;
 
     // Filter out the initial assistant greeting message and prepare for Perplexity
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const filteredMessages = messages.filter((msg: any) => {
       // Skip the initial assistant greeting
       if (msg.role === 'assistant' && msg.content.includes('Hello! I\'m your AI assistant')) {
@@ -69,6 +73,7 @@ Keep responses concise, clear, and beginner-friendly. Use code examples when hel
     }
 
     // Prepare messages - add system context to first user message
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const perplexityMessages = filteredMessages.map((msg: any, index: number) => {
       if (index === 0 && msg.role === 'user') {
         return {
@@ -120,6 +125,35 @@ Keep responses concise, clear, and beginner-friendly. Use code examples when hel
 
     // Remove <think> tags from the actual message
     const messageText = fullResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+
+    // Save to database if user is logged in and conversationId is provided
+    if (session?.user?.id && conversationId) {
+      try {
+        // Save user message
+        await db.insert(chatMessages).values({
+          conversationId,
+          role: 'user',
+          content: filteredMessages[filteredMessages.length - 1].content,
+        });
+
+        // Save assistant message
+        await db.insert(chatMessages).values({
+          conversationId,
+          role: 'assistant',
+          content: messageText,
+          reasoning: reasoning || undefined,
+        });
+
+        // Update conversation updated_at
+        await db
+          .update(chatConversations)
+          .set({ updatedAt: new Date() })
+          .where(eq(chatConversations.id, conversationId));
+      } catch (dbError) {
+        console.error('Error saving chat history:', dbError);
+        // Don't fail the request if database save fails
+      }
+    }
 
     return NextResponse.json({
       success: true,

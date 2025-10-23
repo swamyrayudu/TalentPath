@@ -464,6 +464,42 @@ export const aptitudeResults = pgTable('aptitude_results', {
   userTopicIdx: index('idx_aptitude_results_user_topic').on(table.userId, table.topic),
 }));
 
+
+
+
+// ============================================
+// CHAT HISTORY TABLES
+// ============================================
+
+export const chatConversations = pgTable('chat_conversations', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  title: text('title'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index('idx_chat_conversations_user_id').on(table.userId),
+  updatedAtIdx: index('idx_chat_conversations_updated_at').on(table.updatedAt),
+}));
+
+export const chatMessages = pgTable('chat_messages', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  conversationId: text('conversation_id').notNull().references(() => chatConversations.id, { onDelete: 'cascade' }),
+  role: text('role').notNull(), // 'user' or 'assistant'
+  content: text('content').notNull(),
+  reasoning: text('reasoning'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  conversationIdIdx: index('idx_chat_messages_conversation_id').on(table.conversationId),
+  createdAtIdx: index('idx_chat_messages_created_at').on(table.createdAt),
+}));
+
+// Chat History Types
+export type ChatConversation = typeof chatConversations.$inferSelect;
+export type ChatConversationInsert = typeof chatConversations.$inferInsert;
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type ChatMessageInsert = typeof chatMessages.$inferInsert;
+
 // ============================================
 // TYPE EXPORTS
 // ============================================

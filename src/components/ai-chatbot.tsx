@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { X, Send, Bot, Loader2, Sparkles, User, ChevronDown, ChevronRight, Brain } from 'lucide-react';
+import { X, Send, Bot, Loader2, Sparkles, User, ChevronDown, ChevronRight, Brain, MessageSquarePlus, Trash2, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
 import MarkdownMessage from '@/components/MarkdownMessage';
@@ -17,9 +17,19 @@ type Message = {
   isTyping?: boolean;
 };
 
+type Conversation = {
+  id: string;
+  title: string;
+  updatedAt: string;
+};
+
 export default function AIChatbot() {
   const { data: session } = useSession();
   const [isOpen, setIsOpen] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -34,20 +44,219 @@ export default function AIChatbot() {
   const [expandedThinking, setExpandedThinking] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Create a new conversation when user is logged in and starts chatting
+  const createConversation = async (title = 'New Conversation') => {
+    if (!session?.user?.id) return null;
+
+    try {
+      const response = await fetch('/api/chat-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      });
+
+      if (response.ok) {
+        const { conversation } = await response.json();
+        // Refresh conversations list
+        await loadConversations();
+        return conversation.id;
+      }
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+    }
+    return null;
   };
 
+  // Load all conversations for the user
+  const loadConversations = async () => {
+    if (!session?.user?.id) return;
+
+    try {
+      const response = await fetch('/api/chat-history');
+      if (response.ok) {
+        const { conversations: convs } = await response.json();
+        setConversations(convs || []);
+      }
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    }
+  };
+
+  // Load messages for a specific conversation
+  const loadConversation = async (conversationId: string) => {
+    if (conversationId === currentConversationId) return; // Already loaded
+    
+    setIsLoadingConversation(true);
+    setCurrentConversationId(conversationId);
+    
+    try {
+      const response = await fetch(`/api/chat-history/${conversationId}`);
+      if (!response.ok) {
+        setIsLoadingConversation(false);
+        return;
+      }
+
+      const { messages: loadedMessages } = await response.json();
+      
+      if (loadedMessages && loadedMessages.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const formattedMessages: Message[] = loadedMessages.map((msg: any) => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          timestamp: new Date(msg.createdAt),
+          reasoning: msg.reasoning || undefined,
+          isTyping: false,
+        }));
+        setMessages(formattedMessages);
+      } else {
+        // Empty conversation, show default greeting
+        setMessages([
+          {
+            id: '1',
+            role: 'assistant',
+            content: 'Hello! I\'m your AI assistant powered by Perplexity AI. How can I help you with your coding journey today?',
+            timestamp: new Date(),
+          },
+        ]);
+      }
+      
+      // Auto-close sidebar on mobile after selecting chat
+      if (window.innerWidth < 768) {
+        setShowSidebar(false);
+      }
+    } catch (error) {
+      console.error('Error loading conversation:', error);
+    } finally {
+      setIsLoadingConversation(false);
+    }
+  };
+
+  // Start a new chat
+  const startNewChat = async () => {
+    if (!session?.user?.id) {
+      // Not logged in, just reset messages
+      setMessages([
+        {
+          id: '1',
+          role: 'assistant',
+          content: 'Hello! I\'m your AI assistant powered by Perplexity AI. How can I help you with your coding journey today?',
+          timestamp: new Date(),
+        },
+      ]);
+      setCurrentConversationId(null);
+      return;
+    }
+
+    // Create new conversation
+    const newConvId = await createConversation();
+    if (newConvId) {
+      setCurrentConversationId(newConvId);
+      setMessages([
+        {
+          id: '1',
+          role: 'assistant',
+          content: 'Hello! I\'m your AI assistant powered by Perplexity AI. How can I help you with your coding journey today?',
+          timestamp: new Date(),
+        },
+      ]);
+    }
+  };
+
+  // Delete a conversation
+  const deleteConversation = async (conversationId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!confirm('Delete this conversation?')) return;
+
+    try {
+      const response = await fetch('/api/chat-history', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId }),
+      });
+
+      if (response.ok) {
+        await loadConversations();
+        
+        // If deleted current conversation, start new chat
+        if (conversationId === currentConversationId) {
+          await startNewChat();
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+    }
+  };
+
+  const scrollToBottom = (smooth = true) => {
+    if (smooth) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    }
+  };
+
+  // Auto-scroll during typing
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (isLoading || isThinking) {
+      scrollToBottom(true);
+    }
+  }, [messages, isLoading, isThinking]);
+
+  // Load chat history when user opens chatbot
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      if (!session?.user?.id || !isOpen) return;
+
+      try {
+        // Get user's conversations
+        const conversationsResponse = await fetch('/api/chat-history');
+        if (!conversationsResponse.ok) return;
+
+        const { conversations } = await conversationsResponse.json();
+        
+        if (conversations && conversations.length > 0) {
+          // Load most recent conversation
+          const latestConversation = conversations[0];
+          setCurrentConversationId(latestConversation.id);
+
+          // Load messages for this conversation
+          const messagesResponse = await fetch(`/api/chat-history/${latestConversation.id}`);
+          if (!messagesResponse.ok) return;
+
+          const { messages: loadedMessages } = await messagesResponse.json();
+          
+          if (loadedMessages && loadedMessages.length > 0) {
+            // Convert database messages to component format
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const formattedMessages: Message[] = loadedMessages.map((msg: any) => ({
+              id: msg.id,
+              role: msg.role,
+              content: msg.content,
+              timestamp: new Date(msg.createdAt),
+              reasoning: msg.reasoning || undefined,
+              isTyping: false,
+            }));
+
+            setMessages(formattedMessages);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading chat history:', error);
+      }
+    };
+
+    loadChatHistory();
+  }, [session?.user?.id, isOpen]);
 
   useEffect(() => {
-    if (isOpen && inputRef.current) {
+    if (isOpen && inputRef.current && !isLoadingConversation) {
       inputRef.current.focus();
     }
-  }, [isOpen]);
+  }, [isOpen, isLoadingConversation]);
 
   const toggleThinking = (messageId: string) => {
     const newExpanded = new Set(expandedThinking);
@@ -62,9 +271,11 @@ export default function AIChatbot() {
   const typeMessage = async (messageId: string, fullText: string) => {
     const characters = fullText.split('');
     let currentText = '';
+    const chunkSize = 3; // Type multiple characters at once for better performance
 
-    for (let i = 0; i < characters.length; i++) {
-      currentText += characters[i];
+    for (let i = 0; i < characters.length; i += chunkSize) {
+      const chunk = characters.slice(i, i + chunkSize).join('');
+      currentText += chunk;
       
       setMessages((prev) =>
         prev.map((msg) =>
@@ -74,7 +285,10 @@ export default function AIChatbot() {
         )
       );
 
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      // Auto-scroll during typing
+      requestAnimationFrame(() => scrollToBottom(true));
+
+      await new Promise((resolve) => setTimeout(resolve, 15));
     }
 
     setMessages((prev) =>
@@ -82,6 +296,8 @@ export default function AIChatbot() {
         msg.id === messageId ? { ...msg, isTyping: false } : msg
       )
     );
+    
+    scrollToBottom(true);
   };
 
   const handleSendMessage = async () => {
@@ -95,9 +311,21 @@ export default function AIChatbot() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input.trim();
     setInput('');
     setIsLoading(true);
     setIsThinking(true);
+
+    // Create conversation if logged in and no conversation exists
+    let convId = currentConversationId;
+    if (session?.user?.id && !convId) {
+      // Generate title from first message (truncated)
+      const title = currentInput.length > 50 
+        ? currentInput.substring(0, 50) + '...' 
+        : currentInput;
+      convId = await createConversation(title);
+      setCurrentConversationId(convId);
+    }
 
     try {
       const response = await fetch('/api/ai-chat', {
@@ -110,6 +338,7 @@ export default function AIChatbot() {
             role: m.role,
             content: m.content,
           })),
+          conversationId: convId, // Include conversation ID
         }),
       });
 
@@ -155,6 +384,10 @@ export default function AIChatbot() {
       e.preventDefault();
       handleSendMessage();
     }
+    // ESC to close sidebar
+    if (e.key === 'Escape' && showSidebar) {
+      setShowSidebar(false);
+    }
   };
 
   return (
@@ -177,37 +410,128 @@ export default function AIChatbot() {
 
       {/* Chat Window */}
       {isOpen && (
-        <Card className="fixed bottom-6 right-6 z-50 w-[450px] h-[700px] shadow-2xl border-2 border-amber-500/20 flex flex-col">
-          {/* Header */}
-          <CardHeader className="border-b bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-t-lg p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                  <Bot className="w-6 h-6" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg font-bold">TalentPath Assistant</CardTitle>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                    </span>
+        <div className="fixed bottom-6 right-6 z-50 flex gap-2">
+          {/* Sidebar */}
+          {showSidebar && session?.user?.id && (
+            <Card className="w-[280px] h-[700px] shadow-2xl border-2 border-amber-500/20 flex flex-col">
+              <CardHeader className="border-b bg-gradient-to-r from-amber-500 to-orange-600 text-white p-3">
+                <CardTitle className="text-sm font-bold">Chat History</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-y-auto p-2 space-y-2">
+                <Button
+                  onClick={startNewChat}
+                  className="w-full justify-start gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white"
+                  size="sm"
+                >
+                  <MessageSquarePlus className="w-4 h-4" />
+                  New Chat
+                </Button>
+                {conversations.map((conv) => (
+                  <div
+                    key={conv.id}
+                    className={cn(
+                      "group relative flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-amber-50 dark:hover:bg-gray-800 transition-colors",
+                      currentConversationId === conv.id && "bg-amber-100 dark:bg-gray-800",
+                      isLoadingConversation && "opacity-50 pointer-events-none"
+                    )}
+                    onClick={() => loadConversation(conv.id)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{conv.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(conv.updatedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    {currentConversationId === conv.id && isLoadingConversation ? (
+                      <Loader2 className="w-3 h-3 animate-spin text-amber-600" />
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => deleteConversation(conv.id, e)}
+                        className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                {conversations.length === 0 && (
+                  <div className="text-center py-8 text-sm text-muted-foreground">
+                    No conversations yet
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Main Chat */}
+          <Card className="w-[450px] h-[700px] shadow-2xl border-2 border-amber-500/20 flex flex-col">
+            {/* Header */}
+            <CardHeader className="border-b bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-t-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {session?.user?.id && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowSidebar(!showSidebar)}
+                      className="text-white hover:bg-white/20 h-8 w-8 p-0"
+                    >
+                      <Menu className="h-5 w-5" />
+                    </Button>
+                  )}
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                    <Bot className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-bold">TalentPath Assistant</CardTitle>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                    </div>
                   </div>
                 </div>
+                <div className="flex items-center gap-2">
+                  {session?.user?.id && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={startNewChat}
+                      className="text-white hover:bg-white/20 h-8 w-8 p-0"
+                      title="New Chat"
+                    >
+                      <MessageSquarePlus className="h-5 w-5" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsOpen(false)}
+                    className="text-white hover:bg-white/20 h-8 w-8 p-0"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsOpen(false)}
-                className="text-white hover:bg-white/20 h-8 w-8 p-0"
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-          </CardHeader>
+            </CardHeader>
 
           {/* Messages */}
-          <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-amber-50/30 to-orange-50/30 dark:from-gray-900 dark:to-gray-950">
+          <CardContent 
+            ref={messagesContainerRef}
+            className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-amber-50/30 to-orange-50/30 dark:from-gray-900 dark:to-gray-950 scroll-smooth"
+          >
+            {isLoadingConversation ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
+                  <p className="text-sm text-muted-foreground">Loading conversation...</p>
+                </div>
+              </div>
+            ) : (
+              <>
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -322,10 +646,12 @@ export default function AIChatbot() {
               </div>
             )}
             <div ref={messagesEndRef} />
+            </>
+            )}
           </CardContent>
 
           {/* Input */}
-          <div className="border-t  bg-white dark:bg-gray-900">
+          <div className="border-t bg-white dark:bg-gray-900 p-4">
             {!session && (
               <div className="mb-3 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-800 dark:text-amber-200">
                 Sign in to save your conversation history
@@ -339,12 +665,12 @@ export default function AIChatbot() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Ask me anything..."
-                disabled={isLoading}
+                disabled={isLoading || isLoadingConversation}
                 className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 bg-white dark:bg-gray-800"
               />
               <Button
                 onClick={handleSendMessage}
-                disabled={!input.trim() || isLoading}
+                disabled={!input.trim() || isLoading || isLoadingConversation}
                 className="rounded-full w-10 h-10 p-0 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
               >
                 {isLoading ? (
@@ -355,7 +681,8 @@ export default function AIChatbot() {
               </Button>
             </div>
           </div>
-        </Card>
+          </Card>
+        </div>
       )}
     </>
   );

@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Loader2, CheckCircle2, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ArrowLeft, CheckCircle2, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Question {
@@ -38,11 +39,15 @@ export default function AptitudePage() {
   const [score, setScore] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
 
+  const [topicsLoading, setTopicsLoading] = useState(true);
+
   useEffect(() => {
+    setTopicsLoading(true);
     fetch('/api/aptitude')
       .then(res => res.json())
       .then(data => {
         if (data.success) setTopics(data.topics);
+        setTopicsLoading(false);
       });
   }, []);
 
@@ -208,7 +213,17 @@ export default function AptitudePage() {
       {/* Topics list */}
       {!selectedTopic && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {topics.length === 0 ? (
+          {topicsLoading ? (
+            // Skeleton loader for topics
+            Array.from({ length: 9 }).map((_, idx) => (
+              <Card key={idx}>
+                <CardHeader>
+                  <Skeleton className="h-6 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-full" />
+                </CardHeader>
+              </Card>
+            ))
+          ) : topics.length === 0 ? (
             <Card className="col-span-full text-center">
               <CardContent>No topics available</CardContent>
             </Card>
@@ -229,10 +244,46 @@ export default function AptitudePage() {
         </div>
       )}
 
-      {/* Loader */}
+      {/* Skeleton Loader */}
       {loading && (
-        <div className="flex justify-center py-12">
-          <Loader2 className="w-10 h-10 animate-spin text-amber-600" />
+        <div className="space-y-6">
+          {Array.from({ length: QUESTIONS_PER_PAGE }).map((_, idx) => (
+            <Card key={idx} className="overflow-hidden">
+              <CardContent className="p-6">
+                {/* Question Title Skeleton */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-16 mb-2" />
+                    <Skeleton className="h-6 w-full" />
+                    <Skeleton className="h-6 w-3/4" />
+                  </div>
+                </div>
+
+                <Separator className="mb-4" />
+
+                {/* Options Skeleton */}
+                <div className="space-y-3">
+                  {Array.from({ length: 4 }).map((_, optIdx) => (
+                    <div key={optIdx} className="flex items-center gap-3 p-3 rounded-md border border-muted">
+                      <Skeleton className="h-6 w-8 rounded" />
+                      <Skeleton className="h-5 flex-1" />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          {/* Pagination Skeleton */}
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-10 w-24" />
+            <div className="flex gap-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-10" />
+              ))}
+            </div>
+            <Skeleton className="h-10 w-24" />
+          </div>
         </div>
       )}
 
