@@ -4,6 +4,16 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { X, Send, Bot, Loader2, Sparkles, User, ChevronDown, ChevronRight, Brain, MessageSquarePlus, Trash2, Menu } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
 import MarkdownMessage from '@/components/MarkdownMessage';
@@ -34,7 +44,7 @@ export default function AIChatbot() {
     {
       id: '1',
       role: 'assistant',
-      content: 'Hello! I\'m your AI assistant powered by Perplexity AI. How can I help you with your coding journey today?',
+      content: 'Hello! I\'m TalentPath AI — your friendly coding assistant. How can I help you with your coding journey today?',
       timestamp: new Date(),
     },
   ]);
@@ -42,6 +52,9 @@ export default function AIChatbot() {
   const [isLoading, setIsLoading] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [expandedThinking, setExpandedThinking] = useState<Set<string>>(new Set());
+  const [isMobile, setIsMobile] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -117,7 +130,7 @@ export default function AIChatbot() {
           {
             id: '1',
             role: 'assistant',
-            content: 'Hello! I\'m your AI assistant powered by Perplexity AI. How can I help you with your coding journey today?',
+            content: 'Hello! I\'m TalentPath AI — your friendly coding assistant. How can I help you with your coding journey today?',
             timestamp: new Date(),
           },
         ]);
@@ -136,40 +149,34 @@ export default function AIChatbot() {
 
   // Start a new chat
   const startNewChat = async () => {
-    if (!session?.user?.id) {
-      // Not logged in, just reset messages
-      setMessages([
-        {
-          id: '1',
-          role: 'assistant',
-          content: 'Hello! I\'m your AI assistant powered by Perplexity AI. How can I help you with your coding journey today?',
-          timestamp: new Date(),
-        },
-      ]);
-      setCurrentConversationId(null);
-      return;
-    }
+    // Immediately reset UI to a fresh conversation so previous messages are not shown
+    const greeting: Message = {
+      id: '1',
+      role: 'assistant',
+      content: 'Hello! I\'m TalentPath AI — your friendly coding assistant. How can I help you with your coding journey today?',
+      timestamp: new Date(),
+    };
 
-    // Create new conversation
-    const newConvId = await createConversation();
-    if (newConvId) {
-      setCurrentConversationId(newConvId);
-      setMessages([
-        {
-          id: '1',
-          role: 'assistant',
-          content: 'Hello! I\'m your AI assistant powered by Perplexity AI. How can I help you with your coding journey today?',
-          timestamp: new Date(),
-        },
-      ]);
+    setMessages([greeting]);
+    setCurrentConversationId(null);
+
+    // If the user is logged in, create a server-side conversation and store its id
+    if (!session?.user?.id) return;
+
+    try {
+      const newConvId = await createConversation();
+      if (newConvId) {
+        setCurrentConversationId(newConvId);
+      }
+    } catch (error) {
+      // creation failure shouldn't break UI — we'll keep the local cleared state
+      console.error('Error creating new conversation:', error);
     }
   };
 
   // Delete a conversation
-  const deleteConversation = async (conversationId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    if (!confirm('Delete this conversation?')) return;
+  const deleteConversation = async (conversationId: string) => {
+    if (!conversationId) return;
 
     try {
       const response = await fetch('/api/chat-history', {
@@ -180,7 +187,7 @@ export default function AIChatbot() {
 
       if (response.ok) {
         await loadConversations();
-        
+
         // If deleted current conversation, start new chat
         if (conversationId === currentConversationId) {
           await startNewChat();
@@ -217,7 +224,9 @@ export default function AIChatbot() {
         if (!conversationsResponse.ok) return;
 
         const { conversations } = await conversationsResponse.json();
-        
+        // populate the sidebar list so Chat History shows up
+        setConversations(conversations || []);
+
         if (conversations && conversations.length > 0) {
           // Load most recent conversation
           const latestConversation = conversations[0];
@@ -257,6 +266,14 @@ export default function AIChatbot() {
       inputRef.current.focus();
     }
   }, [isOpen, isLoadingConversation]);
+
+  // Track mobile breakpoint to switch sidebar behaviour
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 640);
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const toggleThinking = (messageId: string) => {
     const newExpanded = new Set(expandedThinking);
@@ -390,6 +407,14 @@ export default function AIChatbot() {
     }
   };
 
+  const handleConfirmDelete = async () => {
+    if (!conversationToDelete) return;
+    // perform deletion
+    await deleteConversation(conversationToDelete);
+    setConversationToDelete(null);
+    setDeleteDialogOpen(false);
+  };
+
   return (
     <>
       {/* Floating Button */}
@@ -410,10 +435,11 @@ export default function AIChatbot() {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 flex gap-2">
+        <div className="fixed inset-x-4 bottom-6 z-50 flex flex-col-reverse sm:flex-row items-end gap-2 sm:left-auto sm:right-6 space-y-3 sm:space-y-0">
           {/* Sidebar */}
-          {showSidebar && session?.user?.id && (
-            <Card className="w-[280px] h-[700px] shadow-2xl border-2 border-amber-500/20 flex flex-col">
+          {/* Desktop / large screen sidebar */}
+          {showSidebar && session?.user?.id && !isMobile && (
+            <Card className="w-full sm:w-[280px] h-[60vh] sm:h-[700px] shadow-2xl border-2 border-amber-500/20 flex flex-col">
               <CardHeader className="border-b bg-gradient-to-r from-amber-500 to-orange-600 text-white p-3">
                 <CardTitle className="text-sm font-bold">Chat History</CardTitle>
               </CardHeader>
@@ -448,7 +474,7 @@ export default function AIChatbot() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={(e) => deleteConversation(conv.id, e)}
+                        onClick={(e) => { e.stopPropagation(); setConversationToDelete(conv.id); setDeleteDialogOpen(true); }}
                         className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -466,7 +492,7 @@ export default function AIChatbot() {
           )}
 
           {/* Main Chat */}
-          <Card className="w-[450px] h-[700px] shadow-2xl border-2 border-amber-500/20 flex flex-col">
+          <Card className="w-full sm:w-[450px] h-[70vh] sm:h-[700px] shadow-2xl border-2 border-amber-500/20 flex flex-col rounded-xl overflow-hidden">
             {/* Header */}
             <CardHeader className="border-b bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-t-lg p-4">
               <div className="flex items-center justify-between">
@@ -521,7 +547,7 @@ export default function AIChatbot() {
           {/* Messages */}
           <CardContent 
             ref={messagesContainerRef}
-            className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-amber-50/30 to-orange-50/30 dark:from-gray-900 dark:to-gray-950 scroll-smooth"
+            className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-amber-50/30 to-orange-50/30 dark:from-gray-800 dark:to-gray-900 scroll-smooth"
           >
             {isLoadingConversation ? (
               <div className="flex items-center justify-center h-full">
@@ -554,7 +580,7 @@ export default function AIChatbot() {
                     <User className="w-5 h-5 text-white" />
                   )}
                 </div>
-                <div className="flex-1 max-w-[80%]">
+                <div className="flex-1 max-w-[85%] sm:max-w-[80%]">
                   {/* Thinking Toggle Button */}
                   {message.reasoning && message.role === 'assistant' && !message.isTyping && (
                     <button
@@ -651,7 +677,7 @@ export default function AIChatbot() {
           </CardContent>
 
           {/* Input */}
-          <div className="border-t bg-white dark:bg-gray-900 p-4">
+          <div className="sticky bottom-0 z-20 border-t border-amber-500/10 bg-white dark:bg-gray-800 p-4">
             {!session && (
               <div className="mb-3 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-800 dark:text-amber-200">
                 Sign in to save your conversation history
@@ -682,8 +708,82 @@ export default function AIChatbot() {
             </div>
           </div>
           </Card>
+
+          {/* Mobile sidebar: show as bottom sheet/modal to avoid stacking under chat */}
+          {showSidebar && session?.user?.id && isMobile && (
+            <div className="fixed inset-0 z-60 flex items-end sm:hidden">
+              <div className="absolute inset-0 bg-black/40" onClick={() => setShowSidebar(false)} />
+              <Card className="relative w-full max-h-[85vh] h-[85vh] shadow-2xl border-2 border-amber-500/20 flex flex-col rounded-t-xl">
+                <CardHeader className="border-b bg-gradient-to-r from-amber-500 to-orange-600 text-white p-3 flex items-center justify-between">
+                  <CardTitle className="text-sm font-bold">Chat History</CardTitle>
+                  <Button variant="ghost" size="sm" onClick={() => setShowSidebar(false)} className="text-white h-8 w-8 p-0">✕</Button>
+                </CardHeader>
+                <CardContent className="flex-1 overflow-y-auto p-2 space-y-2">
+                  <Button
+                    onClick={() => { startNewChat(); setShowSidebar(false); }}
+                    className="w-full justify-start gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white"
+                    size="sm"
+                  >
+                    <MessageSquarePlus className="w-4 h-4" />
+                    New Chat
+                  </Button>
+                  {conversations.map((conv) => (
+                    <div
+                      key={conv.id}
+                      className={cn(
+                        "group relative flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-amber-50 dark:hover:bg-gray-800 transition-colors",
+                        currentConversationId === conv.id && "bg-amber-100 dark:bg-gray-800",
+                        isLoadingConversation && "opacity-50 pointer-events-none"
+                      )}
+                      onClick={() => { loadConversation(conv.id); setShowSidebar(false); }}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{conv.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(conv.updatedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      {currentConversationId === conv.id && isLoadingConversation ? (
+                        <Loader2 className="w-3 h-3 animate-spin text-amber-600" />
+                        ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => { e.stopPropagation(); setConversationToDelete(conv.id); setDeleteDialogOpen(true); }}
+                          className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  {conversations.length === 0 && (
+                    <div className="text-center py-8 text-sm text-muted-foreground">
+                      No conversations yet
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       )}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete conversation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove the conversation from your chat history. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setConversationToDelete(null); setDeleteDialogOpen(false); }}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
