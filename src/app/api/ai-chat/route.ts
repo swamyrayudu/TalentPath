@@ -52,12 +52,20 @@ Your role is to:
 
 Keep responses concise, clear, and beginner-friendly. Use code examples when helpful, formatted in markdown with triple backticks.`;
 
-  // Filter out the initial assistant greeting message and prepare for the AI API
+    // Filter out the initial assistant greeting message and prepare for the AI API
+    // Be resilient to small changes in the greeting text (e.g., "TalentPath AI")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const filteredMessages = messages.filter((msg: any) => {
-      // Skip the initial assistant greeting
-      if (msg.role === 'assistant' && msg.content.includes('Hello! I\'m your AI assistant')) {
-        return false;
+    const filteredMessages = messages.filter((msg: any, idx: number) => {
+      // Skip a leading assistant greeting (if the first message is an assistant 'hello' message)
+      // This uses a loose check for greetings so small text changes (like renaming the bot)
+      // won't break the server-side validation.
+      if (idx === 0 && msg.role === 'assistant') {
+        const content = String(msg.content || '').toLowerCase();
+        // If it looks like a greeting (contains "hello" or "hi"), treat it as the initial
+        // automated assistant greeting and remove it from the prompt sent to the AI.
+        if (content.includes('hello') || content.includes("hi") || content.includes('welcome')) {
+          return false;
+        }
       }
       return true;
     });

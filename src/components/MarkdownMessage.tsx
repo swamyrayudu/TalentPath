@@ -7,13 +7,60 @@ import rehypeRaw from 'rehype-raw';
 import { Copy, Check } from 'lucide-react';
 import 'highlight.js/styles/vs2015.css'; // Dark theme for code blocks
 
-export default function MarkdownMessage({ content }: { content: string }) {
+export default function MarkdownMessage({ content }: { content: unknown }) {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
+  // Ensure we always pass a string to ReactMarkdown. If the incoming content
+  // is not a string (for example an object or array), render it as a fenced
+  // code block (JSON) so it displays correctly instead of producing
+  // "[object Object]".
+  const mdContent = typeof content === 'string'
+    ? content
+    : `\`\`\`json\n${JSON.stringify(content, null, 2)}\n\`\`\``;
+
   const copyToClipboard = (code: string, id: string) => {
-    navigator.clipboard.writeText(code);
-    setCopiedCode(id);
-    setTimeout(() => setCopiedCode(null), 2000);
+    // Try the async Clipboard API first, fallback to execCommand for older
+    // environments or when Clipboard API isn't available (e.g., some iframe
+    // contexts).
+    const doSet = () => {
+      setCopiedCode(id);
+      setTimeout(() => setCopiedCode(null), 2000);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+  navigator.clipboard.writeText(code).then(doSet).catch(() => {
+        // Fallback
+        const textarea = document.createElement('textarea');
+        textarea.value = code;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'absolute';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+          document.execCommand('copy');
+          doSet();
+        } catch {
+          // give up silently
+        }
+        document.body.removeChild(textarea);
+      });
+    } else {
+      const textarea = document.createElement('textarea');
+      textarea.value = code;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'absolute';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        doSet();
+      } catch {
+        // silent fail
+      }
+      document.body.removeChild(textarea);
+    }
   };
 
   return (
@@ -41,8 +88,23 @@ export default function MarkdownMessage({ content }: { content: string }) {
         // Code blocks with syntax highlighting and copy button
         pre: ({ children, ...props }) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const codeElement = children as any;
-          const codeString = codeElement?.props?.children?.toString() || '';
+            const codeElement = children as any;
+
+            // Robustly extract text from the code element's children. ReactMarkdown
+            // sometimes passes nested nodes instead of a plain string, so we need
+            // to flatten them into a single string.
+            const extractText = (node: unknown): string => {
+              if (node == null) return '';
+              if (typeof node === 'string') return node;
+              if (Array.isArray(node)) return node.map((n) => extractText(n)).join('');
+              if (typeof node === 'object' && node !== null && 'props' in node) {
+                const props = (node as { props?: unknown }).props as { children?: unknown } | undefined;
+                return extractText(props?.children);
+              }
+              return String(node);
+            };
+
+            const codeString = extractText(codeElement?.props?.children) || '';
           const className = codeElement?.props?.className || '';
           const match = /language-(\w+)/.exec(className);
           const language = match ? match[1] : 'text';
@@ -118,7 +180,7 @@ export default function MarkdownMessage({ content }: { content: string }) {
         ),
         }}
       >
-        {content}
+        {mdContent}
       </ReactMarkdown>
     </div>
   );
