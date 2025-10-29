@@ -40,6 +40,8 @@ export const submissionVerdictEnum = pgEnum('submission_verdict', [
   'pending', 'accepted', 'wrong_answer', 'runtime_error', 
   'time_limit_exceeded', 'compilation_error'
 ]);
+export const interviewTypeEnum = pgEnum('interview_type', ['dsa-coding', 'system-design', 'behavioral', 'company-specific']);
+export const interviewStatusEnum = pgEnum('interview_status', ['in-progress', 'completed', 'abandoned']);
 
 // ============================================
 // AUTH & USER TABLES
@@ -494,11 +496,78 @@ export const chatMessages = pgTable('chat_messages', {
   createdAtIdx: index('idx_chat_messages_created_at').on(table.createdAt),
 }));
 
+// ============================================
+// MOCK INTERVIEW TABLES
+// ============================================
+
+export const mockInterviews = pgTable('mock_interviews', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: interviewTypeEnum('type').notNull(),
+  status: interviewStatusEnum('status').default('in-progress').notNull(),
+  difficulty: text('difficulty'), // beginner, intermediate, advanced
+  companyName: text('company_name'), // for company-specific interviews
+  duration: integer('duration').default(0), // in seconds
+  score: integer('score'), // 0-100
+  feedback: text('feedback'),
+  strengths: jsonb('strengths'), // array of strings
+  improvements: jsonb('improvements'), // array of strings
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+}, (table) => ({
+  userIdIdx: index('idx_mock_interviews_user_id').on(table.userId),
+  typeIdx: index('idx_mock_interviews_type').on(table.type),
+  statusIdx: index('idx_mock_interviews_status').on(table.status),
+  createdAtIdx: index('idx_mock_interviews_created_at').on(table.createdAt),
+}));
+
+export const interviewQuestions = pgTable('interview_questions', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  interviewId: text('interview_id').notNull().references(() => mockInterviews.id, { onDelete: 'cascade' }),
+  questionNumber: integer('question_number').notNull(),
+  question: text('question').notNull(),
+  difficulty: text('difficulty'),
+  topics: jsonb('topics'), // array of strings
+  expectedAnswer: text('expected_answer'),
+  userAnswer: text('user_answer'),
+  code: text('code'), // for coding questions
+  language: text('language'), // programming language
+  score: integer('score'), // 0-100 for this question
+  timeTaken: integer('time_taken'), // in seconds
+  feedback: text('feedback'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  answeredAt: timestamp('answered_at', { withTimezone: true }),
+}, (table) => ({
+  interviewIdIdx: index('idx_interview_questions_interview_id').on(table.interviewId),
+  questionNumberIdx: index('idx_interview_questions_question_number').on(table.interviewId, table.questionNumber),
+}));
+
+export const interviewTranscripts = pgTable('interview_transcripts', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  interviewId: text('interview_id').notNull().references(() => mockInterviews.id, { onDelete: 'cascade' }),
+  questionId: text('question_id').references(() => interviewQuestions.id, { onDelete: 'cascade' }),
+  role: text('role').notNull(), // 'interviewer' or 'candidate'
+  message: text('message').notNull(),
+  timestamp: timestamp('timestamp', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  interviewIdIdx: index('idx_interview_transcripts_interview_id').on(table.interviewId),
+  questionIdIdx: index('idx_interview_transcripts_question_id').on(table.questionId),
+  timestampIdx: index('idx_interview_transcripts_timestamp').on(table.timestamp),
+}));
+
 // Chat History Types
 export type ChatConversation = typeof chatConversations.$inferSelect;
 export type ChatConversationInsert = typeof chatConversations.$inferInsert;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type ChatMessageInsert = typeof chatMessages.$inferInsert;
+
+// Mock Interview Types
+export type MockInterview = typeof mockInterviews.$inferSelect;
+export type MockInterviewInsert = typeof mockInterviews.$inferInsert;
+export type InterviewQuestion = typeof interviewQuestions.$inferSelect;
+export type InterviewQuestionInsert = typeof interviewQuestions.$inferInsert;
+export type InterviewTranscript = typeof interviewTranscripts.$inferSelect;
+export type InterviewTranscriptInsert = typeof interviewTranscripts.$inferInsert;
 
 // ============================================
 // TYPE EXPORTS
@@ -593,3 +662,6 @@ export type RoadmapCategory = 'frontend' | 'backend' | 'fullstack' | 'devops' | 
 export type ContestStatus = 'draft' | 'upcoming' | 'live' | 'ended';
 export type ContestVisibility = 'public' | 'private';
 export type SubmissionVerdict = 'pending' | 'accepted' | 'wrong_answer' | 'runtime_error' | 'time_limit_exceeded' | 'compilation_error';
+export type InterviewType = 'dsa-coding' | 'system-design' | 'behavioral' | 'company-specific';
+export type InterviewStatus = 'in-progress' | 'completed' | 'abandoned';
+
