@@ -879,9 +879,11 @@ export async function runTestCases(data: {
 
       try {
         // Get the base URL - use multiple fallbacks
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
-                       process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
-                       'http://localhost:3000';
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+          ? process.env.NEXT_PUBLIC_APP_URL
+          : process.env.VERCEL_URL
+            ? `https://${process.env.VERCEL_URL}`
+            : 'http://localhost:3000';
 
         const response = await fetch(`${baseUrl}/api/compile`, {
           method: 'POST',
@@ -1056,9 +1058,11 @@ export async function submitSolution(data: {
         const startTime = Date.now();
         
         // Get the base URL - use multiple fallbacks
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
-                       process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
-                       'http://localhost:3000';
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+          ? process.env.NEXT_PUBLIC_APP_URL
+          : process.env.VERCEL_URL
+            ? `https://${process.env.VERCEL_URL}`
+            : 'http://localhost:3000';
         
         const response = await fetch(`${baseUrl}/api/compile`, {
           method: 'POST',
