@@ -75,9 +75,11 @@ export default function Navbar() {
             href="/" 
             className="flex items-center space-x-2.5 transition-opacity duration-200 hover:opacity-80"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 via-amber-600 to-orange-600 shadow-md transition-transform duration-200 hover:scale-105">
-              <span className="text-lg font-bold text-white">T</span>
-            </div>
+            <img 
+              src="/talentpath-logo.svg" 
+              alt="TalentPath Logo" 
+              className="h-10 w-10 transition-transform duration-200 hover:scale-105"
+            />
             <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 bg-clip-text text-transparent">
               TalentPath
             </h1>

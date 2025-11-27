@@ -385,9 +385,11 @@ export default function Home() {
             {/* Brand Section */}
             <div className="md:col-span-3 space-y-4">
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-primary">
-                  <Code className="h-5 w-5 text-primary-foreground" />
-                </div>
+                <img 
+                  src="/talentpath-logo.svg" 
+                  alt="TalentPath Logo" 
+                  className="h-10 w-10"
+                />
                 <span className="text-xl font-bold">
                   TalentPath
                 </span>

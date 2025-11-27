@@ -15,6 +15,34 @@ import {
 import { eq, and, desc, sql, asc, or } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
+// Helper function to get the base URL for API calls
+async function getBaseUrl(): Promise<string> {
+  // In production with NEXT_PUBLIC_APP_URL set
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  }
+  
+  // In Vercel deployment
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  
+  // Try to get from headers (must be async in Next.js 15)
+  try {
+    const { headers } = await import('next/headers');
+    const headersList = await headers();
+    const host = headersList.get('host');
+    const protocol = headersList.get('x-forwarded-proto') || 'http';
+    if (host) {
+      return `${protocol}://${host}`;
+    }
+  } catch {
+    // Headers not available in this context
+  }
+  
+  // Fallback for local development
+  return 'http://localhost:3000';
+}
 
 // ============================================
 // CONTEST MANAGEMENT
@@ -878,12 +906,7 @@ export async function runTestCases(data: {
       if (!data.testCaseIds.includes(testCase.id)) continue;
 
       try {
-        // Get the base URL - use multiple fallbacks
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL
-          ? process.env.NEXT_PUBLIC_APP_URL
-          : process.env.VERCEL_URL
-            ? `https://${process.env.VERCEL_URL}`
-            : 'http://localhost:3000';
+        const baseUrl = await getBaseUrl();
 
         const response = await fetch(`${baseUrl}/api/compile`, {
           method: 'POST',
@@ -1056,13 +1079,7 @@ export async function submitSolution(data: {
     for (const testCase of testCases) {
       try {
         const startTime = Date.now();
-        
-        // Get the base URL - use multiple fallbacks
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL
-          ? process.env.NEXT_PUBLIC_APP_URL
-          : process.env.VERCEL_URL
-            ? `https://${process.env.VERCEL_URL}`
-            : 'http://localhost:3000';
+        const baseUrl = await getBaseUrl();
         
         const response = await fetch(`${baseUrl}/api/compile`, {
           method: 'POST',

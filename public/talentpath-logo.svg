@@ -1,0 +1,27 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Star -->
+  <path d="M70 20 L72 26 L78 26 L73 30 L75 36 L70 32 L65 36 L67 30 L62 26 L68 26 Z" fill="#F59E0B"/>
+  
+  <!-- Arrow Path -->
+  <path d="M30 85 C35 75, 40 65, 50 60 L50 55 L60 65 L50 75 L50 70 C42 74, 37 82, 35 85 L30 85 Z" fill="#2563EB"/>
+  <path d="M35 85 C40 75, 45 65, 55 60 L55 55 L65 65 L55 75 L55 70 C47 74, 42 82, 40 85 L35 85 Z" fill="#F59E0B"/>
+  
+  <!-- People figures -->
+  <g fill="#2563EB">
+    <circle cx="28" cy="78" r="2"/>
+    <path d="M28 80 L26 88 L30 88 L28 80 Z"/>
+    
+    <circle cx="38" cy="73" r="2"/>
+    <path d="M38 75 L36 83 L40 83 L38 75 Z"/>
+    
+    <circle cx="48" cy="68" r="2"/>
+    <path d="M48 70 L46 78 L50 78 L48 70 Z"/>
+    
+    <circle cx="58" cy="63" r="2"/>
+    <path d="M58 65 L56 73 L60 73 L58 65 Z"/>
+  </g>
+  
+  <!-- T and P letters -->
+  <text x="30" y="110" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#2563EB">T</text>
+  <text x="55" y="110" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#F59E0B">P</text>
+</svg>
