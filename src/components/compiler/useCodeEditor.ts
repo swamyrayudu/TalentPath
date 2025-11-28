@@ -45,51 +45,25 @@ const LANGUAGES = [
 ];
 
 const DEFAULT_CODE: Record<string, string> = {
-  python: `name = input("Enter your name: ")
-age = int(input("Enter your age: "))
-
-print(f"Hello, {name}!")
-print(f"You are {age} years old!")`,
+  python: `print("TalentPath")
+print("Developed by: Swamy Rayudu & Siva Durga Prasad")`,
   
-  javascript: `console.log("Hello, World!");
-const sum = 10 + 20;
-console.log("Sum:", sum);`,
+  javascript: `console.log("TalentPath");
+console.log("Developed by: Swamy Rayudu & Siva Durga Prasad");`,
   
-  java: `import java.util.Scanner;
-
-public class Main {
+  java: `public class Main {
     public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        
-        System.out.print("Enter name: ");
-        String name = sc.nextLine();
-        
-        System.out.print("Enter age: ");
-        int age = sc.nextInt();
-        
-        System.out.println("Hello, " + name + "!");
-        System.out.println("Age: " + age);
-        
-        sc.close();
+        System.out.println("TalentPath");
+        System.out.println("Developed by: Swamy Rayudu & Siva Durga Prasad");
     }
 }`,
 
   cpp: `#include <iostream>
-#include <string>
 using namespace std;
 
 int main() {
-    string name;
-    int age;
-    
-    cout << "Enter name: ";
-    getline(cin, name);
-    
-    cout << "Enter age: ";
-    cin >> age;
-    
-    cout << "Hello, " << name << "!" << endl;
-    cout << "Age: " << age << endl;
+    cout << "TalentPath" << endl;
+    cout << "Developed by: Swamy Rayudu & Siva Durga Prasad" << endl;
     
     return 0;
 }`,
@@ -97,17 +71,8 @@ int main() {
   c: `#include <stdio.h>
 
 int main() {
-    char name[100];
-    int age;
-    
-    printf("Enter name: ");
-    fgets(name, sizeof(name), stdin);
-    
-    printf("Enter age: ");
-    scanf("%d", &age);
-    
-    printf("Hello, %s", name);
-    printf("Age: %d\\n", age);
+    printf("TalentPath\\n");
+    printf("Developed by: Swamy Rayudu & Siva Durga Prasad\\n");
     
     return 0;
 }`,
@@ -117,17 +82,8 @@ int main() {
 import "fmt"
 
 func main() {
-    var name string
-    var age int
-    
-    fmt.Print("Enter name: ")
-    fmt.Scanln(&name)
-    
-    fmt.Print("Enter age: ")
-    fmt.Scanln(&age)
-    
-    fmt.Printf("Hello, %s!\\n", name)
-    fmt.Printf("Age: %d\\n", age)
+    fmt.Println("TalentPath")
+    fmt.Println("Developed by: Swamy Rayudu & Siva Durga Prasad")
 }`,
 };
 

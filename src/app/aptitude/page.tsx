@@ -23,7 +23,7 @@ interface Question {
 }
 
 const PLATFORMS = [
-  { value: 'INDIABIX', label: 'IndiaBIX', color: 'text-amber-600 border-amber-600', gradient: 'from-yellow-400 to-amber-600' },
+  { value: 'TOPICS', label: 'Topics', color: 'text-primary border-primary', gradient: 'from-primary to-purple-600' },
 ];
 
 const QUESTIONS_PER_PAGE = 5;
@@ -231,7 +231,7 @@ export default function AptitudePage() {
             topics.map(topic => (
               <Card
                 key={topic}
-                className="cursor-pointer hover:shadow-lg hover:text-yellow-400 transition-shadow"
+                className="cursor-pointer hover:shadow-lg hover:border-primary transition-all"
                 onClick={() => setSelectedTopic(topic)}
               >
                 <CardHeader>
@@ -335,7 +335,7 @@ export default function AptitudePage() {
                             onClick={() => handleOptionSelect(actualIndex, optValue)}
                             className={`mb-2 rounded-md border p-2 cursor-pointer transition-colors ${
                               isSelected && !submitted
-                                ? 'bg-amber-100 border-amber-500 dark:bg-amber-950'
+                                ? 'bg-primary/10 border-primary'
                                 : isCorrectOption
                                 ? 'bg-green-100 border-green-500 dark:bg-green-950'
                                 : isWrongSelection
@@ -351,7 +351,7 @@ export default function AptitudePage() {
                       })}
                       {submitted && (
                         <details className="mt-3">
-                          <summary className="cursor-pointer font-semibold text-amber-600 hover:underline">
+                          <summary className="cursor-pointer font-semibold text-primary hover:underline">
                             View Explanation
                           </summary>
                           <p className="mt-2 text-muted-foreground">{q.explanation}</p>

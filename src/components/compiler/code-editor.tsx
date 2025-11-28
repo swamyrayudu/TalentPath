@@ -64,9 +64,9 @@ const InputField = memo(({
   }, [index, onKeyDown]);
 
   return (
-    <div className="space-y-2 bg-white dark:bg-gray-900 p-3 rounded-lg border border-blue-100 dark:border-blue-900">
-      <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white text-xs">
+    <div className="space-y-2 bg-card p-3 rounded-lg border">
+      <label className="text-xs font-semibold text-foreground flex items-center gap-2">
+        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs">
           {index + 1}
         </span>
         {prompt}
@@ -77,7 +77,7 @@ const InputField = memo(({
         value={value}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        className="font-mono text-sm border-2 focus:border-blue-400 transition-colors"
+        className="font-mono text-sm"
         autoFocus={autoFocus}
       />
     </div>
@@ -117,10 +117,10 @@ const InputConsoleContent = memo(({
   if (showInputModal && prompts.length > 0) {
     return (
       <div className="space-y-4">
-        <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 border-2 border-blue-200 dark:border-blue-800 rounded-xl">
+        <div className="p-4 bg-muted/50 border rounded-xl">
           <div className="flex items-center gap-2 mb-4">
-            <Settings className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+            <Settings className="h-4 w-4 text-primary" />
+            <p className="text-sm font-semibold text-foreground">
               Provide Input Values
             </p>
           </div>
@@ -147,7 +147,7 @@ const InputConsoleContent = memo(({
           <Button 
             onClick={handleSubmitInputs} 
             disabled={!allInputsFilled}
-            className="w-full mt-4 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg disabled:opacity-50"
+            className="w-full mt-4"
             size="sm"
           >
             <CornerDownLeft className="h-4 w-4 mr-2" />
@@ -160,19 +160,19 @@ const InputConsoleContent = memo(({
   }
 
   return (
-    <div className="h-[180px] flex items-center justify-center bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-900 dark:to-slate-900 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700">
+    <div className="h-[180px] flex items-center justify-center bg-muted/50 rounded-xl border-2 border-dashed">
       <div className="text-center space-y-3">
         <div className="flex justify-center">
-          <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
-            <CheckCircle2 className="h-8 w-8 text-green-500" />
+          <div className="p-3 bg-primary/10 rounded-full">
+            <CheckCircle2 className="h-8 w-8 text-primary" />
           </div>
         </div>
         <div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+          <p className="text-sm font-medium text-foreground">
             No Input Required
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Click <strong className="text-green-600 dark:text-green-400">Run Code</strong> to execute
+          <p className="text-xs text-muted-foreground mt-1">
+            Click <strong className="text-primary">Run Code</strong> to execute
           </p>
         </div>
       </div>
@@ -185,10 +185,10 @@ InputConsoleContent.displayName = 'InputConsoleContent';
 // Memoized Output Console
 const OutputConsole = memo(({ output }: { output: string }) => {
   return (
-    <div className="bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950 text-gray-100 p-4 font-mono text-xs sm:text-sm h-[400px] sm:h-[calc(100vh-480px)] overflow-auto custom-scrollbar">
+    <div className="bg-black text-gray-100 p-4 font-mono text-xs sm:text-sm h-[400px] sm:h-[calc(100vh-480px)] overflow-auto custom-scrollbar">
       <pre className="whitespace-pre-wrap leading-relaxed">
         {output || (
-          <span className="text-gray-500 flex items-center gap-2">
+          <span className="text-muted-foreground flex items-center gap-2">
             <Terminal className="h-4 w-4" />
             Output will appear here after execution...
           </span>
@@ -245,7 +245,7 @@ export function CodeEditor() {
     return (
       <Badge 
         variant={showInputModal ? "default" : "outline"} 
-        className="gap-1 bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-none text-xs"
+        className="gap-1 text-xs"
       >
         {showInputModal ? (
           <AlertCircle className="h-3 w-3" />
@@ -258,15 +258,15 @@ export function CodeEditor() {
   }, [prompts.length, showInputModal]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-black p-2 sm:p-4">
+    <div className="min-h-screen bg-background p-2 sm:p-4">
       <div className="max-w-[1800px] mx-auto space-y-3 sm:space-y-4">
         {/* Compact Header */}
-        <Card className="border-none shadow-lg bg-white/80 dark:bg-gray-950/90 backdrop-blur-xl">
+        <Card className="shadow-lg">
           <CardHeader className="p-2 sm:p-3">
             <div className="flex items-center gap-2 justify-between">
               {/* Language Selector */}
               <Select value={language} onValueChange={handleLanguageChange}>
-                <SelectTrigger className="w-[140px] sm:w-[160px] h-8 text-xs sm:text-sm border hover:border-blue-400 transition-all">
+                <SelectTrigger className="w-[140px] sm:w-[160px] h-8 text-xs sm:text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -314,7 +314,7 @@ export function CodeEditor() {
                   onClick={handleRunClick} 
                   disabled={isRunning}
                   size="sm"
-                  className="h-8 px-3 sm:px-4 text-xs sm:text-sm bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-md hover:shadow-lg transition-all disabled:opacity-50"
+                  className="h-8 px-3 sm:px-4 text-xs sm:text-sm"
                 >
                   {isRunning ? (
                     <>
@@ -337,8 +337,8 @@ export function CodeEditor() {
         {/* Main Content Grid - Desktop View */}
         <div className="hidden xl:grid grid-cols-2 gap-3 sm:gap-4">
           {/* Code Editor Section */}
-          <Card className="border-none shadow-xl bg-gradient-to-r from-slate-100 to-slate-50 dark:from-gray-900 dark:to-gray-950 backdrop-blur-xl overflow-hidden">
-            <CardHeader className="p-3 border-b border-slate-200 dark:border-gray-800">
+          <Card className="shadow-xl overflow-hidden">
+            <CardHeader className="p-3 border-b">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <LanguageIcon url={currentLang?.iconUrl} label={currentLang?.label} />
@@ -370,11 +370,11 @@ export function CodeEditor() {
           {/* Input/Output Section */}
           <div className="space-y-3 sm:space-y-4">
             {/* Custom Input Card */}
-            <Card className="border-none shadow-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 backdrop-blur-xl">
-              <CardHeader className="p-3 border-b border-blue-200 dark:border-blue-900">
+            <Card className="shadow-xl">
+              <CardHeader className="p-3 border-b">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Terminal className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <Terminal className="h-4 w-4 text-primary" />
                     <CardTitle className="text-sm font-semibold">Input Console</CardTitle>
                   </div>
                   {inputBadgeContent}
@@ -395,11 +395,11 @@ export function CodeEditor() {
             </Card>
 
             {/* Output Card */}
-            <Card className="border-none shadow-xl bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 backdrop-blur-xl">
-              <CardHeader className="p-3 border-b border-emerald-200 dark:border-emerald-900">
+            <Card className="shadow-xl">
+              <CardHeader className="p-3 border-b">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg">
-                    <Terminal className="h-3.5 w-3.5 text-white" />
+                  <div className="p-1.5 bg-primary rounded-lg">
+                    <Terminal className="h-3.5 w-3.5 text-primary-foreground" />
                   </div>
                   <CardTitle className="text-sm font-semibold">Output Console</CardTitle>
                 </div>
@@ -414,17 +414,17 @@ export function CodeEditor() {
         {/* Mobile Tabbed View */}
         <div className="xl:hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl shadow-lg h-12 p-1">
+            <TabsList className="grid w-full grid-cols-3 shadow-lg h-12 p-1">
               <TabsTrigger 
                 value="editor" 
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-slate-600 data-[state=active]:to-slate-700 data-[state=active]:text-white font-medium"
+                className="font-medium"
               >
                 <FileCode className="h-4 w-4 mr-2" />
                 Editor
               </TabsTrigger>
               <TabsTrigger 
                 value="input"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-700 data-[state=active]:text-white font-medium relative"
+                className="font-medium relative"
               >
                 <Terminal className="h-4 w-4 mr-2" />
                 Input
@@ -436,7 +436,7 @@ export function CodeEditor() {
               </TabsTrigger>
               <TabsTrigger 
                 value="output"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-600 data-[state=active]:to-teal-700 data-[state=active]:text-white font-medium"
+                className="font-medium"
               >
                 <MonitorPlay className="h-4 w-4 mr-2" />
                 Output
@@ -445,8 +445,8 @@ export function CodeEditor() {
 
             {/* Editor Tab */}
             <TabsContent value="editor" className="mt-4">
-              <Card className="border-none shadow-xl bg-gradient-to-r from-slate-100 to-slate-50 dark:from-gray-900 dark:to-gray-950 backdrop-blur-xl overflow-hidden">
-                <CardHeader className="p-3 border-b border-slate-200 dark:border-gray-800">
+              <Card className="shadow-xl overflow-hidden">
+                <CardHeader className="p-3 border-b">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <LanguageIcon url={currentLang?.iconUrl} label={currentLang?.label} />
@@ -478,11 +478,11 @@ export function CodeEditor() {
 
             {/* Input Tab */}
             <TabsContent value="input" className="mt-4">
-              <Card className="border-none shadow-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 backdrop-blur-xl">
-                <CardHeader className="p-3 border-b border-blue-200 dark:border-blue-900">
+              <Card className="shadow-xl">
+                <CardHeader className="p-3 border-b">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Terminal className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
+                      <Terminal className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       <CardTitle className="text-sm sm:text-base font-semibold">Input Console</CardTitle>
                     </div>
                     {inputBadgeContent}
@@ -491,10 +491,10 @@ export function CodeEditor() {
                 <CardContent className="p-4">
                   {showInputModal && prompts.length > 0 ? (
                     <div className="space-y-4">
-                      <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 border-2 border-blue-200 dark:border-blue-800 rounded-xl">
+                      <div className="p-4 bg-muted/50 border rounded-xl">
                         <div className="flex items-center gap-2 mb-4">
-                          <Settings className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                          <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                          <Settings className="h-4 w-4 text-primary" />
+                          <p className="text-sm font-semibold text-foreground">
                             Provide Input Values
                           </p>
                         </div>
@@ -521,7 +521,7 @@ export function CodeEditor() {
                         <Button 
                           onClick={handleSubmitInputs} 
                           disabled={!allInputsFilled}
-                          className="w-full mt-4 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg disabled:opacity-50"
+                          className="w-full mt-4"
                           size="sm"
                         >
                           <CornerDownLeft className="h-4 w-4 mr-2" />
@@ -531,19 +531,19 @@ export function CodeEditor() {
                       </div>
                     </div>
                   ) : (
-                    <div className="h-[calc(100vh-400px)] flex items-center justify-center bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-900 dark:to-slate-900 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700">
+                    <div className="h-[calc(100vh-400px)] flex items-center justify-center bg-muted/50 rounded-xl border-2 border-dashed">
                       <div className="text-center space-y-3">
                         <div className="flex justify-center">
-                          <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
-                            <CheckCircle2 className="h-8 w-8 text-green-500" />
+                          <div className="p-3 bg-primary/10 rounded-full">
+                            <CheckCircle2 className="h-8 w-8 text-primary" />
                           </div>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                          <p className="text-sm font-medium text-foreground">
                             No Input Required
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Click <strong className="text-green-600 dark:text-green-400">Run Code</strong> to execute
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Click <strong className="text-primary">Run Code</strong> to execute
                           </p>
                         </div>
                       </div>
@@ -555,20 +555,20 @@ export function CodeEditor() {
 
             {/* Output Tab */}
             <TabsContent value="output" className="mt-4">
-              <Card className="border-none shadow-xl bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 backdrop-blur-xl">
-                <CardHeader className="p-3 border-b border-emerald-200 dark:border-emerald-900">
+              <Card className="shadow-xl">
+                <CardHeader className="p-3 border-b">
                   <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg">
-                      <Terminal className="h-4 w-4 text-white" />
+                    <div className="p-1.5 bg-primary rounded-lg">
+                      <Terminal className="h-4 w-4 text-primary-foreground" />
                     </div>
                     <CardTitle className="text-sm font-semibold">Output Console</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950 text-gray-100 p-4 font-mono text-xs sm:text-sm h-[calc(100vh-350px)] overflow-auto custom-scrollbar">
+                  <div className="bg-black text-gray-100 p-4 font-mono text-xs sm:text-sm h-[calc(100vh-350px)] overflow-auto custom-scrollbar">
                     <pre className="whitespace-pre-wrap leading-relaxed">
                       {output || (
-                        <span className="text-gray-500 flex items-center gap-2">
+                        <span className="text-muted-foreground flex items-center gap-2">
                           <Terminal className="h-4 w-4" />
                           Output will appear here after execution...
                         </span>
@@ -594,11 +594,11 @@ export function CodeEditor() {
           border-radius: 4px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: linear-gradient(to bottom, #3b82f6, #6366f1);
+          background: hsl(var(--primary));
           border-radius: 4px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(to bottom, #2563eb, #4f46e5);
+          background: hsl(var(--primary) / 0.8);
         }
       `}} />
     </div>
