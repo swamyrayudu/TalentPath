@@ -4,7 +4,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { visibleProblems } from '@/lib/db/schema';
-import { sql, eq, or, isNull, and } from 'drizzle-orm';
+import { eq, or, isNull } from 'drizzle-orm';
 
 export const revalidate = 300; // Cache for 5 minutes
 
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     const filterPlatform = searchParams.get('platform')?.toUpperCase();
     const filterDifficulty = searchParams.get('difficulty')?.toUpperCase();
 
-    console.log(`📊 Fetching stats - Platform: ${filterPlatform || 'ALL'}, Difficulty: ${filterDifficulty || 'ALL'}`);
+    console.log(`Fetching stats - Platform: ${filterPlatform || 'ALL'}, Difficulty: ${filterDifficulty || 'ALL'}`);
 
     // First, get all visible problems
     const allProblems = await db
@@ -115,7 +115,11 @@ export async function GET(request: Request) {
 
     // Convert to array format for response
     const stats = Object.values(topicMap)
-      .map(({ problemIds, ...rest }) => rest)
+      .map((item) => {
+        const { problemIds, ...rest } = item;
+        void problemIds; // Explicitly mark as intentionally unused
+        return rest;
+      })
       .sort((a, b) => {
         // Sort by platform, then difficulty, then count
         if (a.platform !== b.platform) return a.platform.localeCompare(b.platform);
@@ -126,7 +130,7 @@ export async function GET(request: Request) {
         return b.totalCount - a.totalCount;
       });
 
-    console.log(`✅ Found ${stats.length} topic stats`);
+    console.log(`Found ${stats.length} topic stats`);
 
     // Group by platform and difficulty
     const grouped: Record<string, Record<string, typeof stats>> = {};
@@ -178,7 +182,7 @@ export async function GET(request: Request) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('❌ Error fetching visible problems stats:', error);
+    console.error('Error fetching visible problems stats:', error);
     return NextResponse.json(
       { 
         success: false, 

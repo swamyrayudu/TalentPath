@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const platform = searchParams.get('platform'); // Optional platform filter (LEETCODE, GEEKSFORGEEKS, etc.)
     const bypassVisibility = searchParams.get('bypassVisibility') === 'true';
 
-    console.log('📊 Fetching topic stats...', { difficulty, platform, bypassVisibility });
+    console.log('Fetching topic stats...', { difficulty, platform, bypassVisibility });
     const startTime = Date.now();
 
     // Difficulty filter
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
     });
 
     const endTime = Date.now();
-    console.log(`✅ Retrieved topic stats in ${endTime - startTime}ms`);
+    console.log(`Retrieved topic stats in ${endTime - startTime}ms`);
 
     return NextResponse.json(
       {
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
-    console.error('❌ Error fetching topic stats:', error);
+    console.error('Error fetching topic stats:', error);
     return NextResponse.json(
       {
         success: false,

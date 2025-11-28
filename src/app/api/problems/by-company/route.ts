@@ -165,7 +165,7 @@ export async function GET(request: NextRequest) {
         .offset(offset);
     }
 
-    console.log(`✅ Returned ${result.length} company-wise problems (Total: ${total})`);
+    console.log(`Returned ${result.length} company-wise problems (Total: ${total})`);
 
     // Calculate difficulty breakdown for the company
     const difficultyBreakdown = {
@@ -204,7 +204,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('❌ Error fetching company-wise problems:', error);
+    console.error('Error fetching company-wise problems:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { success: false, error: 'Failed to fetch company-wise problems', details: message },

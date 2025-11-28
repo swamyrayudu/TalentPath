@@ -288,7 +288,7 @@ export function RoadmapViewer({
                       {/* Tip */}
                       <div className="p-4 rounded-lg bg-muted">
                         <p className="text-sm text-muted-foreground">
-                          💡 <strong>Tip:</strong> Complete this step to unlock your next milestone.
+                          <strong>Tip:</strong> Complete this step to unlock your next milestone.
                         </p>
                       </div>
                     </div>

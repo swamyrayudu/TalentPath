@@ -458,7 +458,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: {
                       <>
                         <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
                           <p className="text-xs text-blue-700 dark:text-blue-300">
-                            💡 <strong>Automatic Input Processing:</strong> Arrays like <code className="bg-blue-500/20 px-1 rounded">[1,2,3]</code> are automatically converted to space-separated format <code className="bg-blue-500/20 px-1 rounded">1 2 3</code>. 
+                            <strong>Automatic Input Processing:</strong> Arrays like <code className="bg-blue-500/20 px-1 rounded">[1,2,3]</code> are automatically converted to space-separated format <code className="bg-blue-500/20 px-1 rounded">1 2 3</code>. 
                             Just use <code className="bg-blue-500/20 px-1 rounded">input().split()</code> in Python or <code className="bg-blue-500/20 px-1 rounded">Scanner</code> in Java. No manual parsing needed!
                           </p>
                         </div>
@@ -666,7 +666,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: {
                         <>
                           <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-2">
                             <p className="text-[10px] text-blue-700 dark:text-blue-300">
-                              💡 Arrays are auto-converted to space-separated format
+                              Arrays are auto-converted to space-separated format
                             </p>
                           </div>
                           {sampleTestCases.map((testCase: TestCase, index: number) => (
@@ -876,7 +876,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: {
                       {result.passed && (
                         <div className="space-y-2 text-[10px] lg:text-xs mt-2 lg:mt-3">
                           <div>
-                            <p className="text-green-700 dark:text-green-300 font-semibold mb-1">✅ Output:</p>
+                            <p className="text-green-700 dark:text-green-300 font-semibold mb-1">Output:</p>
                             <pre className="bg-green-50 dark:bg-green-950/30 p-1.5 lg:p-2 rounded font-mono overflow-x-auto border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 text-[10px] lg:text-xs whitespace-pre-wrap break-all">{result.actual}</pre>
                           </div>
                           <div>
@@ -891,13 +891,13 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: {
                         <div className="space-y-2 text-[10px] lg:text-xs mt-2 lg:mt-3">
                           {result.error && result.error.includes('Runtime Error') && (
                             <div className="bg-red-100 dark:bg-red-900/30 p-1.5 lg:p-2 rounded border border-red-300 dark:border-red-700">
-                              <p className="text-red-700 dark:text-red-300 font-semibold mb-1">⚠️ Runtime Error</p>
+                              <p className="text-red-700 dark:text-red-300 font-semibold mb-1">Runtime Error</p>
                               <pre className="text-red-600 dark:text-red-400 whitespace-pre-wrap text-[10px] break-all">{result.actual}</pre>
                             </div>
                           )}
                           {result.error && result.error.includes('Timeout') && (
                             <div className="bg-orange-100 dark:bg-orange-900/30 p-1.5 lg:p-2 rounded border border-orange-300 dark:border-orange-700">
-                              <p className="text-orange-700 dark:text-orange-300 font-semibold mb-1">⏱️ Timeout</p>
+                              <p className="text-orange-700 dark:text-orange-300 font-semibold mb-1">Timeout</p>
                               <pre className="text-orange-600 dark:text-orange-400 whitespace-pre-wrap text-[10px] break-all">{result.actual}</pre>
                             </div>
                           )}
@@ -908,7 +908,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: {
                                 <pre className="bg-muted p-1.5 lg:p-2 rounded font-mono overflow-x-auto border text-[10px] lg:text-xs whitespace-pre-wrap break-all">{result.expected}</pre>
                               </div>
                               <div>
-                                <p className="text-red-700 dark:text-red-300 font-semibold mb-1">❌ Got:</p>
+                                <p className="text-red-700 dark:text-red-300 font-semibold mb-1">Got:</p>
                                 <pre className="bg-red-50 dark:bg-red-950/30 p-1.5 lg:p-2 rounded font-mono overflow-x-auto border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-[10px] lg:text-xs whitespace-pre-wrap break-all">{result.actual}</pre>
                               </div>
                             </>

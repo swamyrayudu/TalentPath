@@ -3,7 +3,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { visibleProblems } from '@/lib/db/schema';
-import { eq, and, desc, asc, or, isNull, SQL } from 'drizzle-orm';
+import { eq, and, or, isNull, SQL } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 
 export async function GET(request: Request) {
@@ -72,7 +72,7 @@ export async function GET(request: Request) {
         return topicSlugs.includes(topicSlug);
       });
       
-      console.log(`📊 Filtered to ${filteredProblems.length} problems for topic: ${topicSlug}`);
+      console.log(`Filtered to ${filteredProblems.length} problems for topic: ${topicSlug}`);
     }
 
     // Sort problems
@@ -108,7 +108,7 @@ export async function GET(request: Request) {
     // Apply pagination
     const paginatedProblems = filteredProblems.slice(offset, offset + limit);
 
-    console.log(`✅ Returning ${paginatedProblems.length} problems (offset: ${offset}, limit: ${limit})`);
+    console.log(`Returning ${paginatedProblems.length} problems (offset: ${offset}, limit: ${limit})`);
 
     return NextResponse.json({
       success: true,
@@ -124,7 +124,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error('❌ Error fetching visible problems by topic:', error);
+    console.error('Error fetching visible problems by topic:', error);
     return NextResponse.json(
       {
         success: false,

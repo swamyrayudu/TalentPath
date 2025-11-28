@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
           success: false, 
           error: 'Code and language are required', 
           output: '',
-          stderr: '❌ Code and language are required'
+          stderr: 'Code and language are required'
         },
         { status: 400 }
       );
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
           success: false, 
           error: `Unsupported language: ${language}`, 
           output: '',
-          stderr: `❌ Language "${language}" not supported. Use: ${SUPPORTED_LANGUAGES.join(', ')}`
+          stderr: `Language "${language}" not supported. Use: ${SUPPORTED_LANGUAGES.join(', ')}`
         },
         { status: 400 }
       );
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: false,
         output: '',
-        stderr: `❌ Compilation Error:\n\n${compileOutput || stderr}`,
+        stderr: `Compilation Error:\n\n${compileOutput || stderr}`,
         exitCode: 1,
       });
     }
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: false,
         output: stdout,
-        stderr: `⏱️ Time Limit Exceeded\n\nYour code took too long to execute.\n\n💡 Try:\n• Reduce loop iterations\n• Optimize your algorithm\n• Check for infinite loops`,
+        stderr: `Time Limit Exceeded\n\nYour code took too long to execute.\n\nTry:\n• Reduce loop iterations\n• Optimize your algorithm\n• Check for infinite loops`,
         exitCode: -1,
       });
     }
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: false,
         output: stdout,
-        stderr: `❌ Runtime Error (${result.status?.description || 'Unknown'})\n\n${stderr}`,
+        stderr: `Runtime Error (${result.status?.description || 'Unknown'})\n\n${stderr}`,
         exitCode: 1,
       });
     }
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: false,
       output: stdout,
-      stderr: `❌ ${result.status?.description || 'Execution Failed'}\n\n${stderr || compileOutput}`,
+      stderr: `${result.status?.description || 'Execution Failed'}\n\n${stderr || compileOutput}`,
       exitCode: 1,
     });
 
@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
         success: false, 
         error: error instanceof Error ? error.message : 'Server error',
         output: '',
-        stderr: `❌ Server Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        stderr: `Server Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
       },
       { status: 500 }
     );

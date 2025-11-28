@@ -285,7 +285,7 @@ export function useCodeEditor() {
     if (editorRef.current && monacoRef.current) {
       if (newValue) {
         registerSnippets();
-        toast.success('Code Snippets enabled 🎯');
+        toast.success('Code Snippets enabled');
       } else {
         if (completionProviderRef.current) {
           completionProviderRef.current.dispose();
@@ -468,9 +468,9 @@ export function useCodeEditor() {
         console.log('Raw output:', rawOutput.substring(0, 200)); // Log first 200 chars
         
         if (rawOutput && rawOutput.trim()) {
-          setOutput(rawOutput + '\n\n✅ Code Execution Successful');
+          setOutput(rawOutput + '\n\nCode Execution Successful');
         } else {
-          setOutput(`⚠️ No output received\n\nDebug: ${JSON.stringify(result.debug, null, 2)}\n\n✅ Code executed without errors`);
+          setOutput(`No output received\n\nDebug: ${JSON.stringify(result.debug, null, 2)}\n\nCode executed without errors`);
         }
         
         toast.success('Executed successfully!');
@@ -485,7 +485,7 @@ export function useCodeEditor() {
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      setOutput(`❌ Network Error\n\n${errorMessage}\n\nPlease check your connection and try again.`);
+      setOutput(`Network Error\n\n${errorMessage}\n\nPlease check your connection and try again.`);
       toast.error('Failed to execute');
     } finally {
       setIsRunning(false);

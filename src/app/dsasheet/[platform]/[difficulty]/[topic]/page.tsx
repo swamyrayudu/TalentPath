@@ -144,7 +144,7 @@ export default function TopicProblemsPage() {
       const response = await fetch('/api/progress');
       const result = await response.json();
       
-      console.log('📊 User progress response:', result);
+      console.log('User progress response:', result);
       
       if (result.success && result.data) {
         const progressMap: Record<number, UserProgress> = {};
@@ -163,7 +163,7 @@ export default function TopicProblemsPage() {
           }
         });
         
-        console.log('✅ Progress map:', progressMap);
+        console.log('Progress map:', progressMap);
         setUserProgress(progressMap);
       }
     } catch (error) {
@@ -176,7 +176,7 @@ export default function TopicProblemsPage() {
       setUpdating(problemId);
       const currentStatus = userProgress[problemId]?.status;
       
-      console.log(`🔄 Toggle status - Problem: ${problemId}, Current: ${currentStatus}`);
+      console.log(`Toggle status - Problem: ${problemId}, Current: ${currentStatus}`);
       
       // Cycle through statuses: undefined -> attempted -> solved -> undefined
       let newStatus: 'solved' | 'attempted' | 'bookmarked' | undefined;
@@ -184,7 +184,7 @@ export default function TopicProblemsPage() {
       else if (currentStatus === 'attempted') newStatus = 'solved';
       else newStatus = undefined;
 
-      console.log(`📝 New status: ${newStatus}`);
+      console.log(`New status: ${newStatus}`);
 
       // Update in database
       const response = await fetch('/api/progress', {
@@ -198,7 +198,7 @@ export default function TopicProblemsPage() {
       });
 
       const result = await response.json();
-      console.log('📊 Update response:', result);
+      console.log('Update response:', result);
 
       if (result.success) {
         if (newStatus) {
@@ -212,12 +212,12 @@ export default function TopicProblemsPage() {
           void _removed;
           setUserProgress(rest);
         }
-        console.log('✅ Status updated successfully');
+        console.log('Status updated successfully');
       } else {
-        console.error('❌ Failed to update status:', result.error);
+        console.error('Failed to update status:', result.error);
       }
     } catch (error) {
-      console.error('❌ Error updating progress:', error);
+      console.error('Error updating progress:', error);
     } finally {
       setUpdating(null);
     }
@@ -424,11 +424,11 @@ export default function TopicProblemsPage() {
                       </div>
                       <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
                         <span className="flex items-center gap-1">
-                          👍 {problem.likes}
+                          {problem.likes} likes
                         </span>
                         <span>•</span>
                         <span className="flex items-center gap-1">
-                          ✅ {problem.acceptanceRate}%
+                          {problem.acceptanceRate}% acceptance
                         </span>
                         {companyTags.length > 0 && (
                           <>

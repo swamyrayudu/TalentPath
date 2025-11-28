@@ -42,11 +42,20 @@ interface TopicData {
   totalLikes?: number;
 }
 
+interface UserProgressItem {
+  problemId: number;
+  status: string;
+  difficulty?: string;
+  platform?: string;
+  topicSlugs?: string[];
+}
+
 export default function DSASheetPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   
   const [topicsData, setTopicsData] = useState<TopicData[]>([]);
+  const [userProgress, setUserProgress] = useState<UserProgressItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<'LEETCODE' | 'GEEKSFORGEEKS'>('LEETCODE');
@@ -61,6 +70,7 @@ export default function DSASheetPage() {
       return;
     }
     fetchStats();
+    fetchUserProgress();
   }, [status, session, router]);
 
   const fetchStats = async () => {
@@ -71,7 +81,7 @@ export default function DSASheetPage() {
       const response = await fetch('/api/visible-problems/stats');
       const result = await response.json();
 
-      console.log('📊 API Response:', result);
+      console.log('API Response:', result);
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to fetch stats');
@@ -89,8 +99,8 @@ export default function DSASheetPage() {
       }
       setUniqueCounts(counts);
       
-      console.log('✅ Topics loaded:', result.data?.length || 0);
-      console.log('✅ Unique counts:', counts);
+      console.log('Topics loaded:', result.data?.length || 0);
+      console.log('Unique counts:', counts);
     } catch (error) {
       console.error('Error fetching DSA stats:', error);
     } finally {
@@ -98,11 +108,76 @@ export default function DSASheetPage() {
     }
   };
 
+  const fetchUserProgress = async () => {
+    try {
+      // Fetch user progress with problem details
+      const response = await fetch('/api/progress/with-problems');
+      const result = await response.json();
+
+      console.log('User Progress Response:', result);
+
+      if (result.success && result.data) {
+        setUserProgress(result.data);
+        console.log('User progress loaded:', result.data.length);
+      }
+    } catch (error) {
+      console.error('Error fetching user progress:', error);
+    }
+  };
+
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchStats();
+    await Promise.all([fetchStats(), fetchUserProgress()]);
     setRefreshing(false);
   };
+
+  // Calculate solved counts by platform and difficulty
+  const solvedCounts = useMemo(() => {
+    const counts: Record<string, Record<string, number>> = {
+      LEETCODE: { EASY: 0, MEDIUM: 0, HARD: 0 },
+      GEEKSFORGEEKS: { EASY: 0, MEDIUM: 0, HARD: 0 },
+    };
+
+    // Track unique problem IDs to avoid double counting
+    const countedProblems = new Set<number>();
+
+    userProgress.forEach((p) => {
+      if (p.status === 'solved' && p.platform && p.difficulty && !countedProblems.has(p.problemId)) {
+        const platform = p.platform.toUpperCase();
+        const difficulty = p.difficulty.toUpperCase();
+        if (counts[platform] && counts[platform][difficulty] !== undefined) {
+          counts[platform][difficulty]++;
+          countedProblems.add(p.problemId);
+        }
+      }
+    });
+
+    return counts;
+  }, [userProgress]);
+
+  // Calculate solved by topic
+  const solvedByTopic = useMemo(() => {
+    const topicCounts: Record<string, Record<string, Record<string, number>>> = {};
+
+    userProgress.forEach((p) => {
+      if (p.status === 'solved' && p.platform && p.difficulty && p.topicSlugs) {
+        const platform = p.platform.toUpperCase();
+        const difficulty = p.difficulty.toUpperCase();
+        
+        if (!topicCounts[platform]) topicCounts[platform] = {};
+        if (!topicCounts[platform][difficulty]) topicCounts[platform][difficulty] = {};
+
+        p.topicSlugs.forEach((slug: string) => {
+          if (!topicCounts[platform][difficulty][slug]) {
+            topicCounts[platform][difficulty][slug] = 0;
+          }
+          topicCounts[platform][difficulty][slug]++;
+        });
+      }
+    });
+
+    return topicCounts;
+  }, [userProgress]);
 
   // Process topics data into organized structure
   const organizedData = useMemo(() => {
@@ -114,37 +189,39 @@ export default function DSASheetPage() {
     topicsData.forEach((item) => {
       const platform = item.platform?.toUpperCase() || 'LEETCODE';
       const difficulty = item.difficulty?.toUpperCase() || 'EASY';
+      const topicSlug = item.topicSlug;
       
       if (result[platform] && result[platform][difficulty]) {
+        const solvedCount = solvedByTopic[platform]?.[difficulty]?.[topicSlug] || 0;
         result[platform][difficulty][item.topicSlug] = {
           name: item.topicName,
           slug: item.topicSlug,
           total: Number(item.totalCount) || 0,
-          solved: 0,
+          solved: solvedCount,
         };
       }
     });
 
     return result;
-  }, [topicsData]);
+  }, [topicsData, solvedByTopic]);
 
   // Calculate platform stats
   const platformStats = useMemo((): PlatformStats => {
     return {
       EASY: {
         total: uniqueCounts[`${selectedPlatform}-EASY`] || 0,
-        solved: 0,
+        solved: solvedCounts[selectedPlatform]?.EASY || 0,
       },
       MEDIUM: {
         total: uniqueCounts[`${selectedPlatform}-MEDIUM`] || 0,
-        solved: 0,
+        solved: solvedCounts[selectedPlatform]?.MEDIUM || 0,
       },
       HARD: {
         total: uniqueCounts[`${selectedPlatform}-HARD`] || 0,
-        solved: 0,
+        solved: solvedCounts[selectedPlatform]?.HARD || 0,
       },
     };
-  }, [selectedPlatform, uniqueCounts]);
+  }, [selectedPlatform, uniqueCounts, solvedCounts]);
 
   // Filter topics by search term
   const filteredTopics = useMemo(() => {

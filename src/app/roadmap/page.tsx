@@ -109,7 +109,7 @@ export default async function RoadmapPage() {
             <Card className="max-w-2xl mx-auto mt-6 border-primary/30 bg-primary/5 dark:bg-primary/10">
               <CardContent className="p-4">
                 <p className="text-sm text-primary dark:text-primary">
-                  💡 You can view all roadmaps, but <strong>sign in to track your progress</strong> and earn achievements!
+                  You can view all roadmaps, but <strong>sign in to track your progress</strong> and earn achievements!
                 </p>
               </CardContent>
             </Card>

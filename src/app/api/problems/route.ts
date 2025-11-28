@@ -151,7 +151,7 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .offset(offset);
 
-    console.log(`✅ Returned ${result.length} problems (Total: ${total})`);
+    console.log(`Returned ${result.length} problems (Total: ${total})`);
     
     // Debug: Check if visible_problems is empty
     if (total === 0 && useVisibleProblems) {
@@ -163,22 +163,22 @@ export async function GET(request: NextRequest) {
           sql`SELECT COUNT(*) as count FROM visible_problems 
               WHERE platform = ${platform.toUpperCase()} AND difficulty = ${difficulty.toUpperCase()}`
         );
-        console.log(`📊 visible_problems: ${vpCount.rows[0]?.total || 0} total, ${vpPlatformCount.rows[0]?.count || 0} for ${platform} ${difficulty}`);
+        console.log(`visible_problems: ${vpCount.rows[0]?.total || 0} total, ${vpPlatformCount.rows[0]?.count || 0} for ${platform} ${difficulty}`);
         
         if (parseInt(vpCount.rows[0]?.total || '0') === 0) {
-          console.log('⚠️  visible_problems table is EMPTY! Run sync_visible_problems()');
+          console.log('visible_problems table is EMPTY! Run sync_visible_problems()');
         }
       } catch (err) {
-        console.log('❌ Debug query failed:', err);
+        console.log('Debug query failed:', err);
       }
     }
     
     // Debug: Show sample difficulties from results
     if (difficulty && result.length > 0) {
       const difficulties = result.slice(0, 5).map((p: { difficulty: string }) => p.difficulty);
-      console.log('📊 Sample difficulties from results:', difficulties);
+      console.log('Sample difficulties from results:', difficulties);
       const uniqueDifficulties = [...new Set(result.map((p: { difficulty: string }) => p.difficulty))];
-      console.log('🎯 Unique difficulties in results:', uniqueDifficulties);
+      console.log('Unique difficulties in results:', uniqueDifficulties);
     }
 
     return NextResponse.json({
@@ -188,7 +188,7 @@ export async function GET(request: NextRequest) {
       total,
     });
   } catch (error) {
-    console.error('❌ Error fetching problems:', error);
+    console.error('Error fetching problems:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { success: false, error: 'Failed to fetch problems', details: message },
