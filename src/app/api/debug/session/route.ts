@@ -21,17 +21,27 @@ export async function GET() {
       });
     }
 
+    const sessionUserId = session.user.id;
+
+    if (!sessionUserId) {
+      return NextResponse.json({
+        error: 'Session user is missing an id',
+        session: session.user,
+        userInDb: null,
+      });
+    }
+
     // Check if user exists in database
     const dbUser = await db.query.users.findFirst({
-      where: eq(users.id, session.user.id),
+      where: eq(users.id, sessionUserId),
     });
 
     return NextResponse.json({
       session: {
-        userId: session.user.id,
+        userId: sessionUserId,
         email: session.user.email,
         name: session.user.name,
-        role: session.user.role,
+        role: (session.user as { role?: string | null }).role ?? dbUser?.role ?? 'user',
       },
       userInDb: dbUser ? {
         id: dbUser.id,
