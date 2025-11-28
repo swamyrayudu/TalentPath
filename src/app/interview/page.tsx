@@ -16,7 +16,6 @@ import {
   Clock,
   Target,
   TrendingUp,
-  Play,
   History,
   Award,
   ChevronRight,
