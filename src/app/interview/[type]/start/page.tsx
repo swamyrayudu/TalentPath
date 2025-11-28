@@ -395,171 +395,173 @@ export default function InterviewSessionPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-6 px-4 max-w-6xl">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <Button variant="ghost" size="sm" onClick={handleEndInterview}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              End Interview
-            </Button>
-            
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span className="font-mono text-sm">
-                  {formatTime(elapsedTime)}
-                  {targetDuration && ` / ${formatTime(targetDuration)}`}
-                </span>
+      <div className="container mx-auto max-w-6xl px-4 py-6 space-y-6">
+        <Card className="border shadow-md bg-gradient-to-r from-primary/5 via-purple-500/5 to-transparent">
+          <CardHeader className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Button variant="ghost" size="sm" onClick={handleEndInterview} className="-ml-2">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Exit Interview
+                </Button>
               </div>
-              
-              <Badge variant="outline">
-                Question {currentQuestion} of {totalQuestions}
-              </Badge>
+              <CardTitle className="text-2xl font-semibold">
+                Live {interview.type.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} Interview
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Stay connected with the AI interviewer while we track your progress and timebox the session.
+              </p>
+              {config && (
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <Badge variant="secondary">{config.jobRole}</Badge>
+                  <Badge variant="outline">{config.experienceLevel}</Badge>
+                  {config.companyName && <Badge variant="outline">{config.companyName}</Badge>}
+                  <Badge variant="outline">{config.duration} min session</Badge>
+                </div>
+              )}
             </div>
-          </div>
-
-          {config && (
-            <div className="mb-4 p-3 bg-muted/50 rounded-lg">
-              <div className="flex flex-wrap items-center gap-3 text-sm">
-                <Badge variant="secondary">{config.jobRole}</Badge>
-                <Badge variant="outline">{config.experienceLevel}</Badge>
-                {config.companyName && <Badge variant="outline">{config.companyName}</Badge>}
-                <span className="text-muted-foreground">
-                  Target: {config.duration} minutes
-                </span>
+            <div className="grid w-full grid-cols-2 gap-3 rounded-xl border bg-background/80 p-4 text-center text-xs md:text-sm lg:w-auto lg:min-w-[340px] lg:text-left">
+              <div className="rounded-lg border bg-muted/50 p-3">
+                <p className="text-muted-foreground">Time Elapsed</p>
+                <div className="mt-1 flex items-baseline gap-2 font-mono text-lg">
+                  <Clock className="h-4 w-4 text-primary" />
+                  <span>{formatTime(elapsedTime)}</span>
+                  {targetDuration && <span className="text-xs text-muted-foreground">/ {formatTime(targetDuration)}</span>}
+                </div>
+              </div>
+              <div className="rounded-lg border bg-muted/50 p-3">
+                <p className="text-muted-foreground">Question Progress</p>
+                <div className="mt-1 text-lg font-semibold">
+                  {currentQuestion}/{totalQuestions}
+                </div>
+                <Progress value={progress} className="mt-2 h-1.5" />
               </div>
             </div>
-          )}
+          </CardHeader>
+        </Card>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Progress</span>
-              <span className="font-medium">{Math.round(progress)}%</span>
-            </div>
-            <Progress value={progress} className="h-2" />
-          </div>
-        </div>
+        <div className="grid gap-6 xl:grid-cols-4">
+          <div className="space-y-4">
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Brain className="h-4 w-4 text-primary" />
+                  Voice Link
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Always-on voice mode keeps the interviewer connected. Just speak naturally when you&apos;re ready.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <VoiceControls
+                  onTranscriptChange={(text) => {
+                    if (text.trim()) {
+                      handleVoiceMessage(text);
+                    }
+                  }}
+                  onSpeakMessage={(speakFn) => setSpeakFunction(() => speakFn)}
+                  disabled={isLoading || interview?.status === 'completed'}
+                />
+                <div className="rounded-lg border border-dashed bg-muted/40 p-3 text-xs text-muted-foreground">
+                  <p className="font-medium text-sm text-foreground">Voice etiquette</p>
+                  <ul className="mt-2 space-y-1.5">
+                    <li>• Speak after the tone; the AI auto-detects pauses.</li>
+                    <li>• Toggle the switch above to pause/resume the call.</li>
+                    <li>• Use settings to adjust voice, rate, or pitch.</li>
+                    <li>• Everything is transcribed and saved automatically.</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* Interview Chat */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Resume Upload Sidebar */}
-          {showResumeUpload && (
-            <div className="lg:col-span-1">
+            {showResumeUpload ? (
               <ResumeUploader
                 onResumeExtracted={(text) => setResumeContext(text)}
+                className="border shadow-sm"
               />
-              
-              {resumeContext && (
-                <Card className="mt-4">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-3">
-                      <Sparkles className="h-5 w-5 text-purple-500 flex-shrink-0 mt-0.5" />
+            ) : (
+              resumeContext && (
+                <Card className="border shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-base">AI Personalization Active</CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      Resume insights are shaping follow-up questions and feedback.
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10 p-3 text-xs">
+                      <Sparkles className="h-4 w-4 text-purple-500" />
                       <div>
-                        <h4 className="font-medium text-sm mb-1">AI Personalization</h4>
-                        <p className="text-xs text-muted-foreground">
-                          Questions will be tailored to your {resumeContext.length > 500 ? 'extensive' : ''} experience and skills
-                        </p>
+                        <p className="font-medium text-sm">{resumeContext.length} characters of context</p>
+                        <p className="text-muted-foreground">Project highlights and experience influence every question.</p>
                       </div>
                     </div>
+                    <Button variant="outline" size="sm" onClick={() => setShowResumeUpload(true)}>
+                      Update resume context
+                    </Button>
                   </CardContent>
                 </Card>
-              )}
-            </div>
-          )}
+              )
+            )}
+          </div>
 
-          {/* Chat Interface */}
-          <div className={showResumeUpload ? 'lg:col-span-2' : 'lg:col-span-3'}>
-            {/* Voice Controls */}
-            <div className="mb-4">
-              <VoiceControls
-                onTranscriptChange={(text) => {
-                  // Auto-submit when user finishes speaking
-                  if (text.trim()) {
-                    handleVoiceMessage(text);
-                  }
-                }}
-                onSpeakMessage={(speakFn) => setSpeakFunction(() => speakFn)}
-                disabled={isLoading || interview?.status === 'completed'}
-              />
-            </div>
+          <div className="space-y-4 xl:col-span-3">
+            {chatError && (
+              <Card className="border-destructive/50 bg-destructive/5 text-sm text-destructive">
+                <CardContent className="flex items-center gap-2 py-3">
+                  <AlertCircle className="h-4 w-4" />
+                  {chatError}
+                </CardContent>
+              </Card>
+            )}
 
-              {chatError && (
-                <Card className="mb-4 border-destructive/50 bg-destructive/5">
-                  <CardContent className="py-3 text-sm text-destructive flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    {chatError}
-                  </CardContent>
-                </Card>
-              )}
-
-              <Card>
+            <Card className="border shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Brain className="h-5 w-5" />
-                  Mock Interview - {interview.type.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                  Conversation Log
                 </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Only interviewer responses are shown to keep the interface focused.
+                </p>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4 max-h-[500px] overflow-y-auto mb-4 pr-2">
+                <div className="space-y-4 overflow-y-auto pr-2" style={{ maxHeight: '520px' }}>
                   {messages
                     .filter((msg) => msg.role === 'interviewer')
                     .map((msg) => (
                       <div key={msg.id} className="flex justify-start">
-                        <div className="max-w-[85%] rounded-lg bg-muted p-4">
-                          <div className="mb-2 flex items-center gap-2">
-                            <Brain className="h-4 w-4" />
-                            <span className="text-xs font-medium opacity-70">AI Interviewer</span>
+                        <div className="max-w-[85%] rounded-lg border bg-muted/80 p-4 shadow-sm">
+                          <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                            <Brain className="h-4 w-4 text-primary" />
+                            AI Interviewer
                           </div>
                           <MarkdownMessage content={msg.content} />
                         </div>
                       </div>
                     ))}
 
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-muted rounded-lg p-4">
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span className="text-sm">AI is thinking...</span>
+                  {isLoading && (
+                    <div className="flex justify-start">
+                      <div className="rounded-lg border bg-muted/60 p-4">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          AI is thinking...
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              )}
+                  )}
 
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Voice-Only Instructions */}
-            {interview.status === 'in-progress' && (
-              <div className="mt-6 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/20">
-                <div className="flex items-start gap-3">
-                  <Brain className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <h4 className="font-medium text-sm mb-2">Voice Interview Mode</h4>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      Voice mode stays connected at all times—just start speaking and the AI will reply instantly.
-                    </p>
-                    <ul className="text-xs text-muted-foreground space-y-1">
-                      <li>• Use the toggle to pause or resume the live connection</li>
-                      <li>• AI responses will be spoken automatically</li>
-                      <li>• Adjust voice settings (speed, pitch) using the settings icon</li>
-                      <li>• All conversations are transcribed and saved</li>
-                    </ul>
-                  </div>
+                  <div ref={messagesEndRef} />
                 </div>
-              </div>
+              </CardContent>
+            </Card>
+
+            {interview.type === 'dsa-coding' && (
+              <CodingWorkspace className="border shadow-sm" />
             )}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-
-        {interview.type === 'dsa-coding' && (
-          <div className="mt-6">
-            <CodingWorkspace />
           </div>
-        )}
+        </div>
 
         {/* Interview Completed */}
         {interview.status === 'completed' && performanceScore !== null && (
