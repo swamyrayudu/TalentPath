@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
     console.log(`Returned ${result.length} problems (Total: ${total})`);
     
     // Debug: Check if visible_problems is empty
-    if (total === 0 && useVisibleProblems) {
+    if (total === 0 && useVisibleProblems && platform && difficulty) {
       try {
         const vpCount = await db.execute(
           sql`SELECT COUNT(*) as total FROM visible_problems`
@@ -163,9 +163,11 @@ export async function GET(request: NextRequest) {
           sql`SELECT COUNT(*) as count FROM visible_problems 
               WHERE platform = ${platform.toUpperCase()} AND difficulty = ${difficulty.toUpperCase()}`
         );
-        console.log(`visible_problems: ${vpCount.rows[0]?.total || 0} total, ${vpPlatformCount.rows[0]?.count || 0} for ${platform} ${difficulty}`);
+        const vpCountArr = vpCount as unknown as { total: string }[];
+        const vpPlatformCountArr = vpPlatformCount as unknown as { count: string }[];
+        console.log(`visible_problems: ${vpCountArr[0]?.total || 0} total, ${vpPlatformCountArr[0]?.count || 0} for ${platform} ${difficulty}`);
         
-        if (parseInt(vpCount.rows[0]?.total || '0') === 0) {
+        if (parseInt(vpCountArr[0]?.total || '0') === 0) {
           console.log('visible_problems table is EMPTY! Run sync_visible_problems()');
         }
       } catch (err) {
