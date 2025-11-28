@@ -64,7 +64,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       data: stats,
-      uniqueCounts: uniqueCounts.rows,
+      uniqueCounts: uniqueCounts,
       cached: true,
       timestamp: new Date().toISOString(),
     });
