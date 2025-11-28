@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { X, Send, Bot, Loader2, Sparkles, User, ChevronDown, ChevronRight, Brain, MessageSquarePlus, Trash2, Menu } from 'lucide-react';
+import { X, Send, Bot, Loader2, User, ChevronDown, ChevronRight, Brain, MessageSquarePlus, Trash2, Menu, MessageCircle } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +35,7 @@ type Conversation = {
 };
 
 export default function AIChatbot() {
+  const pathname = usePathname();
   const { data: session } = useSession();
   const [isOpen, setIsOpen] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
@@ -415,38 +417,48 @@ export default function AIChatbot() {
     setDeleteDialogOpen(false);
   };
 
+  // Hide chatbot on contest and aptitude pages
+  const shouldHideChatbot = pathname?.startsWith('/contest') || pathname?.startsWith('/aptitude');
+
+  if (shouldHideChatbot) {
+    return null;
+  }
+
   return (
     <>
       {/* Floating Button */}
       {!isOpen && (
         <button
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full shadow-2xl hover:shadow-amber-500/50 transition-all duration-300 hover:scale-110 flex items-center justify-center group"
+          onClick={() => {
+            setIsOpen(true);
+            startNewChat();
+          }}
+          className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-primary rounded-full shadow-lg hover:shadow-xl transition-shadow flex items-center justify-center"
         >
-          <Bot className="w-8 h-8 text-white group-hover:scale-110 transition-transform" />
-          <span className="absolute -top-1 -right-1 flex h-5 w-5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-5 w-5 bg-amber-500 items-center justify-center">
-              <Sparkles className="w-3 h-3 text-white" />
-            </span>
-          </span>
+          <MessageCircle className="w-6 h-6 text-primary-foreground" />
         </button>
       )}
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed inset-x-4 bottom-6 z-50 flex flex-col-reverse sm:flex-row items-end gap-2 sm:left-auto sm:right-6 space-y-3 sm:space-y-0">
-          {/* Sidebar */}
+        <>
+          {/* Backdrop overlay */}
+          <div 
+            className="fixed inset-0 z-40 bg-black/20" 
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="fixed inset-x-4 bottom-6 z-50 flex flex-col-reverse sm:flex-row items-end gap-2 sm:left-auto sm:right-6 space-y-3 sm:space-y-0">
+            {/* Sidebar */}
           {/* Desktop / large screen sidebar */}
           {showSidebar && session?.user?.id && !isMobile && (
-            <Card className="w-full sm:w-[280px] h-[60vh] sm:h-[700px] shadow-2xl border-2 border-amber-500/20 flex flex-col">
-              <CardHeader className="border-b bg-gradient-to-r from-amber-500 to-orange-600 text-white p-3">
-                <CardTitle className="text-sm font-bold">Chat History</CardTitle>
+            <Card className="w-full sm:w-[280px] h-[60vh] sm:h-[700px] shadow-lg border flex flex-col">
+              <CardHeader className="border-b bg-muted p-3">
+                <CardTitle className="text-sm font-semibold">Chat History</CardTitle>
               </CardHeader>
               <CardContent className="flex-1 overflow-y-auto p-2 space-y-2">
                 <Button
                   onClick={startNewChat}
-                  className="w-full justify-start gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white"
+                  className="w-full justify-start gap-2 bg-primary hover:bg-primary/90"
                   size="sm"
                 >
                   <MessageSquarePlus className="w-4 h-4" />
@@ -456,8 +468,8 @@ export default function AIChatbot() {
                   <div
                     key={conv.id}
                     className={cn(
-                      "group relative flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-amber-50 dark:hover:bg-gray-800 transition-colors",
-                      currentConversationId === conv.id && "bg-amber-100 dark:bg-gray-800",
+                      "group relative flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-accent transition-colors",
+                      currentConversationId === conv.id && "bg-accent",
                       isLoadingConversation && "opacity-50 pointer-events-none"
                     )}
                     onClick={() => loadConversation(conv.id)}
@@ -492,53 +504,51 @@ export default function AIChatbot() {
           )}
 
           {/* Main Chat */}
-          <Card className="w-full sm:w-[450px] h-[70vh] sm:h-[700px] shadow-2xl border-2 border-amber-500/20 flex flex-col rounded-xl overflow-hidden">
+          <Card className="w-full sm:w-[450px] h-[80vh] sm:h-[700px] shadow-lg border flex flex-col rounded-lg overflow-hidden">
             {/* Header */}
-            <CardHeader className="border-b bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-t-lg p-4">
+            <CardHeader className="border-b p-2 sm:p-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {session?.user?.id && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowSidebar(!showSidebar)}
-                      className="text-white hover:bg-white/20 h-8 w-8 p-0"
-                    >
-                      <Menu className="h-5 w-5" />
-                    </Button>
-                  )}
-                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                    <Bot className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg font-bold">TalentPath Assistant</CardTitle>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
                 <div className="flex items-center gap-2">
                   {session?.user?.id && (
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={() => setShowSidebar(!showSidebar)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Menu className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <MessageCircle className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-semibold">AI Assistant</CardTitle>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                      <span className="text-[10px] text-muted-foreground">Online</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  {session?.user?.id && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={startNewChat}
-                      className="text-white hover:bg-white/20 h-8 w-8 p-0"
+                      className="h-8 w-8 p-0"
                       title="New Chat"
                     >
-                      <MessageSquarePlus className="h-5 w-5" />
+                      <MessageSquarePlus className="h-4 w-4" />
                     </Button>
                   )}
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setIsOpen(false)}
-                    className="text-white hover:bg-white/20 h-8 w-8 p-0"
+                    className="h-8 w-8 p-0"
                   >
-                    <X className="h-5 w-5" />
+                    <X className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -547,7 +557,7 @@ export default function AIChatbot() {
           {/* Messages */}
           <CardContent 
             ref={messagesContainerRef}
-            className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-amber-50/30 to-orange-50/30 dark:from-gray-800 dark:to-gray-900 scroll-smooth"
+            className="flex-1 overflow-y-auto px-3 py-2 md:px-4 md:py-3 space-y-3 scroll-smooth overscroll-contain"
           >
             {isLoadingConversation ? (
               <div className="flex items-center justify-center h-full">
@@ -568,16 +578,16 @@ export default function AIChatbot() {
               >
                 <div
                   className={cn(
-                    'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0',
+                    'w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center flex-shrink-0',
                     message.role === 'assistant'
-                      ? 'bg-gradient-to-br from-amber-500 to-orange-600'
-                      : 'bg-gradient-to-br from-green-500 to-emerald-600'
+                      ? 'bg-primary'
+                      : 'bg-muted'
                   )}
                 >
                   {message.role === 'assistant' ? (
-                    <Bot className="w-5 h-5 text-white" />
+                    <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-primary-foreground" />
                   ) : (
-                    <User className="w-5 h-5 text-white" />
+                    <User className="w-3 h-3 sm:w-4 sm:h-4 text-foreground" />
                   )}
                 </div>
                 <div className="flex-1 max-w-[85%] sm:max-w-[80%]">
@@ -585,9 +595,9 @@ export default function AIChatbot() {
                   {message.reasoning && message.role === 'assistant' && !message.isTyping && (
                     <button
                       onClick={() => toggleThinking(message.id)}
-                      className="flex items-center gap-2 mb-2 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-xs"
+                      className="flex items-center gap-2 mb-2 px-3 py-1.5 rounded-lg bg-muted hover:bg-accent transition-colors text-xs"
                     >
-                      <Brain className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                      <Brain className="w-4 h-4 text-primary" />
                       <span className="font-medium text-gray-700 dark:text-gray-300">
                         {expandedThinking.has(message.id) ? 'Hide thinking' : 'Show thinking'}
                       </span>
@@ -601,8 +611,8 @@ export default function AIChatbot() {
 
                   {/* Thinking Content */}
                   {message.reasoning && expandedThinking.has(message.id) && (
-                    <div className="mb-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words leading-relaxed">
-                      <div className="flex items-center gap-2 mb-2 font-semibold text-amber-700 dark:text-amber-400">
+                    <div className="mb-3 p-3 bg-muted border rounded-lg text-xs whitespace-pre-wrap break-words leading-relaxed">
+                      <div className="flex items-center gap-2 mb-2 font-semibold text-primary">
                         <Brain className="w-4 h-4" />
                         <span>Thinking Process</span>
                       </div>
@@ -613,25 +623,25 @@ export default function AIChatbot() {
                   {/* Message Content */}
                   <div
                     className={cn(
-                      'rounded-2xl px-4 py-2 shadow-sm',
+                      'rounded-lg px-2 py-1.5 sm:px-3 sm:py-2',
                       message.role === 'assistant'
-                        ? 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
-                        : 'bg-gradient-to-r from-amber-500 to-orange-600 text-white'
+                        ? 'bg-muted border'
+                        : 'bg-primary text-primary-foreground'
                     )}
                   >
-                    <div className="text-sm">
+                    <div className="text-xs sm:text-sm">
                       {message.role === 'assistant' ? (
                         <MarkdownMessage content={message.content} />
                       ) : (
                         <p className="whitespace-pre-wrap break-words">{message.content}</p>
                       )}
                       {message.isTyping && (
-                        <span className="inline-block w-0.5 h-4 ml-1 bg-amber-600 dark:bg-amber-400 animate-pulse" />
+                        <span className="inline-block w-0.5 h-4 ml-1 bg-amber-600 dark:bg-amber-400" />
                       )}
                     </div>
                     <span
                       className={cn(
-                        'text-xs mt-1 block',
+                        'text-[10px] sm:text-xs mt-1 block',
                         message.role === 'assistant'
                           ? 'text-muted-foreground'
                           : 'text-white/70'
@@ -649,12 +659,12 @@ export default function AIChatbot() {
 
             {/* Thinking Indicator */}
             {isThinking && (
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-                  <Bot className="w-5 h-5 text-white" />
+              <div className="flex gap-2">
+                <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-primary-foreground" />
                 </div>
-                <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
-                  <Brain className="w-4 h-4 animate-pulse" />
+                <div className="flex items-center gap-2 bg-muted border rounded-lg px-3 py-2 text-sm">
+                  <Brain className="w-4 h-4" />
                   <span className="font-medium">Thinking...</span>
                 </div>
               </div>
@@ -662,12 +672,12 @@ export default function AIChatbot() {
 
             {/* Loading Indicator */}
             {isLoading && !isThinking && (
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-                  <Bot className="w-5 h-5 text-white" />
+              <div className="flex gap-2">
+                <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-primary-foreground" />
                 </div>
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3">
-                  <Loader2 className="w-5 h-5 animate-spin text-amber-600" />
+                <div className="bg-muted border rounded-lg px-3 py-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
                 </div>
               </div>
             )}
@@ -677,9 +687,9 @@ export default function AIChatbot() {
           </CardContent>
 
           {/* Input */}
-          <div className="sticky bottom-0 z-20 border-t border-amber-500/10 bg-white dark:bg-gray-800 p-4">
+          <div className="sticky bottom-0 z-20 border-t px-3 py-2">
             {!session && (
-              <div className="mb-3 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-800 dark:text-amber-200">
+              <div className="mb-2 p-2 bg-muted border rounded-lg text-xs">
                 Sign in to save your conversation history
               </div>
             )}
@@ -692,17 +702,18 @@ export default function AIChatbot() {
                 onKeyPress={handleKeyPress}
                 placeholder="Ask me anything..."
                 disabled={isLoading || isLoadingConversation}
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 bg-white dark:bg-gray-800"
+                className="flex-1 px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 bg-background"
               />
               <Button
                 onClick={handleSendMessage}
                 disabled={!input.trim() || isLoading || isLoadingConversation}
-                className="rounded-full w-10 h-10 p-0 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
+                size="sm"
+                className="rounded-lg w-9 h-9 p-0"
               >
                 {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <Send className="w-5 h-5" />
+                  <Send className="w-4 h-4" />
                 )}
               </Button>
             </div>
@@ -713,15 +724,15 @@ export default function AIChatbot() {
           {showSidebar && session?.user?.id && isMobile && (
             <div className="fixed inset-0 z-60 flex items-end sm:hidden">
               <div className="absolute inset-0 bg-black/40" onClick={() => setShowSidebar(false)} />
-              <Card className="relative w-full max-h-[85vh] h-[85vh] shadow-2xl border-2 border-amber-500/20 flex flex-col rounded-t-xl">
-                <CardHeader className="border-b bg-gradient-to-r from-amber-500 to-orange-600 text-white p-3 flex items-center justify-between">
-                  <CardTitle className="text-sm font-bold">Chat History</CardTitle>
-                  <Button variant="ghost" size="sm" onClick={() => setShowSidebar(false)} className="text-white h-8 w-8 p-0">✕</Button>
+              <Card className="relative w-full max-h-[85vh] h-[85vh] shadow-lg border flex flex-col rounded-t-xl">
+                <CardHeader className="border-b bg-muted p-3 flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold">Chat History</CardTitle>
+                  <Button variant="ghost" size="sm" onClick={() => setShowSidebar(false)} className="h-8 w-8 p-0">✕</Button>
                 </CardHeader>
                 <CardContent className="flex-1 overflow-y-auto p-2 space-y-2">
                   <Button
                     onClick={() => { startNewChat(); setShowSidebar(false); }}
-                    className="w-full justify-start gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white"
+                    className="w-full justify-start gap-2 bg-primary hover:bg-primary/90"
                     size="sm"
                   >
                     <MessageSquarePlus className="w-4 h-4" />
@@ -731,8 +742,8 @@ export default function AIChatbot() {
                     <div
                       key={conv.id}
                       className={cn(
-                        "group relative flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-amber-50 dark:hover:bg-gray-800 transition-colors",
-                        currentConversationId === conv.id && "bg-amber-100 dark:bg-gray-800",
+                        "group relative flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-accent transition-colors",
+                        currentConversationId === conv.id && "bg-accent",
                         isLoadingConversation && "opacity-50 pointer-events-none"
                       )}
                       onClick={() => { loadConversation(conv.id); setShowSidebar(false); }}
@@ -744,7 +755,7 @@ export default function AIChatbot() {
                         </p>
                       </div>
                       {currentConversationId === conv.id && isLoadingConversation ? (
-                        <Loader2 className="w-3 h-3 animate-spin text-amber-600" />
+                        <Loader2 className="w-3 h-3 animate-spin text-primary" />
                         ) : (
                         <Button
                           variant="ghost"
@@ -766,7 +777,8 @@ export default function AIChatbot() {
               </Card>
             </div>
           )}
-        </div>
+          </div>
+        </>
       )}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

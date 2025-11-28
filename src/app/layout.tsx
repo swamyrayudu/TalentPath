@@ -36,8 +36,8 @@ export default function RootLayout({
           <DsaProblemsCacheProvider>
             <ThemeProvider
               attribute="class"
-              defaultTheme="system"
-              enableSystem
+              defaultTheme="light"
+              enableSystem={false}
               disableTransitionOnChange
             >
               <ConditionalNavbar />

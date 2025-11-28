@@ -97,14 +97,20 @@ export default function MarkdownMessage({ content }: { content: unknown }) {
               if (node == null) return '';
               if (typeof node === 'string') return node;
               if (Array.isArray(node)) return node.map((n) => extractText(n)).join('');
-              if (typeof node === 'object' && node !== null && 'props' in node) {
-                const props = (node as { props?: unknown }).props as { children?: unknown } | undefined;
-                return extractText(props?.children);
+              if (typeof node === 'object' && node !== null) {
+                if ('props' in node) {
+                  const props = (node as { props?: unknown }).props as { children?: unknown } | undefined;
+                  return extractText(props?.children);
+                }
+                // Handle text nodes from rehype-highlight
+                if ('value' in node && typeof (node as {value?: unknown}).value === 'string') {
+                  return (node as {value: string}).value;
+                }
               }
               return String(node);
             };
 
-            const codeString = extractText(codeElement?.props?.children) || '';
+            const codeString = extractText(codeElement?.props?.children)?.trim() || '';
           const className = codeElement?.props?.className || '';
           const match = /language-(\w+)/.exec(className);
           const language = match ? match[1] : 'text';

@@ -68,7 +68,23 @@ export default async function RoadmapPage() {
         return { ...roadmap, progressPercentage: 0, isCompleted: false };
       }
 
-      const completedSteps = JSON.parse(userProgress.completedSteps);
+      let completedSteps: string[] = [];
+      try {
+        // Handle if completedSteps is already an array
+        if (Array.isArray(userProgress.completedSteps)) {
+          completedSteps = userProgress.completedSteps;
+        } else if (typeof userProgress.completedSteps === 'string') {
+          const stepsData = userProgress.completedSteps.trim() || '[]';
+          const parsed = JSON.parse(stepsData);
+          completedSteps = Array.isArray(parsed) ? parsed : [];
+        } else {
+          completedSteps = [];
+        }
+      } catch (error) {
+        console.error('Error parsing completed steps:', error);
+        completedSteps = [];
+      }
+
       const progressPercentage = (completedSteps.length / steps.length) * 100;
       const isCompleted = progressPercentage === 100;
 

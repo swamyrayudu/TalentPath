@@ -9,7 +9,7 @@ import {
   aptitudeResults,
 } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -151,207 +151,200 @@ export default async function Dashboard() {
   const streak = calculateStreak();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="container mx-auto p-4 md:p-8 space-y-6 max-w-7xl">
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto p-3 md:p-6 space-y-4 md:space-y-6 max-w-7xl">
         {/* Header Section */}
-        <div className="space-y-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1 flex-1">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-amber-500 via-orange-600 to-amber-600 bg-clip-text text-transparent">
-                Welcome back, {session.user.name?.split(' ')[0] || 'User'}!
-              </h1>
-              <p className="text-sm sm:text-base text-muted-foreground">Track your progress and keep learning</p>
-            </div>
-            
-            {/* Compact Streak Badge */}
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-br from-orange-500/10 to-amber-500/10 border border-orange-500/20">
-              <Flame className="h-5 w-5 sm:h-6 sm:w-6 text-orange-500 flex-shrink-0" />
-              <div className="flex items-baseline gap-1">
-                <span className="text-lg sm:text-xl font-bold text-orange-500">{streak}</span>
-                <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">day streak</span>
-              </div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="space-y-0.5">
+            <h1 className="text-xl md:text-2xl font-semibold">
+              Welcome, {session.user.name?.split(' ')[0] || 'User'}
+            </h1>
+            <p className="text-xs md:text-sm text-muted-foreground">Track your progress</p>
+          </div>
+          
+          {/* Streak Badge */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 md:px-3 md:py-2 rounded-lg bg-muted">
+            <Flame className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
+            <div className="flex items-baseline gap-0.5">
+              <span className="text-sm md:text-base font-semibold">{streak}</span>
+              <span className="text-[10px] md:text-xs text-muted-foreground">days</span>
             </div>
           </div>
         </div>
 
-        {/* Overview Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          <Card className="border-2 hover:shadow-lg transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">DSA Problems</CardTitle>
-              <Code2 className="h-5 w-5 text-blue-500" />
+        {/* Overview Stats - Compact */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+          <Card className="border">
+            <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-[10px] md:text-sm font-medium text-muted-foreground">DSA</CardTitle>
+                <Code2 className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-blue-500">{dsaStats.totalSolved}</div>
-              <p className="text-xs text-muted-foreground mt-1">Problems solved</p>
+            <CardContent className="p-2 md:p-4 pt-0">
+              <div className="text-lg md:text-2xl font-bold">{dsaStats.totalSolved}</div>
+              <p className="text-[9px] md:text-xs text-muted-foreground">solved</p>
             </CardContent>
           </Card>
 
-          <Card className="border-2 hover:shadow-lg transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">Contest Solved</CardTitle>
-              <Trophy className="h-5 w-5 text-amber-500" />
+          <Card className="border">
+            <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-[10px] md:text-sm font-medium text-muted-foreground">Contest</CardTitle>
+                <Trophy className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-amber-500">{contestStats.uniqueProblemsSolved}</div>
-              <p className="text-xs text-muted-foreground mt-1">Unique problems</p>
+            <CardContent className="p-2 md:p-4 pt-0">
+              <div className="text-lg md:text-2xl font-bold">{contestStats.uniqueProblemsSolved}</div>
+              <p className="text-[9px] md:text-xs text-muted-foreground">unique</p>
             </CardContent>
           </Card>
 
-          <Card className="border-2 hover:shadow-lg transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">Aptitude Tests</CardTitle>
-              <Brain className="h-5 w-5 text-purple-500" />
+          <Card className="border">
+            <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-[10px] md:text-sm font-medium text-muted-foreground">Tests</CardTitle>
+                <Brain className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-purple-500">{aptitudeStats.totalTests}</div>
-              <p className="text-xs text-muted-foreground mt-1">Tests completed</p>
+            <CardContent className="p-2 md:p-4 pt-0">
+              <div className="text-lg md:text-2xl font-bold">{aptitudeStats.totalTests}</div>
+              <p className="text-[9px] md:text-xs text-muted-foreground">completed</p>
             </CardContent>
           </Card>
 
-          <Card className="border-2 hover:shadow-lg transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">Best Score</CardTitle>
-              <Award className="h-5 w-5 text-emerald-500" />
+          <Card className="border">
+            <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-[10px] md:text-sm font-medium text-muted-foreground">Best</CardTitle>
+                <Award className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-emerald-500">{aptitudeStats.bestScore}%</div>
-              <p className="text-xs text-muted-foreground mt-1">Aptitude best</p>
+            <CardContent className="p-2 md:p-4 pt-0">
+              <div className="text-lg md:text-2xl font-bold">{aptitudeStats.bestScore}%</div>
+              <p className="text-[9px] md:text-xs text-muted-foreground">score</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Tabbed Content */}
-        <Tabs defaultValue="dsa" className="space-y-6">
-          <TabsList className="inline-flex h-auto w-full justify-center items-center gap-3 p-1.5 bg-muted/40 rounded-2xl border-2 border-border/50 backdrop-blur-sm">
+        <Tabs defaultValue="dsa" className="space-y-4 md:space-y-6">
+          <TabsList className="w-full h-9 md:h-10 bg-muted p-1">
             <TabsTrigger 
               value="dsa" 
-              className="relative flex items-center gap-2 px-6 py-3 rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:to-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/30 transition-all duration-300 hover:scale-105 group"
+              className="flex-1 data-[state=active]:bg-background text-xs md:text-sm"
             >
-              <Code2 className="h-5 w-5 group-data-[state=active]:animate-pulse" />
-              <span className="hidden sm:inline font-semibold">DSA Practice</span>
-              <span className="sm:hidden font-semibold">DSA</span>
-              <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-blue-400/20 to-cyan-400/20 opacity-0 group-data-[state=active]:opacity-100 transition-opacity duration-300 -z-10" />
+              <Code2 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
+              DSA
             </TabsTrigger>
             <TabsTrigger 
               value="contests" 
-              className="relative flex items-center gap-2 px-6 py-3 rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-amber-500 data-[state=active]:to-orange-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-amber-500/30 transition-all duration-300 hover:scale-105 group"
+              className="flex-1 data-[state=active]:bg-background text-xs md:text-sm"
             >
-              <Trophy className="h-5 w-5 group-data-[state=active]:animate-pulse" />
-              <span className="hidden sm:inline font-semibold">Contests</span>
-              <span className="sm:hidden font-semibold">Contest</span>
-              <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-amber-400/20 to-orange-400/20 opacity-0 group-data-[state=active]:opacity-100 transition-opacity duration-300 -z-10" />
+              <Trophy className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
+              Contest
             </TabsTrigger>
             <TabsTrigger 
               value="aptitude" 
-              className="relative flex items-center gap-2 px-6 py-3 rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-purple-500 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/30 transition-all duration-300 hover:scale-105 group"
+              className="flex-1 data-[state=active]:bg-background text-xs md:text-sm"
             >
-              <Brain className="h-5 w-5 group-data-[state=active]:animate-pulse" />
-              <span className="hidden sm:inline font-semibold">Aptitude</span>
-              <span className="sm:hidden font-semibold">Tests</span>
-              <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-purple-400/20 to-pink-400/20 opacity-0 group-data-[state=active]:opacity-100 transition-opacity duration-300 -z-10" />
+              <Brain className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
+              Tests
             </TabsTrigger>
           </TabsList>
 
           {/* DSA Tab Content */}
-          <TabsContent value="dsa" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <TabsContent value="dsa" className="space-y-3 md:space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4">
               {/* Main Content */}
-              <div className="lg:col-span-2 space-y-6">
+              <div className="lg:col-span-2 space-y-3 md:space-y-4">
                 {/* Difficulty Stats */}
-                <Card className="border-2">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <BarChart3 className="h-5 w-5 text-amber-500" />
-                      Difficulty Distribution
+                <Card className="border">
+                  <CardHeader className="p-3 md:p-6 pb-2">
+                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5">
+                      <BarChart3 className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                      <span className="hidden sm:inline">Difficulty Distribution</span>
+                      <span className="sm:hidden">Difficulty</span>
                     </CardTitle>
-                    <CardDescription>Your problem-solving breakdown</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-3 gap-4 mb-6">
-                      <div className="text-center p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                        <div className="text-3xl font-bold text-emerald-500">{dsaStats.easy}</div>
-                        <p className="text-sm text-muted-foreground mt-1">Easy</p>
+                  <CardContent className="p-3 md:p-6 pt-0">
+                    <div className="grid grid-cols-3 gap-1.5 md:gap-3 mb-3">
+                      <div className="text-center p-1.5 md:p-3 rounded-md bg-muted">
+                        <div className="text-base md:text-2xl font-bold">{dsaStats.easy}</div>
+                        <p className="text-[9px] md:text-xs text-muted-foreground mt-0.5">Easy</p>
                       </div>
-                      <div className="text-center p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                        <div className="text-3xl font-bold text-amber-500">{dsaStats.medium}</div>
-                        <p className="text-sm text-muted-foreground mt-1">Medium</p>
+                      <div className="text-center p-1.5 md:p-3 rounded-md bg-muted">
+                        <div className="text-base md:text-2xl font-bold">{dsaStats.medium}</div>
+                        <p className="text-[9px] md:text-xs text-muted-foreground mt-0.5">Medium</p>
                       </div>
-                      <div className="text-center p-4 rounded-lg bg-rose-500/10 border border-rose-500/20">
-                        <div className="text-3xl font-bold text-rose-500">{dsaStats.hard}</div>
-                        <p className="text-sm text-muted-foreground mt-1">Hard</p>
+                      <div className="text-center p-1.5 md:p-3 rounded-md bg-muted">
+                        <div className="text-base md:text-2xl font-bold">{dsaStats.hard}</div>
+                        <p className="text-[9px] md:text-xs text-muted-foreground mt-0.5">Hard</p>
                       </div>
                     </div>
 
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
+                    <div className="space-y-3">
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs md:text-sm">
                           <span className="font-medium">Easy</span>
                           <span className="text-muted-foreground">{Math.round((dsaStats.easy / Math.max(dsaStats.totalSolved, 1)) * 100)}%</span>
                         </div>
-                        <Progress value={(dsaStats.easy / Math.max(dsaStats.totalSolved, 1)) * 100} className="h-2 [&>div]:bg-emerald-500" />
+                        <Progress value={(dsaStats.easy / Math.max(dsaStats.totalSolved, 1)) * 100} className="h-1.5" />
                       </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs md:text-sm">
                           <span className="font-medium">Medium</span>
                           <span className="text-muted-foreground">{Math.round((dsaStats.medium / Math.max(dsaStats.totalSolved, 1)) * 100)}%</span>
                         </div>
-                        <Progress value={(dsaStats.medium / Math.max(dsaStats.totalSolved, 1)) * 100} className="h-2 [&>div]:bg-amber-500" />
+                        <Progress value={(dsaStats.medium / Math.max(dsaStats.totalSolved, 1)) * 100} className="h-1.5" />
                       </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs md:text-sm">
                           <span className="font-medium">Hard</span>
                           <span className="text-muted-foreground">{Math.round((dsaStats.hard / Math.max(dsaStats.totalSolved, 1)) * 100)}%</span>
                         </div>
-                        <Progress value={(dsaStats.hard / Math.max(dsaStats.totalSolved, 1)) * 100} className="h-2 [&>div]:bg-rose-500" />
+                        <Progress value={(dsaStats.hard / Math.max(dsaStats.totalSolved, 1)) * 100} className="h-1.5" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
                 {/* Recent Submissions */}
-                <Card className="border-2">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Clock className="h-5 w-5 text-blue-500" />
-                      Recent Submissions
+                <Card className="border">
+                  <CardHeader className="p-3 md:p-6 pb-2">
+                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                      Recent
                     </CardTitle>
-                    <CardDescription>Your latest solved problems</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-3 md:p-6 pt-0">
                     {dsaStats.recentSubmissions.length === 0 ? (
-                      <div className="text-center py-12">
-                        <Code2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                        <p className="text-muted-foreground">No submissions yet</p>
-                        <Link href="/dsasheet" className="text-sm text-amber-600 hover:underline mt-2 inline-block">
-                          Start solving problems →
+                      <div className="text-center py-8">
+                        <Code2 className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                        <p className="text-xs md:text-sm text-muted-foreground">No submissions yet</p>
+                        <Link href="/dsasheet" className="text-xs text-primary hover:underline mt-1 inline-block">
+                          Start solving →
                         </Link>
                       </div>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="space-y-1.5 md:space-y-2">
                         {dsaStats.recentSubmissions.map((item) => (
                           <div
                             key={item.progress.id}
-                            className="flex items-center justify-between p-3 rounded-lg border hover:border-amber-500/50 hover:bg-accent/50 transition-all duration-200"
+                            className="flex items-center justify-between p-2 md:p-2.5 rounded-md border hover:bg-accent/50 transition-colors"
                           >
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <CheckCircle2 className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary flex-shrink-0" />
                               <div className="flex-1 min-w-0">
-                                <p className="font-medium truncate">{item.problem?.title || 'Unknown Problem'}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {item.progress.solvedAt ? new Date(item.progress.solvedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                                <p className="text-xs md:text-sm font-medium truncate">{item.problem?.title || 'Unknown'}</p>
+                                <p className="text-[10px] md:text-xs text-muted-foreground">
+                                  {item.progress.solvedAt ? new Date(item.progress.solvedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
                                 </p>
                               </div>
                             </div>
                             <Badge
                               variant="outline"
-                              className={
-                                item.problem?.difficulty === 'EASY'
-                                  ? 'border-emerald-500 text-emerald-500 bg-emerald-500/10'
-                                  : item.problem?.difficulty === 'MEDIUM'
-                                  ? 'border-amber-500 text-amber-500 bg-amber-500/10'
-                                  : 'border-rose-500 text-rose-500 bg-rose-500/10'
-                              }
+                              className="text-[10px] md:text-xs"
                             >
                               {item.problem?.difficulty || 'N/A'}
                             </Badge>
@@ -364,44 +357,44 @@ export default async function Dashboard() {
               </div>
 
               {/* Sidebar */}
-              <div className="space-y-6">
-                <Card className="border-2">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Activity className="h-5 w-5" />
-                      Quick Stats
+              <div className="space-y-3 md:space-y-4">
+                <Card className="border">
+                  <CardHeader className="p-3 md:p-6 pb-2">
+                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5">
+                      <Activity className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                      Stats
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex justify-between items-center py-2 border-b">
-                      <span className="text-sm text-muted-foreground">Total Solved</span>
-                      <span className="font-bold text-lg">{dsaStats.totalSolved}</span>
+                  <CardContent className="p-3 md:p-6 pt-0 space-y-1.5">
+                    <div className="flex justify-between items-center py-1.5 border-b">
+                      <span className="text-xs md:text-sm text-muted-foreground">Total Solved</span>
+                      <span className="font-semibold text-sm md:text-base">{dsaStats.totalSolved}</span>
                     </div>
-                    <div className="flex justify-between items-center py-2 border-b">
-                      <span className="text-sm text-muted-foreground">Success Rate</span>
-                      <span className="font-bold text-lg text-emerald-500">100%</span>
+                    <div className="flex justify-between items-center py-1.5 border-b">
+                      <span className="text-xs md:text-sm text-muted-foreground">Success Rate</span>
+                      <span className="font-semibold text-sm md:text-base">100%</span>
                     </div>
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-sm text-muted-foreground">Active Days</span>
-                      <span className="font-bold text-lg">{streak}</span>
+                    <div className="flex justify-between items-center py-1.5">
+                      <span className="text-xs md:text-sm text-muted-foreground">Active Days</span>
+                      <span className="font-semibold text-sm md:text-base">{streak}</span>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="border-2 bg-gradient-to-br from-amber-500/5 to-orange-500/5">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Practice More</CardTitle>
+                <Card className="border">
+                  <CardHeader className="p-3 md:p-6 pb-2">
+                    <CardTitle className="text-xs md:text-base">Practice</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-3 md:p-6 pt-0">
                     <Link
                       href="/dsasheet"
-                      className="flex items-center justify-between p-4 rounded-lg border-2 border-amber-500/20 hover:border-amber-500 hover:bg-amber-500/5 transition-all duration-200 group"
+                      className="flex items-center justify-between p-3 rounded-md border hover:bg-accent transition-colors group"
                     >
-                      <div className="flex items-center gap-3">
-                        <BookOpen className="h-5 w-5 text-amber-500" />
-                        <span className="font-medium">DSA Sheet</span>
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="h-4 w-4" />
+                        <span className="text-sm font-medium">DSA Sheet</span>
                       </div>
-                      <Zap className="h-4 w-4 text-amber-500 group-hover:translate-x-1 transition-transform" />
+                      <Zap className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
                     </Link>
                   </CardContent>
                 </Card>
@@ -410,45 +403,45 @@ export default async function Dashboard() {
           </TabsContent>
 
           {/* Contests Tab Content */}
-          <TabsContent value="contests" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
-                <Card className="border-2">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Trophy className="h-5 w-5 text-amber-500" />
-                      Contest Statistics
+          <TabsContent value="contests" className="space-y-3 md:space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4">
+              <div className="lg:col-span-2 space-y-3 md:space-y-4">
+                <Card className="border">
+                  <CardHeader className="p-3 md:p-6 pb-2">
+                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5">
+                      <Trophy className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                      <span className="hidden sm:inline">Contest Statistics</span>
+                      <span className="sm:hidden">Contest</span>
                     </CardTitle>
-                    <CardDescription>Your competitive programming performance</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-3 gap-4 mb-6">
-                      <div className="text-center p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                        <div className="text-3xl font-bold text-blue-500">{contestStats.totalSubmissions}</div>
-                        <p className="text-sm text-muted-foreground mt-1">Submissions</p>
+                  <CardContent className="p-3 md:p-6 pt-0">
+                    <div className="grid grid-cols-3 gap-1.5 md:gap-3 mb-3">
+                      <div className="text-center p-1.5 md:p-3 rounded-md bg-muted">
+                        <div className="text-base md:text-2xl font-bold">{contestStats.totalSubmissions}</div>
+                        <p className="text-[9px] md:text-xs text-muted-foreground mt-0.5">Submissions</p>
                       </div>
-                      <div className="text-center p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                        <div className="text-3xl font-bold text-emerald-500">{contestStats.totalAccepted}</div>
-                        <p className="text-sm text-muted-foreground mt-1">Accepted</p>
+                      <div className="text-center p-1.5 md:p-3 rounded-md bg-muted">
+                        <div className="text-base md:text-2xl font-bold">{contestStats.totalAccepted}</div>
+                        <p className="text-[9px] md:text-xs text-muted-foreground mt-0.5">Accepted</p>
                       </div>
-                      <div className="text-center p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                        <div className="text-3xl font-bold text-amber-500">{contestStats.uniqueProblemsSolved}</div>
-                        <p className="text-sm text-muted-foreground mt-1">Unique Solved</p>
+                      <div className="text-center p-1.5 md:p-3 rounded-md bg-muted">
+                        <div className="text-base md:text-2xl font-bold">{contestStats.uniqueProblemsSolved}</div>
+                        <p className="text-[9px] md:text-xs text-muted-foreground mt-0.5">Solved</p>
                       </div>
                     </div>
 
                     {contestStats.questionStats.length > 0 && (
-                      <div className="space-y-3">
-                        <h4 className="font-semibold text-sm">Question Performance</h4>
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-xs md:text-sm">Question Performance</h4>
                         {contestStats.questionStats.map((stat, index) => (
-                          <div key={index} className="p-3 rounded-lg border bg-accent/20">
-                            <div className="flex justify-between items-start mb-2">
-                              <span className="font-medium">{stat.questionTitle}</span>
-                              <Badge variant={stat.acceptedSubmissions > 0 ? "default" : "secondary"}>
+                          <div key={index} className="p-2 md:p-2.5 rounded-md border">
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="text-xs md:text-sm font-medium">{stat.questionTitle}</span>
+                              <Badge variant={stat.acceptedSubmissions > 0 ? "default" : "secondary"} className="text-[10px] md:text-xs">
                                 {stat.acceptedSubmissions > 0 ? 'Solved' : 'Attempted'}
                               </Badge>
                             </div>
-                            <div className="flex gap-2 text-xs text-muted-foreground">
+                            <div className="flex gap-1.5 text-[10px] md:text-xs text-muted-foreground">
                               <span>{stat.totalSubmissions} submissions</span>
                               <span>•</span>
                               <span>{stat.acceptedSubmissions} accepted</span>
@@ -461,51 +454,47 @@ export default async function Dashboard() {
                 </Card>
 
                 {/* Recent Contest Submissions */}
-                <Card className="border-2">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Clock className="h-5 w-5 text-blue-500" />
-                      Recent Contest Submissions
+                <Card className="border">
+                  <CardHeader className="p-3 md:p-6 pb-2">
+                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                      Recent
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-3 md:p-6 pt-0">
                     {contestStats.recentSubmissions.length === 0 ? (
-                      <div className="text-center py-12">
-                        <Trophy className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                        <p className="text-muted-foreground">No contest submissions yet</p>
-                        <Link href="/contest" className="text-sm text-amber-600 hover:underline mt-2 inline-block">
-                          Join a contest →
+                      <div className="text-center py-8">
+                        <Trophy className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                        <p className="text-xs md:text-sm text-muted-foreground">No submissions yet</p>
+                        <Link href="/contest" className="text-xs text-primary hover:underline mt-1 inline-block">
+                          Join contest →
                         </Link>
                       </div>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="space-y-1.5 md:space-y-2">
                         {contestStats.recentSubmissions.slice(0, 10).map((submission, index) => (
                           <div
                             key={index}
-                            className="flex items-center justify-between p-3 rounded-lg border hover:border-amber-500/50 hover:bg-accent/50 transition-all duration-200"
+                            className="flex items-center justify-between p-2 md:p-2.5 rounded-md border hover:bg-accent/50 transition-colors"
                           >
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
                               {submission.verdict === 'accepted' ? (
-                                <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />
+                                <CheckCircle2 className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary flex-shrink-0" />
                               ) : (
-                                <Clock className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                                <Clock className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground flex-shrink-0" />
                               )}
                               <div className="flex-1 min-w-0">
-                                <p className="font-medium truncate">{submission.questionTitle}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {new Date(submission.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                <p className="text-xs md:text-sm font-medium truncate">{submission.questionTitle}</p>
+                                <p className="text-[10px] md:text-xs text-muted-foreground">
+                                  {new Date(submission.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                 </p>
                               </div>
                             </div>
                             <Badge
                               variant="outline"
-                              className={
-                                submission.verdict === 'accepted'
-                                  ? 'border-emerald-500 text-emerald-500 bg-emerald-500/10'
-                                  : 'border-amber-500 text-amber-500 bg-amber-500/10'
-                              }
+                              className="text-[10px] md:text-xs"
                             >
-                              {submission.verdict.toUpperCase().replace(/_/g, ' ')}
+                              {submission.verdict === 'accepted' ? 'Accepted' : 'Pending'}
                             </Badge>
                           </div>
                         ))}
@@ -515,44 +504,44 @@ export default async function Dashboard() {
                 </Card>
               </div>
 
-              <div className="space-y-6">
-                <Card className="border-2">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <TrendingUp className="h-5 w-5" />
+              <div className="space-y-3 md:space-y-4">
+                <Card className="border">
+                  <CardHeader className="p-3 md:p-6 pb-2">
+                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5">
+                      <TrendingUp className="h-3.5 w-3.5 md:h-4 md:w-4" />
                       Performance
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex justify-between items-center py-2 border-b">
-                      <span className="text-sm text-muted-foreground">Acceptance Rate</span>
-                      <span className="font-bold text-lg text-emerald-500">
+                  <CardContent className="p-3 md:p-6 pt-0 space-y-1.5">
+                    <div className="flex justify-between items-center py-1.5 border-b">
+                      <span className="text-xs md:text-sm text-muted-foreground">Acceptance</span>
+                      <span className="font-semibold text-sm md:text-base">
                         {contestStats.totalSubmissions > 0 
                           ? `${Math.round((contestStats.totalAccepted / contestStats.totalSubmissions) * 100)}%`
                           : '0%'}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-sm text-muted-foreground">Total Attempts</span>
-                      <span className="font-bold text-lg">{contestStats.totalSubmissions}</span>
+                    <div className="flex justify-between items-center py-1.5">
+                      <span className="text-xs md:text-sm text-muted-foreground">Attempts</span>
+                      <span className="font-semibold text-sm md:text-base">{contestStats.totalSubmissions}</span>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="border-2 bg-gradient-to-br from-amber-500/5 to-orange-500/5">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Join Contests</CardTitle>
+                <Card className="border">
+                  <CardHeader className="p-3 md:p-6 pb-2">
+                    <CardTitle className="text-xs md:text-base">Contests</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-3 md:p-6 pt-0">
                     <Link
                       href="/contest"
-                      className="flex items-center justify-between p-4 rounded-lg border-2 border-amber-500/20 hover:border-amber-500 hover:bg-amber-500/5 transition-all duration-200 group"
+                      className="flex items-center justify-between p-3 rounded-md border hover:bg-accent transition-colors group"
                     >
-                      <div className="flex items-center gap-3">
-                        <Trophy className="h-5 w-5 text-amber-500" />
-                        <span className="font-medium">Browse Contests</span>
+                      <div className="flex items-center gap-2">
+                        <Trophy className="h-4 w-4" />
+                        <span className="text-sm font-medium">Contests</span>
                       </div>
-                      <Zap className="h-4 w-4 text-amber-500 group-hover:translate-x-1 transition-transform" />
+                      <Zap className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
                     </Link>
                   </CardContent>
                 </Card>
@@ -561,49 +550,49 @@ export default async function Dashboard() {
           </TabsContent>
 
           {/* Aptitude Tab Content */}
-          <TabsContent value="aptitude" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
-                <Card className="border-2">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Brain className="h-5 w-5 text-purple-500" />
-                      Aptitude Statistics
+          <TabsContent value="aptitude" className="space-y-3 md:space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4">
+              <div className="lg:col-span-2 space-y-3 md:space-y-4">
+                <Card className="border">
+                  <CardHeader className="p-3 md:p-6 pb-2">
+                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5">
+                      <Brain className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                      <span className="hidden sm:inline">Test Statistics</span>
+                      <span className="sm:hidden">Tests</span>
                     </CardTitle>
-                    <CardDescription>Your test performance overview</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-3 gap-4 mb-6">
-                      <div className="text-center p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                        <div className="text-3xl font-bold text-purple-500">{aptitudeStats.totalTests}</div>
-                        <p className="text-sm text-muted-foreground mt-1">Total Tests</p>
+                  <CardContent className="p-3 md:p-6 pt-0">
+                    <div className="grid grid-cols-3 gap-1.5 md:gap-3 mb-3">
+                      <div className="text-center p-1.5 md:p-3 rounded-md bg-muted">
+                        <div className="text-base md:text-2xl font-bold">{aptitudeStats.totalTests}</div>
+                        <p className="text-[9px] md:text-xs text-muted-foreground mt-0.5">Tests</p>
                       </div>
-                      <div className="text-center p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                        <div className="text-3xl font-bold text-blue-500">{aptitudeStats.averageScore}%</div>
-                        <p className="text-sm text-muted-foreground mt-1">Avg Score</p>
+                      <div className="text-center p-1.5 md:p-3 rounded-md bg-muted">
+                        <div className="text-base md:text-2xl font-bold">{aptitudeStats.averageScore}%</div>
+                        <p className="text-[9px] md:text-xs text-muted-foreground mt-0.5">Average</p>
                       </div>
-                      <div className="text-center p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                        <div className="text-3xl font-bold text-emerald-500">{aptitudeStats.bestScore}%</div>
-                        <p className="text-sm text-muted-foreground mt-1">Best Score</p>
+                      <div className="text-center p-1.5 md:p-3 rounded-md bg-muted">
+                        <div className="text-base md:text-2xl font-bold">{aptitudeStats.bestScore}%</div>
+                        <p className="text-[9px] md:text-xs text-muted-foreground mt-0.5">Best</p>
                       </div>
                     </div>
 
                     {/* Topic-wise Performance */}
                     {aptitudeStats.topicStats.length > 0 && (
-                      <div className="space-y-3">
-                        <h4 className="font-semibold text-sm">Topic-wise Performance</h4>
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-xs md:text-sm">Topic Performance</h4>
                         {aptitudeStats.topicStats.map((topic, index) => (
-                          <div key={index} className="p-3 rounded-lg border bg-accent/20">
-                            <div className="flex justify-between items-start mb-2">
-                              <span className="font-medium capitalize">{topic.topic}</span>
-                              <Badge variant="secondary">{topic.testsCompleted} tests</Badge>
+                          <div key={index} className="p-2 md:p-2.5 rounded-md border">
+                            <div className="flex justify-between items-start mb-1.5">
+                              <span className="text-xs md:text-sm font-medium capitalize">{topic.topic}</span>
+                              <Badge variant="secondary" className="text-[10px] md:text-xs">{topic.testsCompleted}</Badge>
                             </div>
                             <div className="space-y-1">
-                              <div className="flex justify-between text-xs">
+                              <div className="flex justify-between text-[10px] md:text-xs">
                                 <span className="text-muted-foreground">Average</span>
                                 <span className="font-medium">{topic.averageScore}%</span>
                               </div>
-                              <Progress value={topic.averageScore} className="h-2 [&>div]:bg-purple-500" />
+                              <Progress value={topic.averageScore} className="h-1.5" />
                             </div>
                           </div>
                         ))}
@@ -613,40 +602,40 @@ export default async function Dashboard() {
                 </Card>
 
                 {/* Recent Tests */}
-                <Card className="border-2">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Clock className="h-5 w-5 text-blue-500" />
-                      Recent Tests
+                <Card className="border">
+                  <CardHeader className="p-3 md:p-6 pb-2">
+                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                      Recent
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-3 md:p-6 pt-0">
                     {aptitudeStats.recentTests.length === 0 ? (
-                      <div className="text-center py-12">
-                        <Brain className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                        <p className="text-muted-foreground">No tests taken yet</p>
-                        <Link href="/aptitude" className="text-sm text-amber-600 hover:underline mt-2 inline-block">
-                          Take a test →
+                      <div className="text-center py-8">
+                        <Brain className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                        <p className="text-xs md:text-sm text-muted-foreground">No tests yet</p>
+                        <Link href="/aptitude" className="text-xs text-primary hover:underline mt-1 inline-block">
+                          Take test →
                         </Link>
                       </div>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="space-y-1.5 md:space-y-2">
                         {aptitudeStats.recentTests.map((test) => (
                           <div
                             key={test.id}
-                            className="flex items-center justify-between p-3 rounded-lg border hover:border-purple-500/50 hover:bg-accent/50 transition-all duration-200"
+                            className="flex items-center justify-between p-2 md:p-2.5 rounded-md border hover:bg-accent/50 transition-colors"
                           >
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <Target className="h-5 w-5 text-purple-500 flex-shrink-0" />
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <Target className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary flex-shrink-0" />
                               <div className="flex-1 min-w-0">
-                                <p className="font-medium capitalize truncate">{test.topic}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {test.correctAnswers}/{test.totalQuestions} correct • {new Date(test.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                <p className="text-xs md:text-sm font-medium capitalize truncate">{test.topic}</p>
+                                <p className="text-[10px] md:text-xs text-muted-foreground">
+                                  {test.correctAnswers}/{test.totalQuestions} • {new Date(test.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                 </p>
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="text-lg font-bold text-purple-500">{test.score}%</div>
+                              <div className="text-sm md:text-base font-semibold">{test.score}%</div>
                             </div>
                           </div>
                         ))}
@@ -656,44 +645,44 @@ export default async function Dashboard() {
                 </Card>
               </div>
 
-              <div className="space-y-6">
-                <Card className="border-2">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Award className="h-5 w-5" />
-                      Your Best
+              <div className="space-y-3 md:space-y-4">
+                <Card className="border">
+                  <CardHeader className="p-3 md:p-6 pb-2">
+                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5">
+                      <Award className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                      Best
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex justify-between items-center py-2 border-b">
-                      <span className="text-sm text-muted-foreground">Best Score</span>
-                      <span className="font-bold text-lg text-emerald-500">{aptitudeStats.bestScore}%</span>
+                  <CardContent className="p-3 md:p-6 pt-0 space-y-1.5">
+                    <div className="flex justify-between items-center py-1.5 border-b">
+                      <span className="text-xs md:text-sm text-muted-foreground">Best Score</span>
+                      <span className="font-semibold text-sm md:text-base">{aptitudeStats.bestScore}%</span>
                     </div>
-                    <div className="flex justify-between items-center py-2 border-b">
-                      <span className="text-sm text-muted-foreground">Average Score</span>
-                      <span className="font-bold text-lg">{aptitudeStats.averageScore}%</span>
+                    <div className="flex justify-between items-center py-1.5 border-b">
+                      <span className="text-xs md:text-sm text-muted-foreground">Average</span>
+                      <span className="font-semibold text-sm md:text-base">{aptitudeStats.averageScore}%</span>
                     </div>
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-sm text-muted-foreground">Tests Taken</span>
-                      <span className="font-bold text-lg">{aptitudeStats.totalTests}</span>
+                    <div className="flex justify-between items-center py-1.5">
+                      <span className="text-xs md:text-sm text-muted-foreground">Tests Taken</span>
+                      <span className="font-semibold text-sm md:text-base">{aptitudeStats.totalTests}</span>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="border-2 bg-gradient-to-br from-purple-500/5 to-pink-500/5">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Practice More</CardTitle>
+                <Card className="border">
+                  <CardHeader className="p-3 md:p-6 pb-2">
+                    <CardTitle className="text-xs md:text-base">Tests</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-3 md:p-6 pt-0">
                     <Link
                       href="/aptitude"
-                      className="flex items-center justify-between p-4 rounded-lg border-2 border-purple-500/20 hover:border-purple-500 hover:bg-purple-500/5 transition-all duration-200 group"
+                      className="flex items-center justify-between p-3 rounded-md border hover:bg-accent transition-colors group"
                     >
-                      <div className="flex items-center gap-3">
-                        <Brain className="h-5 w-5 text-purple-500" />
-                        <span className="font-medium">Take Tests</span>
+                      <div className="flex items-center gap-2">
+                        <Brain className="h-4 w-4" />
+                        <span className="text-sm font-medium">Aptitude</span>
                       </div>
-                      <Zap className="h-4 w-4 text-purple-500 group-hover:translate-x-1 transition-transform" />
+                      <Zap className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
                     </Link>
                   </CardContent>
                 </Card>
