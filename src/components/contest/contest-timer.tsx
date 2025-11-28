@@ -101,7 +101,7 @@ export function ContestTimer({ contest }: ContestTimerProps) {
           </div>
 
           {isLive && (
-            <Badge className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 text-xs animate-pulse">
+            <Badge className="bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-1 text-xs animate-pulse">
               <PlayCircle className="h-3 w-3 mr-1.5" />
               Live Now
             </Badge>

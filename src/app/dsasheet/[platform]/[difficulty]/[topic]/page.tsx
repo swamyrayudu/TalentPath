@@ -187,7 +187,7 @@ export default function TopicProblemsPage() {
           <div className="flex items-center gap-3">
             <Card className="px-4 py-3 border-2">
               <div className="flex items-center gap-3">
-                <Trophy className="h-6 w-6 text-yellow-500" />
+                <Trophy className="h-6 w-6 text-primary" />
                 <div>
                   <div className="text-2xl font-bold">{solvedCount}</div>
                   <div className="text-xs text-muted-foreground">Solved</div>

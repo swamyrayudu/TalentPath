@@ -30,7 +30,7 @@ export function ContestSubmissionsPreview({ stats }: ContestSubmissionsPreviewPr
     <Card className="border-2 hover:shadow-lg transition-all">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-yellow-500" />
+          <Trophy className="h-5 w-5 text-primary" />
           Contest Submissions Overview
         </CardTitle>
         <CardDescription>Your contest problem solving activity</CardDescription>

@@ -63,7 +63,22 @@ export default async function RoadmapDetailPage({
     .orderBy(roadmapSteps.orderIndex);
 
   const userProgress = session?.user ? await getUserProgress(id) : null;
-  const completedSteps = userProgress ? JSON.parse(userProgress.completedSteps) : [];
+  
+  // Safely parse completedSteps - handle array, string, or empty values
+  let completedSteps: string[] = [];
+  if (userProgress?.completedSteps) {
+    if (Array.isArray(userProgress.completedSteps)) {
+      completedSteps = userProgress.completedSteps;
+    } else if (typeof userProgress.completedSteps === 'string') {
+      try {
+        const parsed = JSON.parse(userProgress.completedSteps);
+        completedSteps = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        completedSteps = [];
+      }
+    }
+  }
+  
   const progressPercentage = steps.length > 0 ? (completedSteps.length / steps.length) * 100 : 0;
 
   const IconComponent = categoryIcons[roadmap.category] || Map;

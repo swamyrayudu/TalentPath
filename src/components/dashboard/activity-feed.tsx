@@ -33,9 +33,9 @@ export default function ActivityFeed({ activities }: ActivityFeedProps) {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'problem_solved':
-        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+        return <CheckCircle2 className="h-4 w-4 text-primary" />;
       case 'contest_joined':
-        return <Trophy className="h-4 w-4 text-yellow-500" />;
+        return <Trophy className="h-4 w-4 text-primary" />;
       case 'roadmap_started':
         return <BookOpen className="h-4 w-4 text-blue-500" />;
       case 'step_completed':

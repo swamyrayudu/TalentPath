@@ -85,7 +85,7 @@ export default function RoadmapsCard({ roadmaps }: RoadmapsCardProps) {
                         </div>
                       </div>
                       {roadmap.progressPercentage === 100 && (
-                        <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                        <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
                       )}
                     </div>
                     

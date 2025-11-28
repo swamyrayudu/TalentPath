@@ -27,7 +27,7 @@ export function ContestCard({ contest }: ContestCardProps) {
     switch (contest.status) {
       case 'live':
         return (
-          <Badge className="bg-green-500/90 hover:bg-green-500 text-white border-0">
+          <Badge className="bg-primary hover:bg-primary/90 text-primary-foreground border-0 animate-pulse">
             <Zap className="h-3 w-3 mr-1" />
             Live Now
           </Badge>
@@ -56,7 +56,7 @@ export function ContestCard({ contest }: ContestCardProps) {
   const getCardStyle = () => {
     switch (contest.status) {
       case 'live':
-        return 'border-green-500/50 bg-gradient-to-br from-green-500/5 to-transparent hover:border-green-500 hover:shadow-lg';
+        return 'border-primary/50 bg-gradient-to-br from-primary/5 to-transparent hover:border-primary hover:shadow-lg';
       case 'upcoming':
         return 'border-primary/30 bg-gradient-to-br from-primary/5 to-transparent hover:border-primary hover:shadow-lg';
       case 'ended':

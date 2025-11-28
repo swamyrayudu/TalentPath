@@ -30,8 +30,8 @@ export default function StatsOverview({ stats }: StatsOverviewProps) {
       title: 'Contests Joined',
       value: stats.contestsParticipated,
       icon: Trophy,
-      color: 'text-yellow-500',
-      bgColor: 'bg-yellow-50 dark:bg-yellow-950',
+      color: 'text-primary',
+      bgColor: 'bg-primary/10',
     },
     {
       title: 'Active Roadmaps',

@@ -46,9 +46,9 @@ export default function DSAProgressCard({ stats }: DSAProgressCardProps) {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-4">
-          <div className="flex flex-col items-center space-y-1 p-3 bg-green-50 dark:bg-green-950 rounded-lg">
-            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-            <span className="text-2xl font-bold text-green-600 dark:text-green-400">
+          <div className="flex flex-col items-center space-y-1 p-3 bg-primary/10 rounded-lg">
+            <CheckCircle2 className="h-5 w-5 text-primary" />
+            <span className="text-2xl font-bold text-primary">
               {stats.solved}
             </span>
             <span className="text-xs text-muted-foreground">Solved</span>

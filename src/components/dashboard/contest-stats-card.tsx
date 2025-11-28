@@ -35,7 +35,7 @@ export function ContestStatsCard({ stats }: ContestStatsCardProps) {
     <Card className="border-2">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-yellow-500" />
+          <Trophy className="h-5 w-5 text-primary" />
           Contest Submissions
         </CardTitle>
         <CardDescription>Your contest problem submission statistics</CardDescription>

@@ -39,14 +39,14 @@ export default async function ContestsPage() {
 
           {session?.user ? (
             <CreateContestDialog>
-              <Button size="default" className="w-full md:w-auto hover:bg-yellow-500 hover:text-black transition-all duration-300 shadow-lg hover:shadow-yellow-500/50 text-sm sm:text-base">
+              <Button size="default" className="w-full md:w-auto hover:bg-primary/90 transition-all duration-300 shadow-lg hover:shadow-primary/50 text-sm sm:text-base">
                 <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                 Create Contest
               </Button>
             </CreateContestDialog>
           ) : (
             <Link href="/api/auth/signin" className="w-full md:w-auto">
-              <Button size="default" variant="outline" className="w-full hover:bg-yellow-500/10 hover:border-yellow-500 hover:text-yellow-500 transition-all duration-300 text-sm sm:text-base">
+              <Button size="default" variant="outline" className="w-full hover:bg-primary/10 hover:border-primary hover:text-primary transition-all duration-300 text-sm sm:text-base">
                 <LogIn className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                 Login to Create
               </Button>
@@ -66,14 +66,14 @@ export default async function ContestsPage() {
           </p>
           {session?.user ? (
             <CreateContestDialog>
-              <Button size="lg" className="hover:bg-yellow-500 hover:text-black transition-all duration-300">
+              <Button size="lg" className="hover:bg-primary/90 transition-all duration-300">
                 <Plus className="h-5 w-5 mr-2" />
                 Create First Contest
               </Button>
             </CreateContestDialog>
           ) : (
             <Link href="/api/auth/signin">
-              <Button size="lg" variant="outline" className="hover:bg-yellow-500/10 hover:border-yellow-500 hover:text-yellow-500 transition-all duration-300">
+              <Button size="lg" variant="outline" className="hover:bg-primary/10 hover:border-primary hover:text-primary transition-all duration-300">
                 <LogIn className="h-5 w-5 mr-2" />
                 Login to Create Contest
               </Button>

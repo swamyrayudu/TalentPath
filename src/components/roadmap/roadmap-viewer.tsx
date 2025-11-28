@@ -19,7 +19,9 @@ import {
   Lock,
   LogIn,
   BookOpen,
-  Circle
+  Circle,
+  ChevronRight,
+  MousePointerClick
 } from 'lucide-react';
 import { toggleStepCompletion } from '@/actions/roadmap';
 import { toast } from 'sonner';
@@ -77,95 +79,107 @@ export function RoadmapViewer({
 
   return (
     <div className="relative w-full">
-      {/* Vertical Connection Line - Responsive positioning */}
-      <div className="absolute left-[22px] sm:left-[30px] top-0 bottom-0 w-0.5 bg-border" />
+      {/* Vertical Connection Line */}
+      <div className="absolute left-6 sm:left-7 top-6 bottom-6 w-0.5 bg-gradient-to-b from-primary/40 via-border to-border" />
 
-      <div className="space-y-2 sm:space-y-3 relative">
+      <div className="space-y-4 relative">
         {steps.map((step, index) => {
           const isCompleted = localCompleted.includes(step.id);
           const isLoading = loading === step.id;
 
           return (
-            <div key={step.id} className="relative flex items-start gap-2 sm:gap-3">
-              {/* Step Circle with Checkbox - Mobile Optimized */}
-              <div className="relative z-10 flex flex-col items-center gap-1 sm:gap-1.5 flex-shrink-0">
-                {/* Circle - Smaller on mobile */}
+            <div key={step.id} className="relative flex items-start gap-4">
+              {/* Step Circle with Checkbox */}
+              <div className="relative z-10 flex flex-col items-center gap-2 flex-shrink-0">
+                {/* Circle */}
                 <div
-                  className={`w-[44px] h-[44px] sm:w-[60px] sm:h-[60px] rounded-lg flex items-center justify-center font-semibold text-xs sm:text-sm border-2 transition-all ${
+                  className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center font-bold text-sm border-2 transition-all duration-200 shadow-sm ${
                     isCompleted
-                      ? 'bg-green-600 border-green-600 text-white shadow-sm'
-                      : 'bg-card border-border hover:border-primary'
+                      ? 'bg-primary border-primary text-primary-foreground'
+                      : 'bg-card border-border hover:border-primary hover:shadow-md'
                   }`}
                 >
                   {isCompleted ? (
-                    <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6" />
                   ) : (
-                    <span className="text-base sm:text-lg">{index + 1}</span>
+                    <span className="text-lg">{index + 1}</span>
                   )}
                 </div>
 
-                {/* Checkbox - Responsive */}
+                {/* Checkbox */}
                 {isLoggedIn ? (
                   <Checkbox
                     checked={isCompleted}
                     onCheckedChange={() => handleToggleStep(step.id)}
                     disabled={isLoading}
-                    className="h-3 w-3 sm:h-3.5 sm:w-3.5"
+                    className="h-4 w-4 cursor-pointer border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                   />
                 ) : (
-                  <div className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded border border-muted-foreground/30 flex items-center justify-center">
-                    <Lock className="h-1.5 w-1.5 sm:h-2 sm:w-2 text-muted-foreground" />
+                  <div className="w-4 h-4 rounded border border-muted-foreground/30 flex items-center justify-center">
+                    <Lock className="h-2.5 w-2.5 text-muted-foreground" />
                   </div>
                 )}
               </div>
 
-              {/* Content Card - Mobile Optimized */}
+              {/* Content Card */}
               <Sheet>
                 <SheetTrigger asChild>
                   <Card
-                    className={`flex-1 cursor-pointer transition-all hover:shadow-md min-w-0 ${
+                    className={`flex-1 cursor-pointer transition-all duration-200 min-w-0 group ${
                       isCompleted
-                        ? 'bg-green-50 dark:bg-green-950/20 border-green-500/50'
-                        : 'hover:border-primary/50'
+                        ? 'bg-primary/5 border-primary/30 hover:border-primary/50'
+                        : 'hover:border-primary hover:shadow-md hover:bg-accent/30'
                     }`}
                   >
-                    <CardContent className="p-2 sm:p-2.5">
-                      <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-                        <h3
-                          className={`text-xs sm:text-sm font-semibold truncate ${
-                            isCompleted
-                              ? 'text-muted-foreground line-through'
-                              : 'text-foreground'
-                          }`}
-                        >
-                          {step.title}
-                        </h3>
-                        {step.resources && (
-                          <ExternalLink className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground flex-shrink-0" />
-                        )}
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h3
+                            className={`text-sm sm:text-base font-semibold ${
+                              isCompleted
+                                ? 'text-primary line-through opacity-70'
+                                : 'text-foreground'
+                            }`}
+                          >
+                            {step.title}
+                          </h3>
+                          {/* Click hint */}
+                          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1 group-hover:text-primary transition-colors">
+                            <MousePointerClick className="h-3 w-3" />
+                            <span>Click to view details</span>
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {isCompleted && (
+                            <Badge variant="secondary" className="bg-primary/10 text-primary border-0 text-xs">
+                              Completed
+                            </Badge>
+                          )}
+                          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
                 </SheetTrigger>
 
-                {/* Sheet Content - Mobile Optimized */}
+                {/* Sheet Content */}
                 <SheetContent className="overflow-y-auto w-full max-w-full sm:max-w-md p-4 sm:p-6">
-                  <SheetHeader className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
-                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                      <Badge variant="secondary" className="text-xs px-1.5 py-0.5 sm:px-2">
+                  <SheetHeader className="space-y-3 mb-6">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="outline" className="text-xs border-primary/30 text-primary">
                         Step {index + 1}
                       </Badge>
                       {isCompleted && (
-                        <Badge className="bg-green-600 text-xs px-1.5 py-0.5 sm:px-2">
-                          <CheckCircle2 className="h-3 w-3 mr-0.5 sm:mr-1" />
-                          Done
+                        <Badge className="bg-primary text-primary-foreground text-xs">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Completed
                         </Badge>
                       )}
                     </div>
-                    <SheetTitle className="text-base sm:text-lg leading-tight">
+                    <SheetTitle className="text-lg sm:text-xl leading-tight">
                       {step.title}
                     </SheetTitle>
-                    <SheetDescription className="text-xs sm:text-sm leading-relaxed">
+                    <SheetDescription className="text-sm leading-relaxed">
                       {step.description}
                     </SheetDescription>
                   </SheetHeader>

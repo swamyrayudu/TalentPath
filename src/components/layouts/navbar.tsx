@@ -21,6 +21,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { LogOut, Shield, Menu } from 'lucide-react';
 import { ModeToggle } from './mode-toggle';
+import { ColorPicker } from './color-picker';
+import { MobileColorPicker } from './mobile-color-picker';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
@@ -130,6 +132,9 @@ export default function Navbar() {
 
           {/* Right Side Actions */}
           <div className="flex items-center space-x-3">
+            <div className="transition-transform duration-200 hover:scale-105">
+              <ColorPicker />
+            </div>
             <div className="transition-transform duration-200 hover:scale-105">
               <ModeToggle />
             </div>
@@ -304,6 +309,11 @@ export default function Navbar() {
                           </Link>
                         </>
                       )}
+                    </div>
+
+                    {/* Color Theme Picker */}
+                    <div className="pt-4 border-t">
+                      <MobileColorPicker />
                     </div>
 
                     {/* Auth Button */}

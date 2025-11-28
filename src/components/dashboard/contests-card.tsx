@@ -27,9 +27,9 @@ export default function ContestsCard({ contests }: ContestsCardProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'live':
-        return <Badge className="bg-red-500 hover:bg-red-600 animate-pulse">Live</Badge>;
+        return <Badge className="bg-primary hover:bg-primary/90 text-primary-foreground animate-pulse">Live</Badge>;
       case 'upcoming':
-        return <Badge variant="outline" className="border-blue-500 text-blue-500">Upcoming</Badge>;
+        return <Badge variant="outline" className="border-primary text-primary">Upcoming</Badge>;
       case 'ended':
         return <Badge variant="secondary">Ended</Badge>;
       default:
@@ -45,14 +45,14 @@ export default function ContestsCard({ contests }: ContestsCardProps) {
             <CardTitle>Contests</CardTitle>
             <CardDescription>Compete and improve your skills</CardDescription>
           </div>
-          <Trophy className="h-8 w-8 text-yellow-500" />
+          <Trophy className="h-8 w-8 text-primary" />
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {liveContests.length > 0 && (
           <div className="space-y-3">
             <h4 className="text-sm font-semibold flex items-center gap-2">
-              <span className="h-2 w-2 bg-red-500 rounded-full animate-pulse" />
+              <span className="h-2 w-2 bg-primary rounded-full animate-pulse" />
               Live Now
             </h4>
             {liveContests.map((contest) => (

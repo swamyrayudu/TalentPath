@@ -354,7 +354,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: {
                 {question.difficulty}
               </Badge>
               <div className="flex items-center gap-1 text-xs lg:text-sm">
-                <Trophy className="h-3 w-3 lg:h-4 lg:w-4 text-yellow-500" />
+                <Trophy className="h-3 w-3 lg:h-4 lg:w-4 text-primary" />
                 <span className="font-medium">{question.points}</span>
               </div>
             </div>
@@ -398,7 +398,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: {
               onClick={handleSubmit} 
               disabled={isSubmitting || isRunning || isContestEnded}
               size="sm"
-              className="bg-green-600 hover:bg-green-700 h-8 lg:h-9 text-xs lg:text-sm px-2 lg:px-3 order-4 lg:order-none"
+              className="bg-primary hover:bg-primary/90 h-8 lg:h-9 text-xs lg:text-sm px-2 lg:px-3 order-4 lg:order-none"
             >
               {isSubmitting ? (
                 <Loader2 className="h-3 w-3 lg:h-4 lg:w-4 lg:mr-2 animate-spin" />

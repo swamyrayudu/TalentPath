@@ -100,7 +100,7 @@ export default async function ContestDetailPage({
       {isCreator && (
         <div className="mt-3 sm:mt-4">
           <Link href={`/contest/${slug}/manage`}>
-            <Button size="sm" className="w-full md:w-auto text-sm bg-yellow-500 hover:bg-yellow-600 text-black font-medium">
+            <Button size="sm" className="w-full md:w-auto text-sm bg-primary hover:bg-primary/90 text-primary-foreground font-medium">
               <Settings className="h-3.5 w-3.5 mr-1.5" />
               Manage Contest
             </Button>
@@ -119,8 +119,8 @@ export default async function ContestDetailPage({
           )}
 
           {isParticipant && session?.user && (
-            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-green-600/10 border border-green-600/20 rounded-md">
-              <p className="text-sm sm:text-base text-green-700 dark:text-green-400 font-medium flex items-center gap-2">
+            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-primary/10 border border-primary/20 rounded-md">
+              <p className="text-sm sm:text-base text-primary font-medium flex items-center gap-2">
                 <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 You are registered for this contest
               </p>

@@ -136,7 +136,7 @@ export function QuestionManagementList({ questions, contestSlug }: QuestionManag
                     
                     {/* Points */}
                     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                      <Trophy className="h-4 w-4 text-yellow-600 dark:text-yellow-500 flex-shrink-0" />
+                      <Trophy className="h-4 w-4 text-primary flex-shrink-0" />
                       <span className="text-sm font-semibold">{question.points}</span>
                       <span className="text-xs text-muted-foreground">points</span>
                     </div>

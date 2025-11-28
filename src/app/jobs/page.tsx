@@ -152,8 +152,8 @@ export default function JobsPage() {
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-1">Jobs & Internships</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-1">Jobs & Internships</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Explore {filteredJobs.length} opportunities to enhance your career
           </p>
         </div>
@@ -163,7 +163,7 @@ export default function JobsPage() {
           <Button
             variant={activeTab === 'jobs' ? 'default' : 'outline'}
             onClick={() => setActiveTab('jobs')}
-            className="px-6 transition-all duration-200"
+            className="px-4 sm:px-6 text-xs sm:text-sm transition-all duration-200"
             size="sm"
           >
             Jobs
@@ -171,7 +171,7 @@ export default function JobsPage() {
           <Button
             variant={activeTab === 'internships' ? 'default' : 'outline'}
             onClick={() => setActiveTab('internships')}
-            className="px-6 transition-all duration-200"
+            className="px-4 sm:px-6 text-xs sm:text-sm transition-all duration-200"
             size="sm"
           >
             Internships
@@ -207,7 +207,7 @@ export default function JobsPage() {
                 <Accordion type="multiple" className="w-full">
                   {/* Job Type */}
                   <AccordionItem value="job-type" className="border-0">
-                    <AccordionTrigger className="py-2 text-sm font-medium hover:no-underline">
+                    <AccordionTrigger className="py-2 text-xs sm:text-sm font-medium hover:no-underline">
                       Job Type
                     </AccordionTrigger>
                     <AccordionContent className="pb-2">
@@ -224,7 +224,7 @@ export default function JobsPage() {
                                   }
                                   className="h-4 w-4"
                                 />
-                                <Label htmlFor={type} className="text-sm capitalize cursor-pointer font-normal">
+                                <Label htmlFor={type} className="text-xs sm:text-sm capitalize cursor-pointer font-normal">
                                   {type}
                                 </Label>
                               </div>
@@ -240,7 +240,7 @@ export default function JobsPage() {
                               }
                               className="h-4 w-4"
                             />
-                            <Label htmlFor="internship" className="text-sm cursor-pointer font-normal">
+                            <Label htmlFor="internship" className="text-xs sm:text-sm cursor-pointer font-normal">
                               Internship
                             </Label>
                           </div>
@@ -251,7 +251,7 @@ export default function JobsPage() {
 
                   {/* Location */}
                   <AccordionItem value="location" className="border-0">
-                    <AccordionTrigger className="py-2 text-sm font-medium hover:no-underline">
+                    <AccordionTrigger className="py-2 text-xs sm:text-sm font-medium hover:no-underline">
                       Location
                     </AccordionTrigger>
                     <AccordionContent className="pb-2">
@@ -266,7 +266,7 @@ export default function JobsPage() {
                               }
                               className="h-4 w-4"
                             />
-                            <Label htmlFor={location} className="text-sm capitalize cursor-pointer font-normal">
+                            <Label htmlFor={location} className="text-xs sm:text-sm capitalize cursor-pointer font-normal">
                               {location}
                             </Label>
                           </div>
@@ -277,7 +277,7 @@ export default function JobsPage() {
 
                   {/* Salary */}
                   <AccordionItem value="salary" className="border-0">
-                    <AccordionTrigger className="py-2 text-sm font-medium hover:no-underline">
+                    <AccordionTrigger className="py-2 text-xs sm:text-sm font-medium hover:no-underline">
                       Salary
                     </AccordionTrigger>
                     <AccordionContent className="pb-2">
@@ -297,7 +297,7 @@ export default function JobsPage() {
                               }
                               className="h-4 w-4"
                             />
-                            <Label htmlFor={range.value} className="text-sm cursor-pointer font-normal">
+                            <Label htmlFor={range.value} className="text-xs sm:text-sm cursor-pointer font-normal">
                               {range.label}
                             </Label>
                           </div>
@@ -364,20 +364,20 @@ export default function JobsPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2 mb-2">
                               <div className="flex-1 min-w-0">
-                                <h3 className="text-base font-semibold mb-0.5 truncate group-hover:text-amber-600 transition-colors">
+                                <h3 className="text-sm sm:text-base font-semibold mb-0.5 truncate group-hover:text-primary transition-colors">
                                   {job.title}
                                 </h3>
-                                <p className="text-sm text-muted-foreground">{job.company}</p>
+                                <p className="text-xs sm:text-sm text-muted-foreground">{job.company}</p>
                               </div>
                               <Link href={`/jobs/${job.id}`}>
-                                <Button size="sm" className="h-8 text-xs">
+                                <Button size="sm" className="h-7 sm:h-8 text-xs">
                                   Details
                                 </Button>
                               </Link>
                             </div>
 
                             {/* Info Row */}
-                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mb-2">
+                            <div className="flex flex-wrap gap-x-3 sm:gap-x-4 gap-y-1 text-[10px] sm:text-xs text-muted-foreground mb-2">
                               <div className="flex items-center gap-1">
                                 <MapPin className="h-3 w-3" />
                                 <span>{job.location}</span>
@@ -387,7 +387,7 @@ export default function JobsPage() {
                                 <span className="capitalize">{job.jobType}</span>
                               </div>
                               {job.salary && (
-                                <div className="flex items-center gap-1 font-medium text-amber-600">
+                                <div className="flex items-center gap-1 font-medium text-primary">
                                   <IndianRupee className="h-3 w-3" />
                                   <span>{job.salary} LPA</span>
                                 </div>
@@ -404,11 +404,11 @@ export default function JobsPage() {
                             <div className="flex gap-1.5">
                               <Badge 
                                 variant={job.locationType === 'remote' ? 'default' : 'secondary'}
-                                className="text-xs h-5 px-2"
+                                className="text-[10px] sm:text-xs h-5 px-1.5 sm:px-2"
                               >
                                 {job.locationType}
                               </Badge>
-                              <Badge variant="outline" className="text-xs h-5 px-2">
+                              <Badge variant="outline" className="text-[10px] sm:text-xs h-5 px-1.5 sm:px-2">
                                 {job.jobType}
                               </Badge>
                             </div>

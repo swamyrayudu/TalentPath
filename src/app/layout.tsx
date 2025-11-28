@@ -6,6 +6,7 @@ import { ThemeProvider } from '../components/layouts/theme-provider';
 import ConditionalNavbar from '../components/layouts/conditional-navbar';
 import AuthProvider from '@/components/providers/session-provider';
 import { DsaProblemsCacheProvider } from '@/components/context/DsaProblemsCacheContext';
+import { ColorThemeProvider } from '@/components/context/ColorThemeContext';
 import { Toaster } from 'sonner';
 import AIChatbot from '@/components/ai-chatbot';
 
@@ -45,10 +46,12 @@ export default function RootLayout({
               enableSystem={false}
               disableTransitionOnChange
             >
-              <ConditionalNavbar />
-              <main>{children}</main>
-              <Toaster richColors position="top-right" />
-              <AIChatbot />
+              <ColorThemeProvider>
+                <ConditionalNavbar />
+                <main>{children}</main>
+                <Toaster richColors position="top-right" />
+                <AIChatbot />
+              </ColorThemeProvider>
             </ThemeProvider>
           </DsaProblemsCacheProvider>
         </AuthProvider>

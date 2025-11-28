@@ -22,7 +22,7 @@ export function ContestHeader({ contest }: ContestHeaderProps) {
     switch (contest.status) {
       case 'live':
         return (
-          <Badge className="bg-green-600 hover:bg-green-700 text-white animate-pulse gap-1">
+          <Badge className="bg-primary hover:bg-primary/90 text-primary-foreground animate-pulse gap-1">
             <PlayCircle className="h-3 w-3" />
             Live
           </Badge>

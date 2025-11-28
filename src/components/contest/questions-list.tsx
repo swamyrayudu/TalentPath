@@ -72,13 +72,13 @@ export function QuestionsList({ questions, contestSlug, isParticipant, completed
         const isCompleted = completedQuestionIds?.has(question.id);
         
         return (
-        <Card key={question.id} className={`hover:shadow-md transition-shadow ${isCompleted ? 'border-green-500/50 bg-green-500/5' : ''}`}>
+        <Card key={question.id} className={`hover:shadow-md transition-shadow ${isCompleted ? 'border-primary/50 bg-primary/5' : ''}`}>
           <CardHeader className="p-2.5 sm:p-3 md:p-4 lg:p-6">
             <div className="flex flex-col sm:flex-row items-start gap-2.5 sm:gap-3">
               <div className="flex items-start gap-2 sm:gap-2.5 md:gap-4 flex-1 w-full">
                 <div className={`flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-full font-bold text-xs sm:text-sm md:text-base flex-shrink-0 ${
                   isCompleted 
-                    ? 'bg-green-500/20 text-green-600 dark:text-green-400' 
+                    ? 'bg-primary/20 text-primary' 
                     : 'bg-primary/10 text-primary'
                 }`}>
                   {isCompleted ? (
@@ -91,7 +91,7 @@ export function QuestionsList({ questions, contestSlug, isParticipant, completed
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5 md:gap-2 mb-1.5 sm:mb-2">
                     <CardTitle className="text-sm sm:text-sm md:text-base leading-tight">{question.title}</CardTitle>
                     {isCompleted && (
-                      <Badge className="bg-green-600 text-white w-fit text-[10px] sm:text-[10px] px-1.5 py-0.5">
+                      <Badge className="bg-primary text-primary-foreground w-fit text-[10px] sm:text-[10px] px-1.5 py-0.5">
                         Completed
                       </Badge>
                     )}

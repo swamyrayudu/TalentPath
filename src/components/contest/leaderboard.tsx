@@ -34,7 +34,7 @@ export function ContestLeaderboard({ leaderboard, compact = false }: Leaderboard
     
     switch (rank) {
       case 1:
-        return <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600" />;
+        return <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />;
       case 2:
         return <Medal className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />;
       case 3:
@@ -49,7 +49,7 @@ export function ContestLeaderboard({ leaderboard, compact = false }: Leaderboard
     
     switch (rank) {
       case 1:
-        return <Badge className="bg-yellow-600 hover:bg-yellow-700 text-white text-xs">1st</Badge>;
+        return <Badge className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs">1st</Badge>;
       case 2:
         return <Badge variant="secondary" className="text-xs">2nd</Badge>;
       case 3:
@@ -78,7 +78,7 @@ export function ContestLeaderboard({ leaderboard, compact = false }: Leaderboard
       <Card className="border bg-card">
         <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-6">
           <CardTitle className="text-sm sm:text-base flex items-center gap-1.5 sm:gap-2">
-            <Trophy className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-600" />
+            <Trophy className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
             Top Participants
           </CardTitle>
         </CardHeader>
@@ -111,14 +111,14 @@ export function ContestLeaderboard({ leaderboard, compact = false }: Leaderboard
     <Card className="border bg-card">
       <CardHeader className="p-3 sm:p-4 md:p-5">
         <CardTitle className="text-base sm:text-base md:text-lg flex items-center gap-1.5 sm:gap-2">
-          <Trophy className="h-4 w-4 sm:h-4 sm:w-4 md:h-5 md:w-5 text-yellow-600" />
+          <Trophy className="h-4 w-4 sm:h-4 sm:w-4 md:h-5 md:w-5 text-primary" />
           Leaderboard
         </CardTitle>
       </CardHeader>
       <CardContent className="p-3 sm:p-4 md:p-5 pt-0">
         <div className="space-y-2.5 sm:space-y-3">
           {leaderboard.map((entry) => (
-            <Card key={entry.userId} className={`${entry.rank && entry.rank <= 3 ? 'border-2 border-yellow-600/50' : 'border'}`}>
+            <Card key={entry.userId} className={`${entry.rank && entry.rank <= 3 ? 'border-2 border-primary/50' : 'border'}`}>
               <CardContent className="p-3 sm:p-3.5">
                 <div className="flex items-start sm:items-center gap-2 sm:gap-3">
                   <div className="w-6 sm:w-7 flex justify-center items-center flex-shrink-0">

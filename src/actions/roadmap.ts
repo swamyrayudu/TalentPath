@@ -144,7 +144,21 @@ export async function toggleStepCompletion(roadmapId: string, stepId: string) {
   });
 
   if (existingProgress) {
-    const completedSteps = JSON.parse(existingProgress.completedSteps);
+    // Safely parse completedSteps - handle array, string, or empty values
+    let completedSteps: string[] = [];
+    if (existingProgress.completedSteps) {
+      if (Array.isArray(existingProgress.completedSteps)) {
+        completedSteps = existingProgress.completedSteps;
+      } else if (typeof existingProgress.completedSteps === 'string') {
+        try {
+          const parsed = JSON.parse(existingProgress.completedSteps);
+          completedSteps = Array.isArray(parsed) ? parsed : [];
+        } catch {
+          completedSteps = [];
+        }
+      }
+    }
+    
     const index = completedSteps.indexOf(stepId);
 
     if (index > -1) {

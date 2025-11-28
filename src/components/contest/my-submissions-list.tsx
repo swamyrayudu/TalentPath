@@ -39,12 +39,12 @@ const getVerdictInfo = (verdict: string) => {
     case 'accepted':
       return {
         icon: CheckCircle2,
-        color: 'text-emerald-500',
-        bgColor: 'bg-emerald-500/10',
-        borderColor: 'border-emerald-500/20',
+        color: 'text-primary',
+        bgColor: 'bg-primary/10',
+        borderColor: 'border-primary/20',
         label: 'Accepted',
         badgeVariant: 'default' as const,
-        badgeClassName: 'bg-emerald-500'
+        badgeClassName: 'bg-primary'
       };
     case 'wrong_answer':
       return {
@@ -166,7 +166,7 @@ export function MySubmissionsList({ submissions }: MySubmissionsListProps) {
       <Card className="border-2">
         <CardHeader className="p-4 sm:p-5">
           <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-            <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+            <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             All Submissions
           </CardTitle>
           <CardDescription className="text-xs sm:text-sm">
@@ -213,7 +213,7 @@ export function MySubmissionsList({ submissions }: MySubmissionsListProps) {
                               <span className="text-muted-foreground">Test Cases:</span>
                               <span className={`font-medium ${
                                 submission.passedTestCases === submission.totalTestCases 
-                                  ? 'text-emerald-500' 
+                                  ? 'text-primary' 
                                   : 'text-orange-500'
                               }`}>
                                 {submission.passedTestCases}/{submission.totalTestCases}

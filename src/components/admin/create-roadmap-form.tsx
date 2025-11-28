@@ -187,7 +187,7 @@ export function CreateRoadmapForm() {
           <Button
             type="submit"
             disabled={isLoading}
-            className="bg-yellow-400 hover:bg-yellow-500"
+            className="bg-primary hover:bg-primary/90"
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Create Roadmap

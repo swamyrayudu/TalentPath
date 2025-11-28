@@ -181,7 +181,7 @@ export default async function AdminDashboard() {
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
             <div className="flex items-center gap-2 mb-2">
-              <Trophy className="h-6 w-6 text-yellow-600" />
+              <Trophy className="h-6 w-6 text-primary" />
               <CardTitle>Contest Management</CardTitle>
             </div>
             <CardDescription>

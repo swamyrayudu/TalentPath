@@ -135,8 +135,8 @@ export default async function RoadmapPage() {
               return (
                 <Card 
                   key={roadmap.id} 
-                  className={`group hover:shadow-lg transition-all duration-300 relative ${
-                    roadmap.isCompleted ? 'border-green-500 border-2' : ''
+                  className={`group hover:shadow-lg transition-all duration-300 relative flex flex-col h-full ${
+                    roadmap.isCompleted ? 'border-green-500 border-2' : 'border-border'
                   }`}
                 >
                   {/* Completion Badge - Top Right Corner */}
@@ -151,12 +151,12 @@ export default async function RoadmapPage() {
                     </div>
                   )}
 
-                  <CardHeader>
+                  <CardHeader className="flex-none pb-4">
                     <div className="flex items-start justify-between mb-4">
                       <div className={`p-3 rounded-lg ${
                         roadmap.isCompleted 
                           ? 'bg-gradient-to-br from-green-500 to-emerald-600' 
-                          : 'bg-gradient-to-br from-amber-500 to-orange-600'
+                          : 'bg-gradient-to-br from-primary to-primary/80'
                       }`}>
                         <IconComponent className="h-6 w-6 text-white" />
                       </div>
@@ -165,69 +165,74 @@ export default async function RoadmapPage() {
                       </Badge>
                     </div>
 
-                    <CardTitle className={`transition-colors ${
+                    <CardTitle className={`transition-colors line-clamp-1 ${
                       roadmap.isCompleted 
                         ? 'text-green-600 dark:text-green-400' 
-                        : 'group-hover:text-amber-600'
+                        : 'group-hover:text-primary'
                     }`}>
                       {roadmap.title}
                     </CardTitle>
-                    <CardDescription className="line-clamp-2">
+                    <CardDescription className="line-clamp-2 min-h-[2.5rem]">
                       {roadmap.description}
                     </CardDescription>
                   </CardHeader>
 
-                  <CardContent>
+                  <CardContent className="flex-1 flex flex-col justify-end pt-0">
                     <div className="space-y-4">
-                      {/* Progress Bar - Only show if user is logged in and has progress */}
-                      {session?.user && roadmap.progressPercentage > 0 && (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">Progress</span>
-                            <span className={`font-semibold ${
-                              roadmap.isCompleted ? 'text-green-600' : 'text-amber-600'
-                            }`}>
-                              {Math.round(roadmap.progressPercentage)}%
+                      {/* Progress Section - Fixed height container */}
+                      <div className="min-h-[3.5rem]">
+                        {session?.user && roadmap.progressPercentage > 0 ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">Progress</span>
+                              <span className={`font-semibold ${
+                                roadmap.isCompleted ? 'text-green-600' : 'text-primary'
+                              }`}>
+                                {Math.round(roadmap.progressPercentage)}%
+                              </span>
+                            </div>
+                            <Progress 
+                              value={roadmap.progressPercentage} 
+                              className={`h-2 ${
+                                roadmap.isCompleted ? '[&>div]:bg-green-600' : ''
+                              }`}
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+
+                      {/* Status Section - Fixed height container */}
+                      <div className="min-h-[2.5rem]">
+                        {/* Not logged in notice */}
+                        {!session?.user && (
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted text-muted-foreground">
+                            <Lock className="h-3 w-3" />
+                            <span className="text-xs">Sign in to track progress</span>
+                          </div>
+                        )}
+
+                        {/* Completion Badge */}
+                        {roadmap.isCompleted && (
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                            <Award className="h-4 w-4 text-green-600" />
+                            <span className="text-xs font-semibold text-green-600">
+                              Completed! 🎉
                             </span>
                           </div>
-                          <Progress 
-                            value={roadmap.progressPercentage} 
-                            className={`h-2 ${
-                              roadmap.isCompleted ? '[&>div]:bg-green-600' : ''
-                            }`}
-                          />
-                        </div>
-                      )}
-
-                      {/* Not logged in notice */}
-                      {!session?.user && (
-                        <div className="flex items-center gap-2 p-2 rounded-lg bg-muted text-muted-foreground">
-                          <Lock className="h-3 w-3" />
-                          <span className="text-xs">Sign in to track progress</span>
-                        </div>
-                      )}
-
-                      {/* Completion Badge */}
-                      {roadmap.isCompleted && (
-                        <div className="flex items-center gap-2 p-2 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
-                          <Award className="h-4 w-4 text-green-600" />
-                          <span className="text-xs font-semibold text-green-600">
-                            Completed! 🎉
-                          </span>
-                        </div>
-                      )}
+                        )}
+                      </div>
 
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Clock className="h-4 w-4" />
                         <span>{roadmap.estimatedTime || 'Self-paced'}</span>
                       </div>
 
-                      <Link href={`/roadmap/${roadmap.id}`}>
+                      <Link href={`/roadmap/${roadmap.id}`} className="block">
                         <Button 
                           className={`w-full gap-2 ${
                             roadmap.isCompleted 
                               ? 'bg-green-600 hover:bg-green-700' 
-                              : ''
+                              : 'bg-primary hover:bg-primary/90 text-primary-foreground'
                           }`}
                         >
                           {roadmap.isCompleted ? 'Review Roadmap' : session?.user ? 'Continue Learning' : 'View Roadmap'}
