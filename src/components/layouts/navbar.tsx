@@ -22,7 +22,6 @@ import { Badge } from '@/components/ui/badge';
 import { LogOut, Shield, Menu } from 'lucide-react';
 import { ModeToggle } from './mode-toggle';
 import { ColorPicker } from './color-picker';
-import { MobileColorPicker } from './mobile-color-picker';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
@@ -226,7 +225,7 @@ export default function Navbar() {
                     <Menu className="h-6 w-6" />
                   </button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-80 sm:w-96">
+                <SheetContent side="right" className="w-80 sm:w-96 overflow-y-auto">
                   <SheetHeader>
                     <SheetTitle className="flex items-center space-x-2">
                       <img 
@@ -309,11 +308,6 @@ export default function Navbar() {
                           </Link>
                         </>
                       )}
-                    </div>
-
-                    {/* Color Theme Picker */}
-                    <div className="pt-4 border-t">
-                      <MobileColorPicker />
                     </div>
 
                     {/* Auth Button */}
