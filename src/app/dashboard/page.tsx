@@ -4,11 +4,9 @@ import React from 'react';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import { 
-  userProgress, 
-  problems,
   aptitudeResults,
 } from '@/lib/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -31,6 +29,19 @@ import {
 import Link from 'next/link';
 import { getUserContestStats } from '@/actions/contest.actions';
 
+interface ProgressWithProblem {
+  id: number;
+  status: string;
+  solvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  problemId: number;
+  title: string | null;
+  difficulty: string | null;
+  platform: string | null;
+  slug: string | null;
+}
+
 export default async function Dashboard() {
   const session = await auth();
 
@@ -40,16 +51,24 @@ export default async function Dashboard() {
 
   const userId = session.user.id as string;
 
-  // Fetch all user progress
-  const userProgressData = await db
-    .select({
-      progress: userProgress,
-      problem: problems,
-    })
-    .from(userProgress)
-    .leftJoin(problems, eq(userProgress.problemId, problems.id))
-    .where(eq(userProgress.userId, userId))
-    .orderBy(desc(userProgress.solvedAt));
+  // Fetch user progress with visible_problems join using raw SQL
+  const userProgressData = await db.execute(sql`
+    SELECT 
+      up.id,
+      up.status,
+      up.solved_at as "solvedAt",
+      up.created_at as "createdAt",
+      up.updated_at as "updatedAt",
+      up.problem_id as "problemId",
+      vp.title,
+      vp.difficulty,
+      vp.platform,
+      vp.slug
+    FROM user_progress up
+    LEFT JOIN visible_problems vp ON up.problem_id = vp.id
+    WHERE up.user_id = ${userId}
+    ORDER BY up.updated_at DESC
+  `) as ProgressWithProblem[];
 
   // Fetch contest submission statistics
   const contestStatsResult = await getUserContestStats(userId);
@@ -112,13 +131,13 @@ export default async function Dashboard() {
     })),
   };
 
-  // Calculate DSA statistics
-  const solved = userProgressData.filter(p => p.progress.status === 'solved');
+  // Calculate DSA statistics - using new flat structure from raw SQL
+  const solved = userProgressData.filter(p => p.status === 'solved');
   const dsaStats = {
     totalSolved: solved.length,
-    easy: solved.filter(p => p.problem?.difficulty === 'EASY').length,
-    medium: solved.filter(p => p.problem?.difficulty === 'MEDIUM').length,
-    hard: solved.filter(p => p.problem?.difficulty === 'HARD').length,
+    easy: solved.filter(p => p.difficulty?.toUpperCase() === 'EASY').length,
+    medium: solved.filter(p => p.difficulty?.toUpperCase() === 'MEDIUM').length,
+    hard: solved.filter(p => p.difficulty?.toUpperCase() === 'HARD').length,
     recentSubmissions: solved.slice(0, 10),
   };
 
@@ -126,20 +145,47 @@ export default async function Dashboard() {
   const calculateStreak = () => {
     if (solved.length === 0) return 0;
     
+    // Get all dates when problems were solved
     const dates = solved
-      .filter(p => p.progress.solvedAt)
-      .map(p => new Date(p.progress.solvedAt!).toDateString())
-      .filter((date, index, self) => self.indexOf(date) === index)
+      .filter(p => p.solvedAt)
+      .map(p => {
+        // Handle both timestamp and string formats
+        const date = new Date(p.solvedAt!);
+        return date.toDateString();
+      })
+      .filter((date, index, self) => self.indexOf(date) === index) // unique dates
       .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
 
+    if (dates.length === 0) return 0;
+
     let streak = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     
     for (let i = 0; i < dates.length; i++) {
-      const expectedDate = new Date();
+      const expectedDate = new Date(today);
       expectedDate.setDate(expectedDate.getDate() - i);
       
       if (dates[i] === expectedDate.toDateString()) {
         streak++;
+      } else if (i === 0) {
+        // If today hasn't been solved yet, check from yesterday
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (dates[0] === yesterday.toDateString()) {
+          streak = 1;
+          // Continue checking from day before yesterday
+          for (let j = 1; j < dates.length; j++) {
+            const checkDate = new Date(yesterday);
+            checkDate.setDate(checkDate.getDate() - j);
+            if (dates[j] === checkDate.toDateString()) {
+              streak++;
+            } else {
+              break;
+            }
+          }
+        }
+        break;
       } else {
         break;
       }
@@ -330,15 +376,15 @@ export default async function Dashboard() {
                       <div className="space-y-1.5 md:space-y-2">
                         {dsaStats.recentSubmissions.map((item) => (
                           <div
-                            key={item.progress.id}
+                            key={item.id}
                             className="flex items-center justify-between p-2 md:p-2.5 rounded-md border hover:bg-accent/50 transition-colors"
                           >
                             <div className="flex items-center gap-2 flex-1 min-w-0">
                               <CheckCircle2 className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary flex-shrink-0" />
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs md:text-sm font-medium truncate">{item.problem?.title || 'Unknown'}</p>
+                                <p className="text-xs md:text-sm font-medium truncate">{item.title || 'Unknown'}</p>
                                 <p className="text-[10px] md:text-xs text-muted-foreground">
-                                  {item.progress.solvedAt ? new Date(item.progress.solvedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
+                                  {item.solvedAt ? new Date(item.solvedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
                                 </p>
                               </div>
                             </div>
@@ -346,7 +392,7 @@ export default async function Dashboard() {
                               variant="outline"
                               className="text-[10px] md:text-xs"
                             >
-                              {item.problem?.difficulty || 'N/A'}
+                              {item.difficulty || 'N/A'}
                             </Badge>
                           </div>
                         ))}

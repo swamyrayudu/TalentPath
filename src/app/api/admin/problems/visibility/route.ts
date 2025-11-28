@@ -2,9 +2,42 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { problems, users } from '@/lib/db/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
+
+// Helper function to sync visible_problems table after visibility changes
+async function syncVisibleProblems() {
+  try {
+    // Delete all from visible_problems first
+    await db.execute(sql`DELETE FROM visible_problems`);
+    
+    // Insert only visible problems from problems table
+    // Match the exact database schema columns
+    await db.execute(sql`
+      INSERT INTO visible_problems (
+        id, title, slug, is_premium, difficulty, platform, likes, dislikes,
+        acceptance_rate, url, topic_tags, company_tags, main_topics,
+        topic_slugs, accepted, submissions, similar_questions, 
+        created_at, updated_at, is_visible_to_users
+      )
+      SELECT 
+        id, title, slug, is_premium, difficulty, platform, 
+        likes::text, dislikes::text,
+        acceptance_rate, url, 
+        to_jsonb(topic_tags), to_jsonb(company_tags), to_jsonb(main_topics),
+        to_jsonb(topic_slugs), accepted::text, submissions, similar_questions,
+        created_at, updated_at, is_visible_to_users
+      FROM problems
+      WHERE is_visible_to_users = true
+    `);
+    
+    console.log('✅ visible_problems table synced successfully');
+  } catch (error) {
+    console.error('❌ Error syncing visible_problems:', error);
+    throw error;
+  }
+}
 
 // PATCH - Toggle visibility for specific problems
 export async function PATCH(request: NextRequest) {
@@ -48,6 +81,20 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    // Convert problemIds to numbers (bigint in database)
+    const numericProblemIds = problemIds.map((id: string | number) => 
+      typeof id === 'string' ? parseInt(id, 10) : id
+    ).filter((id: number) => !isNaN(id));
+
+    if (numericProblemIds.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No valid problem IDs provided' },
+        { status: 400 }
+      );
+    }
+
+    console.log('📝 Updating visibility for problems:', numericProblemIds, 'to:', isVisible);
+
     // Update the visibility of the specified problems
     const result = await db
       .update(problems)
@@ -55,8 +102,13 @@ export async function PATCH(request: NextRequest) {
         isVisibleToUsers: isVisible,
         updatedAt: new Date()
       })
-      .where(inArray(problems.id, problemIds))
+      .where(inArray(problems.id, numericProblemIds))
       .returning();
+
+    console.log('✅ Updated', result.length, 'problems');
+
+    // Sync visible_problems table after update
+    await syncVisibleProblems();
 
     return NextResponse.json({
       success: true,
@@ -189,6 +241,9 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await updateQuery;
+
+    // Sync visible_problems table after bulk update
+    await syncVisibleProblems();
 
     return NextResponse.json({
       success: true,
