@@ -45,7 +45,7 @@ export async function GET() {
       success: true,
       totalVisible: total[0]?.count || 0,
       leetcodeEasy: leetcodeEasy[0]?.count || 0,
-      arrayProblems: arrayProblems.rows[0]?.count || 0,
+      arrayProblems: (arrayProblems as unknown as { count: number }[])[0]?.count || 0,
       sampleProblems: samples
     });
   } catch (error) {

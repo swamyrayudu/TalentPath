@@ -177,9 +177,9 @@ export async function GET(request: NextRequest) {
     
     // Debug: Show sample difficulties from results
     if (difficulty && result.length > 0) {
-      const difficulties = result.slice(0, 5).map((p: { difficulty: string }) => p.difficulty);
+      const difficulties = result.slice(0, 5).map((p) => (p as { difficulty: string | null }).difficulty);
       console.log('Sample difficulties from results:', difficulties);
-      const uniqueDifficulties = [...new Set(result.map((p: { difficulty: string }) => p.difficulty))];
+      const uniqueDifficulties = [...new Set(result.map((p) => (p as { difficulty: string | null }).difficulty))];
       console.log('Unique difficulties in results:', uniqueDifficulties);
     }
 

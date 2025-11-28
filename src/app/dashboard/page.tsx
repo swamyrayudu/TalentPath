@@ -68,7 +68,7 @@ export default async function Dashboard() {
     LEFT JOIN visible_problems vp ON up.problem_id = vp.id
     WHERE up.user_id = ${userId}
     ORDER BY up.updated_at DESC
-  `) as ProgressWithProblem[];
+  `) as unknown as ProgressWithProblem[];
 
   // Fetch contest submission statistics
   const contestStatsResult = await getUserContestStats(userId);
