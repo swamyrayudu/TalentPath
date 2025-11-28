@@ -22,6 +22,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'TalentPath - Your Career Journey',
   description: 'Authentication and career management platform',
+  icons: {
+    icon: '/talentpath-logo.svg',
+    shortcut: '/talentpath-logo.svg',
+    apple: '/talentpath-logo.svg',
+  },
 };
 
 export default function RootLayout({

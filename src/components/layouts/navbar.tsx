@@ -80,7 +80,7 @@ export default function Navbar() {
               alt="TalentPath Logo" 
               className="h-10 w-10 transition-transform duration-200 hover:scale-105"
             />
-            <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 bg-clip-text text-transparent">
+            <h1 className="text-xl font-bold tracking-tight text-primary">
               TalentPath
             </h1>
           </Link>
@@ -99,7 +99,7 @@ export default function Navbar() {
                   <span
                     className={`relative z-10 transition-colors duration-300 ${
                       isActive
-                        ? 'text-amber-600 dark:text-amber-400'
+                        ? 'text-primary'
                         : 'text-muted-foreground group-hover:text-foreground'
                     }`}
                   >
@@ -108,7 +108,7 @@ export default function Navbar() {
 
                   {/* Bottom border animation */}
                   <span
-                    className={`absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-amber-500 to-orange-600 transition-all duration-300 ${
+                    className={`absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ${
                       isActive
                         ? 'w-full'
                         : 'w-0 group-hover:w-full'
@@ -141,13 +141,13 @@ export default function Navbar() {
               ) : session?.user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="relative h-10 w-10 rounded-full transition-transform duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
-                      <Avatar className="h-10 w-10 ring-2 ring-amber-500/20 transition-all duration-300 hover:ring-amber-500/40">
+                    <button className="relative h-10 w-10 rounded-full transition-transform duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/20">
+                      <Avatar className="h-10 w-10 ring-2 ring-primary/20 transition-all duration-300 hover:ring-primary/40">
                         <AvatarImage
                           src={session.user.image || ''}
                           alt={session.user.name || 'User'}
                         />
-                        <AvatarFallback className="bg-gradient-to-br from-amber-500 to-amber-600 text-white font-semibold">
+                        <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
                           {session.user.name?.charAt(0).toUpperCase() || 'U'}
                         </AvatarFallback>
                       </Avatar>
@@ -206,7 +206,7 @@ export default function Navbar() {
               ) : (
                 <Button
                   onClick={handleGoogleSignIn}
-                  className="gap-2 bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 hover:from-amber-600 hover:via-amber-700 hover:to-orange-700 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
+                  className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
                 >
                   Sign In
                 </Button>
@@ -217,17 +217,19 @@ export default function Navbar() {
             <div className="lg:hidden">
               <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetTrigger asChild>
-                  <button className="inline-flex items-center justify-center rounded-md p-2 transition-all duration-200 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+                  <button className="inline-flex items-center justify-center rounded-md p-2 transition-all duration-200 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-primary/20">
                     <Menu className="h-6 w-6" />
                   </button>
                 </SheetTrigger>
                 <SheetContent side="right" className="w-80 sm:w-96">
                   <SheetHeader>
                     <SheetTitle className="flex items-center space-x-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 shadow-md">
-                        <span className="text-sm font-bold text-white">T</span>
-                      </div>
-                      <span className="bg-gradient-to-r from-amber-500 to-amber-600 bg-clip-text text-transparent">
+                      <img 
+                        src="/talentpath-logo.svg" 
+                        alt="TalentPath Logo" 
+                        className="h-8 w-8"
+                      />
+                      <span className="text-primary font-bold">
                         TalentPath
                       </span>
                     </SheetTitle>
@@ -236,14 +238,14 @@ export default function Navbar() {
                   <div className="mt-8 flex flex-col space-y-6">
                     {/* User Info Card */}
                     {session?.user && (
-                      <div className="rounded-xl border p-4 bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/20 backdrop-blur-sm transition-all duration-300 hover:shadow-md">
+                      <div className="rounded-xl border p-4 bg-primary/5 backdrop-blur-sm transition-all duration-300 hover:shadow-md">
                         <div className="flex items-center space-x-3">
-                          <Avatar className="h-12 w-12 ring-2 ring-amber-500/20">
+                          <Avatar className="h-12 w-12 ring-2 ring-primary/20">
                             <AvatarImage
                               src={session.user.image || ''}
                               alt={session.user.name || 'User'}
                             />
-                            <AvatarFallback className="bg-gradient-to-br from-amber-500 to-amber-600 text-white font-semibold">
+                            <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
                               {session.user.name?.charAt(0).toUpperCase() || 'U'}
                             </AvatarFallback>
                           </Avatar>
@@ -278,13 +280,13 @@ export default function Navbar() {
                             onClick={() => setMobileMenuOpen(false)}
                             className={`group flex items-center justify-between rounded-lg px-4 py-3 text-sm font-medium transition-all duration-300 ${
                               isActive
-                                ? 'bg-gradient-to-r from-amber-500/10 to-orange-500/10 text-amber-600 dark:text-amber-400 shadow-sm'
+                                ? 'bg-primary/10 text-primary shadow-sm'
                                 : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:translate-x-1'
                             }`}
                           >
                             <span>{route.name}</span>
                             {isActive && (
-                              <span className="h-2 w-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 animate-pulse" />
+                              <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
                             )}
                           </Link>
                         );
@@ -324,7 +326,7 @@ export default function Navbar() {
                             handleGoogleSignIn();
                             setMobileMenuOpen(false);
                           }}
-                          className="w-full gap-2 bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 hover:from-amber-600 hover:via-amber-700 hover:to-orange-700 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
+                          className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
                         >
                           Sign In with Google
                         </Button>

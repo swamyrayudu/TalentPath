@@ -157,7 +157,7 @@ export default async function Dashboard() {
         <div className="flex items-center justify-between gap-3">
           <div className="space-y-0.5">
             <h1 className="text-xl md:text-2xl font-semibold">
-              Welcome, {session.user.name?.split(' ')[0] || 'User'}
+              Welcome, <span className="text-primary">{session.user.name?.split(' ')[0] || 'User'}</span>
             </h1>
             <p className="text-xs md:text-sm text-muted-foreground">Track your progress</p>
           </div>
@@ -174,54 +174,54 @@ export default async function Dashboard() {
 
         {/* Overview Stats - Compact */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-          <Card className="border">
+          <Card className="border bg-card hover:bg-accent/5 transition-colors">
             <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-[10px] md:text-sm font-medium text-muted-foreground">DSA</CardTitle>
-                <Code2 className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+                <CardTitle className="text-[10px] md:text-sm font-medium text-foreground">DSA</CardTitle>
+                <Code2 className="h-3 w-3 md:h-4 md:w-4 text-primary" />
               </div>
             </CardHeader>
             <CardContent className="p-2 md:p-4 pt-0">
-              <div className="text-lg md:text-2xl font-bold">{dsaStats.totalSolved}</div>
+              <div className="text-lg md:text-2xl font-bold text-foreground">{dsaStats.totalSolved}</div>
               <p className="text-[9px] md:text-xs text-muted-foreground">solved</p>
             </CardContent>
           </Card>
 
-          <Card className="border">
+          <Card className="border bg-card hover:bg-accent/5 transition-colors">
             <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-[10px] md:text-sm font-medium text-muted-foreground">Contest</CardTitle>
-                <Trophy className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+                <CardTitle className="text-[10px] md:text-sm font-medium text-foreground">Contest</CardTitle>
+                <Trophy className="h-3 w-3 md:h-4 md:w-4 text-primary" />
               </div>
             </CardHeader>
             <CardContent className="p-2 md:p-4 pt-0">
-              <div className="text-lg md:text-2xl font-bold">{contestStats.uniqueProblemsSolved}</div>
+              <div className="text-lg md:text-2xl font-bold text-foreground">{contestStats.uniqueProblemsSolved}</div>
               <p className="text-[9px] md:text-xs text-muted-foreground">unique</p>
             </CardContent>
           </Card>
 
-          <Card className="border">
+          <Card className="border bg-card hover:bg-accent/5 transition-colors">
             <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-[10px] md:text-sm font-medium text-muted-foreground">Tests</CardTitle>
-                <Brain className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+                <CardTitle className="text-[10px] md:text-sm font-medium text-foreground">Tests</CardTitle>
+                <Brain className="h-3 w-3 md:h-4 md:w-4 text-primary" />
               </div>
             </CardHeader>
             <CardContent className="p-2 md:p-4 pt-0">
-              <div className="text-lg md:text-2xl font-bold">{aptitudeStats.totalTests}</div>
+              <div className="text-lg md:text-2xl font-bold text-foreground">{aptitudeStats.totalTests}</div>
               <p className="text-[9px] md:text-xs text-muted-foreground">completed</p>
             </CardContent>
           </Card>
 
-          <Card className="border">
+          <Card className="border bg-card hover:bg-accent/5 transition-colors">
             <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-[10px] md:text-sm font-medium text-muted-foreground">Best</CardTitle>
-                <Award className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+                <CardTitle className="text-[10px] md:text-sm font-medium text-foreground">Best</CardTitle>
+                <Award className="h-3 w-3 md:h-4 md:w-4 text-primary" />
               </div>
             </CardHeader>
             <CardContent className="p-2 md:p-4 pt-0">
-              <div className="text-lg md:text-2xl font-bold">{aptitudeStats.bestScore}%</div>
+              <div className="text-lg md:text-2xl font-bold text-foreground">{aptitudeStats.bestScore}%</div>
               <p className="text-[9px] md:text-xs text-muted-foreground">score</p>
             </CardContent>
           </Card>
@@ -229,27 +229,27 @@ export default async function Dashboard() {
 
         {/* Tabbed Content */}
         <Tabs defaultValue="dsa" className="space-y-4 md:space-y-6">
-          <TabsList className="w-full h-9 md:h-10 bg-muted p-1">
+          <TabsList className="w-full h-9 md:h-10 bg-muted p-1 gap-1">
             <TabsTrigger 
               value="dsa" 
-              className="flex-1 data-[state=active]:bg-background text-xs md:text-sm"
+              className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground hover:bg-primary/20 hover:text-primary transition-all text-xs md:text-sm rounded-sm"
             >
               <Code2 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
-              DSA
+              <span className="font-semibold">DSA</span>
             </TabsTrigger>
             <TabsTrigger 
               value="contests" 
-              className="flex-1 data-[state=active]:bg-background text-xs md:text-sm"
+              className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground hover:bg-primary/20 hover:text-primary transition-all text-xs md:text-sm rounded-sm"
             >
               <Trophy className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
-              Contest
+              <span className="font-semibold">Contest</span>
             </TabsTrigger>
             <TabsTrigger 
               value="aptitude" 
-              className="flex-1 data-[state=active]:bg-background text-xs md:text-sm"
+              className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground hover:bg-primary/20 hover:text-primary transition-all text-xs md:text-sm rounded-sm"
             >
               <Brain className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
-              Tests
+              <span className="font-semibold">Tests</span>
             </TabsTrigger>
           </TabsList>
 
@@ -261,8 +261,8 @@ export default async function Dashboard() {
                 {/* Difficulty Stats */}
                 <Card className="border">
                   <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5">
-                      <BarChart3 className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5 text-foreground">
+                      <BarChart3 className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
                       <span className="hidden sm:inline">Difficulty Distribution</span>
                       <span className="sm:hidden">Difficulty</span>
                     </CardTitle>
@@ -312,8 +312,8 @@ export default async function Dashboard() {
                 {/* Recent Submissions */}
                 <Card className="border">
                   <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5 text-foreground">
+                      <Clock className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
                       Recent
                     </CardTitle>
                   </CardHeader>
@@ -360,8 +360,8 @@ export default async function Dashboard() {
               <div className="space-y-3 md:space-y-4">
                 <Card className="border">
                   <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5">
-                      <Activity className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5 text-foreground">
+                      <Activity className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
                       Stats
                     </CardTitle>
                   </CardHeader>
@@ -383,7 +383,7 @@ export default async function Dashboard() {
 
                 <Card className="border">
                   <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base">Practice</CardTitle>
+                    <CardTitle className="text-xs md:text-base text-foreground">Practice</CardTitle>
                   </CardHeader>
                   <CardContent className="p-3 md:p-6 pt-0">
                     <Link
@@ -408,8 +408,8 @@ export default async function Dashboard() {
               <div className="lg:col-span-2 space-y-3 md:space-y-4">
                 <Card className="border">
                   <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5">
-                      <Trophy className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5 text-foreground">
+                      <Trophy className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
                       <span className="hidden sm:inline">Contest Statistics</span>
                       <span className="sm:hidden">Contest</span>
                     </CardTitle>
@@ -432,7 +432,7 @@ export default async function Dashboard() {
 
                     {contestStats.questionStats.length > 0 && (
                       <div className="space-y-2">
-                        <h4 className="font-medium text-xs md:text-sm">Question Performance</h4>
+                        <h4 className="font-medium text-xs md:text-sm text-foreground">Question Performance</h4>
                         {contestStats.questionStats.map((stat, index) => (
                           <div key={index} className="p-2 md:p-2.5 rounded-md border">
                             <div className="flex justify-between items-start mb-1">
@@ -507,8 +507,8 @@ export default async function Dashboard() {
               <div className="space-y-3 md:space-y-4">
                 <Card className="border">
                   <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5">
-                      <TrendingUp className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5 text-foreground">
+                      <TrendingUp className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
                       Performance
                     </CardTitle>
                   </CardHeader>
@@ -530,7 +530,7 @@ export default async function Dashboard() {
 
                 <Card className="border">
                   <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base">Contests</CardTitle>
+                    <CardTitle className="text-xs md:text-base text-foreground">Contests</CardTitle>
                   </CardHeader>
                   <CardContent className="p-3 md:p-6 pt-0">
                     <Link
@@ -555,8 +555,8 @@ export default async function Dashboard() {
               <div className="lg:col-span-2 space-y-3 md:space-y-4">
                 <Card className="border">
                   <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5">
-                      <Brain className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5 text-foreground">
+                      <Brain className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
                       <span className="hidden sm:inline">Test Statistics</span>
                       <span className="sm:hidden">Tests</span>
                     </CardTitle>
@@ -580,7 +580,7 @@ export default async function Dashboard() {
                     {/* Topic-wise Performance */}
                     {aptitudeStats.topicStats.length > 0 && (
                       <div className="space-y-2">
-                        <h4 className="font-medium text-xs md:text-sm">Topic Performance</h4>
+                        <h4 className="font-medium text-xs md:text-sm text-foreground">Topic Performance</h4>
                         {aptitudeStats.topicStats.map((topic, index) => (
                           <div key={index} className="p-2 md:p-2.5 rounded-md border">
                             <div className="flex justify-between items-start mb-1.5">
@@ -648,8 +648,8 @@ export default async function Dashboard() {
               <div className="space-y-3 md:space-y-4">
                 <Card className="border">
                   <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5">
-                      <Award className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5 text-foreground">
+                      <Award className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
                       Best
                     </CardTitle>
                   </CardHeader>
@@ -671,7 +671,7 @@ export default async function Dashboard() {
 
                 <Card className="border">
                   <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base">Tests</CardTitle>
+                    <CardTitle className="text-xs md:text-base text-foreground">Tests</CardTitle>
                   </CardHeader>
                   <CardContent className="p-3 md:p-6 pt-0">
                     <Link
