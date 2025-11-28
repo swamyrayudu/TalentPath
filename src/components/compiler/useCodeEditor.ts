@@ -64,7 +64,6 @@ using namespace std;
 int main() {
     cout << "TalentPath" << endl;
     cout << "Developed by: Swamy Rayudu & Siva Durga Prasad" << endl;
-    
     return 0;
 }`,
 
@@ -73,7 +72,6 @@ int main() {
 int main() {
     printf("TalentPath\\n");
     printf("Developed by: Swamy Rayudu & Siva Durga Prasad\\n");
-    
     return 0;
 }`,
 
@@ -92,22 +90,26 @@ function extractPrompts(code: string, language: string): string[] {
     const prompts: string[] = [];
     
     if (language === 'python') {
-      const regexWithPrompt = /input\s*\(\s*["']([^"']*)["']\s*\)/g;
-      const regexWithoutPrompt = /input\s*\(\s*\)/g;
+      // Remove all comments from code before extracting input() calls
+      const codeWithoutComments = code
+        .split('\n')
+        .map(line => {
+          const commentIndex = line.indexOf('#');
+          return commentIndex >= 0 ? line.substring(0, commentIndex) : line;
+        })
+        .join('\n');
+      
+      // Match only input() function calls, not print() or other functions
+      const inputRegex = /\binput\s*\(\s*(?:["']([^"']*)["'])?\s*\)/g;
       
       let match;
       let inputCount = 0;
       
-      while ((match = regexWithPrompt.exec(code)) !== null) {
-        prompts.push(match[1] || `Input ${inputCount + 1}`);
+      while ((match = inputRegex.exec(codeWithoutComments)) !== null) {
         inputCount++;
-      }
-      
-      const withoutPromptMatches = code.match(regexWithoutPrompt) || [];
-      const emptyInputCount = withoutPromptMatches.length - inputCount;
-      
-      for (let i = 0; i < emptyInputCount; i++) {
-        prompts.push(`Input ${inputCount + i + 1}`);
+        // Use the prompt text if available, otherwise use generic label
+        const promptText = match[1] && match[1].trim() ? match[1].trim() : `Input ${inputCount}`;
+        prompts.push(promptText);
       }
       
     } else if (language === 'java') {
@@ -437,9 +439,17 @@ export function useCodeEditor() {
 
       const result = await response.json();
 
+      // Debug logging
+      console.log('Frontend received result:', {
+        success: result.success,
+        hasOutput: !!result.output,
+        outputLength: result.output?.length || 0,
+        debug: result.debug,
+      });
+
       if (result.timeout) {
         setOutput(result.stderr);
-        toast.error('Execution timeout (10 seconds)!');
+        toast.error('Execution timeout!');
         setIsRunning(false);
         return;
       }
@@ -453,34 +463,14 @@ export function useCodeEditor() {
       }
 
       if (result.success) {
-        let rawOutput = result.output || '';
+        const rawOutput = result.output || '';
         
-        if (prompts.length > 0 && inputs.length > 0) {
-          prompts.forEach(prompt => {
-            const escapedPrompt = prompt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            rawOutput = rawOutput.replace(new RegExp(escapedPrompt + '\\s*', 'g'), '');
-          });
-          
-          inputs.forEach(input => {
-            if (input) {
-              const escapedInput = input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-              rawOutput = rawOutput.replace(new RegExp('^' + escapedInput + '$', 'gm'), '');
-            }
-          });
-          
-          rawOutput = rawOutput
-            .split('\n')
-            .filter((line: string) => line.trim() !== '')
-            .join('\n')
-            .trim();
-        }
+        console.log('Raw output:', rawOutput.substring(0, 200)); // Log first 200 chars
         
-        const finalOutput = rawOutput.trim();
-        
-        if (finalOutput) {
-          setOutput(finalOutput + '\n\n✅ Code Execution Successful');
+        if (rawOutput && rawOutput.trim()) {
+          setOutput(rawOutput + '\n\n✅ Code Execution Successful');
         } else {
-          setOutput('✅ Code Execution Successful');
+          setOutput(`⚠️ No output received\n\nDebug: ${JSON.stringify(result.debug, null, 2)}\n\n✅ Code executed without errors`);
         }
         
         toast.success('Executed successfully!');
@@ -557,19 +547,25 @@ export function useCodeEditor() {
     let lastCommandTime = 0;
     let commandCount = 0;
     
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-      const now = Date.now();
-      
-      // Reset counter if more than 2 seconds passed
-      if (now - lastCommandTime > 2000) {
-        commandCount = 0;
-      }
-      
-      // Allow max 1 command per second, max 3 within 2 seconds
-      if (now - lastCommandTime > 1000 && commandCount < 3) {
-        lastCommandTime = now;
-        commandCount++;
-        handleRunClick();
+    // Prevent default Enter behavior when Ctrl is pressed
+    editor.onKeyDown((e) => {
+      if ((e.ctrlKey || e.metaKey) && e.keyCode === monaco.KeyCode.Enter) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const now = Date.now();
+        
+        // Reset counter if more than 2 seconds passed
+        if (now - lastCommandTime > 2000) {
+          commandCount = 0;
+        }
+        
+        // Allow max 1 command per second, max 3 within 2 seconds
+        if (now - lastCommandTime > 1000 && commandCount < 3) {
+          lastCommandTime = now;
+          commandCount++;
+          handleRunClick();
+        }
       }
     });
 
