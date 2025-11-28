@@ -422,7 +422,7 @@ export async function addExistingQuestionToContest(data: {
     }
 
     // Check if contest has ended
-    if (contest.status === 'ENDED' || (contest.endTime && new Date(contest.endTime) < new Date())) {
+    if (contest.status === 'ended' || (contest.endTime && new Date(contest.endTime) < new Date())) {
       return { success: false, error: 'Cannot add questions to an ended contest' };
     }
 
@@ -500,7 +500,7 @@ export async function addContestQuestion(data: {
     }
 
     // Check if contest has ended
-    if (contest.status === 'ENDED' || (contest.endTime && new Date(contest.endTime) < new Date())) {
+    if (contest.status === 'ended' || (contest.endTime && new Date(contest.endTime) < new Date())) {
       return { success: false, error: 'Cannot add questions to an ended contest' };
     }
 
@@ -646,7 +646,7 @@ export async function addTestCase(data: {
     }
 
     // Check if contest has ended
-    if (contest.status === 'ENDED' || (contest.endTime && new Date(contest.endTime) < new Date())) {
+    if (contest.status === 'ended' || (contest.endTime && new Date(contest.endTime) < new Date())) {
       return { success: false, error: 'Cannot add test cases to an ended contest' };
     }
 
