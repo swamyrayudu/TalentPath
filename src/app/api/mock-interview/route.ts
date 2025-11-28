@@ -62,6 +62,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const userId = session.user.id;
+
     const body = await request.json();
     const { type, difficulty, companyName } = body;
 
@@ -74,12 +76,12 @@ export async function POST(request: NextRequest) {
 
     // Verify user exists in database
     const userExists = await db.query.users.findFirst({
-      where: eq(users.id, session.user.id),
+      where: eq(users.id, userId),
       columns: { id: true },
     });
 
     if (!userExists) {
-      console.error('User not found in database:', session.user.id);
+      console.error('User not found in database:', userId);
       return NextResponse.json(
         { success: false, error: 'User account not found. Please sign out and sign in again to refresh your account.' },
         { status: 404 }
@@ -88,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     // Create new interview session
     const [interview] = await db.insert(mockInterviews).values({
-      userId: session.user.id,
+      userId: userId,
       type,
       difficulty: difficulty || 'intermediate',
       companyName: companyName || null,

@@ -88,11 +88,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const userId = session.user.id;
+
     // Check if user is admin
     const user = await db
       .select()
       .from(users)
-      .where(eq(users.id, session.user.id))
+      .where(eq(users.id, userId))
       .limit(1);
 
     if (user[0]?.role !== 'admin') {

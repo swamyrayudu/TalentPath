@@ -209,10 +209,11 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // It's a problem creation - check admin permissions
+      const adminUserId = session.user.id;
       const user = await db
         .select()
         .from(users)
-        .where(eq(users.id, session.user.id))
+        .where(eq(users.id, adminUserId))
         .limit(1);
 
       if (user[0]?.role !== 'admin') {
