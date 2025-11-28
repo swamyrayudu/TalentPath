@@ -5,7 +5,9 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { dsaTopicStats } from '@/lib/db/schema';
-import { sql, eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
+
+export const revalidate = 300; // Cache for 5 minutes
 
 export async function GET(request: Request) {
   try {
@@ -29,52 +31,41 @@ export async function GET(request: Request) {
       );
     }
 
-    // Build query conditions
-    const conditions = [];
+    const filters = [];
     if (difficulty) {
-      conditions.push(eq(dsaTopicStats.difficulty, difficulty as 'EASY' | 'MEDIUM' | 'HARD'));
+      filters.push(eq(dsaTopicStats.difficulty, difficulty as 'EASY' | 'MEDIUM' | 'HARD'));
     }
     if (platform) {
-      conditions.push(eq(dsaTopicStats.platform, platform as 'LEETCODE' | 'GEEKSFORGEEKS' | 'CODEFORCES' | 'HACKERRANK'));
+      filters.push(eq(dsaTopicStats.platform, platform as 'LEETCODE' | 'GEEKSFORGEEKS' | 'CODEFORCES' | 'HACKERRANK'));
     }
 
-    // Fetch stats from optimized table
-    const stats = conditions.length > 0
-      ? await db.select().from(dsaTopicStats).where(and(...conditions))
-      : await db.select().from(dsaTopicStats);
+    const stats = await db
+      .select({
+        difficulty: dsaTopicStats.difficulty,
+        platform: dsaTopicStats.platform,
+        topicSlug: dsaTopicStats.topicSlug,
+        topicName: dsaTopicStats.topicName,
+        totalCount: dsaTopicStats.totalCount,
+      })
+      .from(dsaTopicStats)
+      .where(filters.length ? and(...filters) : undefined);
 
-    // Group by difficulty and topic_slug for easy consumption
-    const result: Record<string, Record<string, { total: number; solved: number; name: string }>> = {
-      EASY: {},
-      MEDIUM: {},
-      HARD: {},
-    };
+    // Calculate unique problem counts per platform/difficulty
+    const uniqueCounts = await db.execute(sql`
+      SELECT 
+        platform,
+        difficulty,
+        COUNT(DISTINCT id) as unique_count
+      FROM visible_problems
+      GROUP BY platform, difficulty
+    `);
 
-    stats.forEach((row) => {
-      const diff = row.difficulty;
-      const slug = row.topicSlug;
-      
-      if (!result[diff]) {
-        result[diff] = {};
-      }
-      
-      if (!result[diff][slug]) {
-        result[diff][slug] = {
-          total: 0,
-          solved: 0,
-          name: row.topicName,
-        };
-      }
-      
-      result[diff][slug].total += row.totalCount || 0;
-      // Note: solved count comes from user progress, not from this table
-      // Client will merge this with user progress data
-    });
-
+    // Return flat array with unique counts - let frontend organize by platform/difficulty
     return NextResponse.json({
       success: true,
-      data: result,
-      cached: false,
+      data: stats,
+      uniqueCounts: uniqueCounts.rows,
+      cached: true,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {

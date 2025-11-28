@@ -56,31 +56,56 @@ export default function DSASheetPage() {
     try {
       setLoading(true);
       
-      const responses = await Promise.all([
-        fetch('/api/dsa-stats?difficulty=EASY&platform=LEETCODE'),
-        fetch('/api/dsa-stats?difficulty=MEDIUM&platform=LEETCODE'),
-        fetch('/api/dsa-stats?difficulty=HARD&platform=LEETCODE'),
-        fetch('/api/dsa-stats?difficulty=EASY&platform=GEEKSFORGEEKS'),
-        fetch('/api/dsa-stats?difficulty=MEDIUM&platform=GEEKSFORGEEKS'),
-        fetch('/api/dsa-stats?difficulty=HARD&platform=GEEKSFORGEEKS'),
-      ]);
+      // Single API call - fetch all stats at once
+      const response = await fetch('/api/dsa-stats');
+      const result = await response.json();
 
-      const data = await Promise.all(responses.map(r => r.json()));
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch stats');
+      }
 
+      // Organize flat array into platform/difficulty structure
       const organized: PlatformData = {
-        LEETCODE: {
-          EASY: data[0].success ? data[0].data.EASY : {},
-          MEDIUM: data[1].success ? data[1].data.MEDIUM : {},
-          HARD: data[2].success ? data[2].data.HARD : {},
-        },
-        GEEKSFORGEEKS: {
-          EASY: data[3].success ? data[3].data.EASY : {},
-          MEDIUM: data[4].success ? data[4].data.MEDIUM : {},
-          HARD: data[5].success ? data[5].data.HARD : {},
-        },
+        LEETCODE: { EASY: {}, MEDIUM: {}, HARD: {} },
+        GEEKSFORGEEKS: { EASY: {}, MEDIUM: {}, HARD: {} },
       };
 
+      // Track unique problem IDs per difficulty to avoid double counting
+      const uniqueProblems: Record<string, Set<number>> = {
+        'LEETCODE-EASY': new Set(),
+        'LEETCODE-MEDIUM': new Set(),
+        'LEETCODE-HARD': new Set(),
+        'GEEKSFORGEEKS-EASY': new Set(),
+        'GEEKSFORGEEKS-MEDIUM': new Set(),
+        'GEEKSFORGEEKS-HARD': new Set(),
+      };
+
+      result.data.forEach((stat: any) => {
+        const platform = stat.platform as 'LEETCODE' | 'GEEKSFORGEEKS';
+        const difficulty = stat.difficulty as 'EASY' | 'MEDIUM' | 'HARD';
+        const slug = stat.topicSlug;
+
+        if (organized[platform] && organized[platform][difficulty]) {
+          organized[platform][difficulty][slug] = {
+            name: stat.topicName,
+            slug: slug,
+            total: stat.totalCount || 0,
+            solved: 0, // TODO: Merge with user progress
+          };
+        }
+      });
+
       setPlatformData(organized);
+
+      // Store unique counts from API
+      if (result.uniqueCounts) {
+        const counts: Record<string, number> = {};
+        result.uniqueCounts.forEach((row: any) => {
+          const key = `${row.platform}-${row.difficulty}`;
+          counts[key] = row.unique_count;
+        });
+        sessionStorage.setItem('uniqueCounts', JSON.stringify(counts));
+      }
     } catch (error) {
       console.error('Error fetching DSA stats:', error);
     } finally {
@@ -89,12 +114,11 @@ export default function DSASheetPage() {
   };
 
   const calculateProgress = (topics: Record<string, TopicStats>) => {
-    const totalProblems = Object.values(topics).reduce((sum, topic) => sum + topic.total, 0);
     const solvedProblems = Object.values(topics).reduce((sum, topic) => sum + topic.solved, 0);
     return { 
-      total: totalProblems, 
+      total: 0, // Will be set from uniqueCounts
       solved: solvedProblems, 
-      percentage: totalProblems > 0 ? (solvedProblems / totalProblems) * 100 : 0 
+      percentage: 0 // Will be calculated later
     };
   };
 
@@ -123,11 +147,32 @@ export default function DSASheetPage() {
 
   const currentTopics = platformData[selectedPlatform][selectedDifficulty];
 
+  // Get unique counts from storage
+  const uniqueCountsStr = typeof window !== 'undefined' ? sessionStorage.getItem('uniqueCounts') : null;
+  const uniqueCounts: Record<string, number> = uniqueCountsStr ? JSON.parse(uniqueCountsStr) : {};
+
   const platformStats = {
-    EASY: calculateProgress(platformData[selectedPlatform].EASY),
-    MEDIUM: calculateProgress(platformData[selectedPlatform].MEDIUM),
-    HARD: calculateProgress(platformData[selectedPlatform].HARD),
+    EASY: { 
+      ...calculateProgress(platformData[selectedPlatform].EASY),
+      total: uniqueCounts[`${selectedPlatform}-EASY`] || 0
+    },
+    MEDIUM: { 
+      ...calculateProgress(platformData[selectedPlatform].MEDIUM),
+      total: uniqueCounts[`${selectedPlatform}-MEDIUM`] || 0
+    },
+    HARD: { 
+      ...calculateProgress(platformData[selectedPlatform].HARD),
+      total: uniqueCounts[`${selectedPlatform}-HARD`] || 0
+    },
   };
+
+  // Recalculate percentages with correct totals
+  platformStats.EASY.percentage = platformStats.EASY.total > 0 
+    ? (platformStats.EASY.solved / platformStats.EASY.total) * 100 : 0;
+  platformStats.MEDIUM.percentage = platformStats.MEDIUM.total > 0 
+    ? (platformStats.MEDIUM.solved / platformStats.MEDIUM.total) * 100 : 0;
+  platformStats.HARD.percentage = platformStats.HARD.total > 0 
+    ? (platformStats.HARD.solved / platformStats.HARD.total) * 100 : 0;
 
   const totalPlatformProgress = {
     total: platformStats.EASY.total + platformStats.MEDIUM.total + platformStats.HARD.total,

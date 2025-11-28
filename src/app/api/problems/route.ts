@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { userProgress, problems, users } from '@/lib/db/schema';
+import { userProgress, problems, users, visibleProblems } from '@/lib/db/schema';
 import { eq, and, desc, sql, or, ilike } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
@@ -21,11 +21,37 @@ export async function GET(request: NextRequest) {
     const sortOrder = searchParams.get('sortOrder') || 'desc';
     const limit = parseInt(searchParams.get('limit') || '200');
     const offset = parseInt(searchParams.get('offset') || '0');
-    const onlyApproved = searchParams.get('onlyApproved') === 'true'; // Force approved filter
-    const bypassVisibility = searchParams.get('bypassVisibility') === 'true'; // Bypass visibility for difficulty sheets
+    const onlyApproved = searchParams.get('onlyApproved') === 'true';
+    const bypassVisibility = searchParams.get('bypassVisibility') === 'true';
+
+    const useVisibleProblems = onlyApproved && !bypassVisibility;
+    const baseTable = useVisibleProblems ? visibleProblems : problems;
+    const baseTableName = useVisibleProblems ? 'visible_problems' : 'problems';
+
+    // Helper for JSONB arrays (visible_problems) vs text[] arrays (problems)
+    const jsonbArrayText = (column: string) =>
+      sql.raw(`jsonb_array_elements_text(
+        CASE
+          WHEN "${baseTableName}"."${column}" IS NULL THEN '[]'::jsonb
+          WHEN jsonb_typeof("${baseTableName}"."${column}") = 'array' THEN "${baseTableName}"."${column}"
+          WHEN jsonb_typeof("${baseTableName}"."${column}") = 'string' THEN jsonb_build_array("${baseTableName}"."${column}")
+          ELSE '[]'::jsonb
+        END 
+      )`);
+
+    const topicTagsExpr = useVisibleProblems 
+      ? jsonbArrayText('topic_tags')
+      : sql.raw(`unnest(coalesce("${baseTableName}"."topic_tags", ARRAY[]::text[]))`);
+    const topicSlugsExpr = useVisibleProblems
+      ? jsonbArrayText('topic_slugs')
+      : sql.raw(`unnest(coalesce("${baseTableName}"."topic_slugs", ARRAY[]::text[]))`);
+    const companyTagsExpr = useVisibleProblems
+      ? jsonbArrayText('company_tags')
+      : sql.raw(`unnest(coalesce("${baseTableName}"."company_tags", ARRAY[]::text[]))`);
 
     console.log('🔍 Fetching problems with filters:', { 
-      topic, company, difficulty, platform, onlyApproved, bypassVisibility, hasSession: !!session?.user?.id 
+      topic, company, difficulty, platform, onlyApproved, bypassVisibility, hasSession: !!session?.user?.id,
+      useVisibleProblems, baseTableName 
     });
 
     const conditions = [];
@@ -34,23 +60,27 @@ export async function GET(request: NextRequest) {
     if (difficulty && difficulty !== 'all') {
       // Normalize difficulty to uppercase to match enum
       const difficultyUpper = difficulty.toUpperCase();
-      conditions.push(eq(problems.difficulty, difficultyUpper as 'EASY' | 'MEDIUM' | 'HARD'));
+      conditions.push(eq(baseTable.difficulty, difficultyUpper as 'EASY' | 'MEDIUM' | 'HARD'));
       console.log(`🎯 Filtering by difficulty: ${difficultyUpper}`);
     }
 
     if (platform && platform !== 'all') {
-      conditions.push(eq(problems.platform, platform.toUpperCase().trim() as 'LEETCODE' | 'CODEFORCES' | 'HACKERRANK' | 'GEEKSFORGEEKS'));
+      conditions.push(eq(baseTable.platform, platform.toUpperCase().trim() as 'LEETCODE' | 'CODEFORCES' | 'HACKERRANK' | 'GEEKSFORGEEKS'));
     }
 
     if (topic && topic !== 'all' && topic !== 'undefined') {
       const topicSlug = topic.toLowerCase().replace(/\s+/g, '-');
+      console.log(`🏷️  Topic filter: "${topic}" → slug: "${topicSlug}"`);
       conditions.push(
         sql`(
           EXISTS (
-            SELECT 1 FROM unnest(${problems.topicTags}) AS tag 
+            SELECT 1 FROM ${topicTagsExpr} AS tag 
             WHERE LOWER(tag) = LOWER(${topic})
           )
-          OR ${problems.topicSlugs} && ARRAY[${topicSlug}]
+          OR EXISTS (
+            SELECT 1 FROM ${topicSlugsExpr} AS slug
+            WHERE LOWER(slug) = LOWER(${topicSlug})
+          )
         )`
       );
     }
@@ -59,7 +89,7 @@ export async function GET(request: NextRequest) {
       const companyName = decodeURIComponent(company).replace(/-/g, ' ');
       conditions.push(
         sql`EXISTS (
-          SELECT 1 FROM unnest(${problems.companyTags}) AS tag 
+          SELECT 1 FROM ${companyTagsExpr} AS tag 
           WHERE LOWER(tag) = LOWER(${companyName})
         )`
       );
@@ -68,8 +98,8 @@ export async function GET(request: NextRequest) {
     if (search) {
       conditions.push(
         or(
-          ilike(problems.title, `%${search}%`),
-          ilike(problems.slug, `%${search}%`)
+          ilike(baseTable.title, `%${search}%`),
+          ilike(baseTable.slug, `%${search}%`)
         )
       );
     }
@@ -81,30 +111,33 @@ export async function GET(request: NextRequest) {
     if (difficulty) {
       console.log(`🔍 Difficulty filter active: ${difficulty.toUpperCase()}`);
     }
+    if (topic) {
+      console.log(`🏷️  Topic filter: "${topic}" -> slug: "${topic.toLowerCase().replace(/\s+/g, '-')}"`);
+    }
 
     // Dynamic sorting
     let orderByClause;
     switch (sortBy) {
       case 'likes':
-        orderByClause = sortOrder === 'asc' ? problems.likes : desc(problems.likes);
+        orderByClause = sortOrder === 'asc' ? baseTable.likes : desc(baseTable.likes);
         break;
       case 'acceptance':
-        orderByClause = sortOrder === 'asc' ? problems.acceptanceRate : desc(problems.acceptanceRate);
+        orderByClause = sortOrder === 'asc' ? baseTable.acceptanceRate : desc(baseTable.acceptanceRate);
         break;
       case 'title':
-        orderByClause = sortOrder === 'asc' ? problems.title : desc(problems.title);
+        orderByClause = sortOrder === 'asc' ? baseTable.title : desc(baseTable.title);
         break;
       case 'difficulty':
-        orderByClause = sortOrder === 'asc' ? problems.difficulty : desc(problems.difficulty);
+        orderByClause = sortOrder === 'asc' ? baseTable.difficulty : desc(baseTable.difficulty);
         break;
       default:
-        orderByClause = desc(problems.likes);
+        orderByClause = desc(baseTable.likes);
     }
 
     // Count total results
     const countResult = await db
       .select({ count: sql<number>`count(*)::int` })
-      .from(problems)
+      .from(baseTable)
       .where(whereClause || sql`TRUE`);
 
     const total = countResult[0]?.count || 0;
@@ -112,13 +145,33 @@ export async function GET(request: NextRequest) {
     // Fetch paginated results
     const result = await db
       .select()
-      .from(problems)
+      .from(baseTable)
       .where(whereClause || sql`TRUE`)
       .orderBy(orderByClause)
       .limit(limit)
       .offset(offset);
 
     console.log(`✅ Returned ${result.length} problems (Total: ${total})`);
+    
+    // Debug: Check if visible_problems is empty
+    if (total === 0 && useVisibleProblems) {
+      try {
+        const vpCount = await db.execute(
+          sql`SELECT COUNT(*) as total FROM visible_problems`
+        );
+        const vpPlatformCount = await db.execute(
+          sql`SELECT COUNT(*) as count FROM visible_problems 
+              WHERE platform = ${platform.toUpperCase()} AND difficulty = ${difficulty.toUpperCase()}`
+        );
+        console.log(`📊 visible_problems: ${vpCount.rows[0]?.total || 0} total, ${vpPlatformCount.rows[0]?.count || 0} for ${platform} ${difficulty}`);
+        
+        if (parseInt(vpCount.rows[0]?.total || '0') === 0) {
+          console.log('⚠️  visible_problems table is EMPTY! Run sync_visible_problems()');
+        }
+      } catch (err) {
+        console.log('❌ Debug query failed:', err);
+      }
+    }
     
     // Debug: Show sample difficulties from results
     if (difficulty && result.length > 0) {
