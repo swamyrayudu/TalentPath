@@ -31,7 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { MoreHorizontal, Shield, User, Trash2, CheckCircle2 } from 'lucide-react';
+import { MoreHorizontal, Shield, User, Trash2, CheckCircle2, Clock } from 'lucide-react';
 import { updateUserRole, deleteUser } from '@/actions/user';
 import { toast } from 'sonner';
 
@@ -43,6 +43,7 @@ type UserType = {
   role: 'user' | 'admin';
   emailVerified: Date | null;
   createdAt: Date | null;
+  lastLoginAt: Date | null;
 };
 
 export function UserTable({ users, currentUserId }: { users: UserType[]; currentUserId: string }) {
@@ -104,6 +105,42 @@ export function UserTable({ users, currentUserId }: { users: UserType[]; current
     });
   };
 
+  const formatLastLogin = (date: Date | null) => {
+    if (!date) return 'Never';
+    
+    const loginDate = new Date(date);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const loginDay = new Date(loginDate.getFullYear(), loginDate.getMonth(), loginDate.getDate());
+    
+    const timeStr = loginDate.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+    
+    if (loginDay.getTime() === today.getTime()) {
+      return `Today at ${timeStr}`;
+    } else if (loginDay.getTime() === yesterday.getTime()) {
+      return `Yesterday at ${timeStr}`;
+    } else {
+      const diffDays = Math.floor((today.getTime() - loginDay.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays < 7) {
+        return `${diffDays} days ago`;
+      } else {
+        return loginDate.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        });
+      }
+    }
+  };
+
   return (
     <>
       <div className="rounded-md border">
@@ -115,13 +152,14 @@ export function UserTable({ users, currentUserId }: { users: UserType[]; current
               <TableHead>Role</TableHead>
               <TableHead>Verified</TableHead>
               <TableHead>Joined</TableHead>
+              <TableHead>Last Login</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
                   No users found
                 </TableCell>
               </TableRow>
@@ -168,6 +206,12 @@ export function UserTable({ users, currentUserId }: { users: UserType[]; current
                     )}
                   </TableCell>
                   <TableCell>{formatDate(user.createdAt)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-sm">{formatLastLogin(user.lastLoginAt)}</span>
+                    </div>
+                  </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

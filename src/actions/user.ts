@@ -36,6 +36,7 @@ export async function getAllUsers() {
       role: true,
       emailVerified: true,
       createdAt: true,
+      lastLoginAt: true,
     },
     orderBy: (users, { desc }) => [desc(users.createdAt)],
   });

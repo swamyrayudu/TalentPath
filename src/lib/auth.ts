@@ -47,8 +47,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.name = user.name;
         token.picture = user.image;
         
-        // Fetch role only on initial sign-in
+        // Fetch role only on initial sign-in and update last login time
         if (token.email) {
+          // Update last login time
+          await db.update(users)
+            .set({ lastLoginAt: new Date() })
+            .where(eq(users.email, token.email as string));
+          
           const dbUser = await db.query.users.findFirst({
             where: eq(users.email, token.email as string),
             columns: {

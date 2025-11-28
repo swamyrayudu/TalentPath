@@ -55,6 +55,7 @@ export const users = pgTable('user', {
   image: text('image'),
   role: roleEnum('role').default('user').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
+  lastLoginAt: timestamp('last_login_at', { mode: 'date' }),
 });
 
 export const accounts = pgTable('account', {
