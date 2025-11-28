@@ -98,7 +98,7 @@ export default async function RoadmapPage() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Learning <span className="text-amber-600">Roadmaps</span>
+            Learning <span className="text-primary">Roadmaps</span>
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Follow structured learning paths to master new technologies
@@ -106,9 +106,9 @@ export default async function RoadmapPage() {
           
           {/* Login Notice */}
           {!session?.user && (
-            <Card className="max-w-2xl mx-auto mt-6 border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+            <Card className="max-w-2xl mx-auto mt-6 border-primary/30 bg-primary/5 dark:bg-primary/10">
               <CardContent className="p-4">
-                <p className="text-sm text-amber-800 dark:text-amber-200">
+                <p className="text-sm text-primary dark:text-primary">
                   💡 You can view all roadmaps, but <strong>sign in to track your progress</strong> and earn achievements!
                 </p>
               </CardContent>
