@@ -2,6 +2,17 @@
 import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { deleteContest } from '@/actions/contest.actions';
@@ -37,10 +48,6 @@ export function ContestSettings({ contest }: ContestSettingsProps) {
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this contest? This action cannot be undone.')) {
-      return;
-    }
-
     const result = await deleteContest(contest.id);
     if (result.success) {
       toast.success('Contest deleted successfully');
@@ -99,10 +106,31 @@ export function ContestSettings({ contest }: ContestSettingsProps) {
           <CardTitle className="text-red-600 dark:text-red-400">Danger Zone</CardTitle>
         </CardHeader>
         <CardContent>
-          <Button variant="destructive" onClick={handleDelete}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete Contest
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Contest
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete the contest and all associated questions and submissions. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <p className="text-sm text-muted-foreground mt-2">
             This will permanently delete the contest and all associated questions and submissions.
           </p>

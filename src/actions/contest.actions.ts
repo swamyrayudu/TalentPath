@@ -362,7 +362,7 @@ export async function getAllQuestionsFromLibrary(params?: {
 
     const totalCount = countResult?.count || 0;
 
-    // Get paginated questions with test case count - RANDOM ORDER
+    // Get paginated questions with test case count
     const offset = (page - 1) * limit;
     const allQuestions = await db
       .select({
@@ -383,7 +383,7 @@ export async function getAllQuestionsFromLibrary(params?: {
       })
       .from(adminQuestions)
       .where(where)
-      .orderBy(sql`RANDOM()`)
+      .orderBy(desc(adminQuestions.createdAt))
       .limit(limit)
       .offset(offset);
 
@@ -419,6 +419,11 @@ export async function addExistingQuestionToContest(data: {
     const [contest] = await db.select().from(contests).where(eq(contests.id, data.contestId)).limit(1);
     if (!contest || contest.createdBy !== session.user.id) {
       return { success: false, error: 'Unauthorized' };
+    }
+
+    // Check if contest has ended
+    if (contest.status === 'ENDED' || (contest.endTime && new Date(contest.endTime) < new Date())) {
+      return { success: false, error: 'Cannot add questions to an ended contest' };
     }
 
     // Get the original question from admin library
@@ -492,6 +497,11 @@ export async function addContestQuestion(data: {
     const [contest] = await db.select().from(contests).where(eq(contests.id, data.contestId)).limit(1);
     if (!contest || contest.createdBy !== session.user.id) {
       return { success: false, error: 'Unauthorized' };
+    }
+
+    // Check if contest has ended
+    if (contest.status === 'ENDED' || (contest.endTime && new Date(contest.endTime) < new Date())) {
+      return { success: false, error: 'Cannot add questions to an ended contest' };
     }
 
     const [question] = await db.insert(contestQuestions).values({
@@ -606,6 +616,38 @@ export async function addTestCase(data: {
     const session = await auth();
     if (!session?.user?.id) {
       return { success: false, error: 'Unauthorized' };
+    }
+
+    // Get the question and verify contest creator
+    const [question] = await db
+      .select()
+      .from(contestQuestions)
+      .where(eq(contestQuestions.id, data.questionId))
+      .limit(1);
+
+    if (!question) {
+      return { success: false, error: 'Question not found' };
+    }
+
+    // Get the contest to check status
+    const [contest] = await db
+      .select()
+      .from(contests)
+      .where(eq(contests.id, question.contestId))
+      .limit(1);
+
+    if (!contest) {
+      return { success: false, error: 'Contest not found' };
+    }
+
+    // Verify user is contest creator
+    if (contest.createdBy !== session.user.id) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    // Check if contest has ended
+    if (contest.status === 'ENDED' || (contest.endTime && new Date(contest.endTime) < new Date())) {
+      return { success: false, error: 'Cannot add test cases to an ended contest' };
     }
 
     const [testCase] = await db.insert(contestTestCases).values(data).returning();

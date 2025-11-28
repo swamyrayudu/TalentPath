@@ -24,7 +24,7 @@ export default function DsaStatsRefreshButton() {
       if (response.ok && data.success) {
         setMessage({ 
           type: 'success', 
-          text: `✅ ${data.message} - Updated at ${new Date(data.timestamp).toLocaleTimeString()}` 
+          text: `${data.message} - Updated at ${new Date(data.timestamp).toLocaleTimeString()}` 
         });
         
         // Clear cache so next visit fetches fresh data
@@ -41,13 +41,13 @@ export default function DsaStatsRefreshButton() {
       } else {
         setMessage({ 
           type: 'error', 
-          text: `❌ ${data.error || 'Failed to refresh statistics'}` 
+          text: data.error || 'Failed to refresh statistics' 
         });
       }
     } catch (error) {
       setMessage({ 
         type: 'error', 
-        text: `❌ Network error: ${error instanceof Error ? error.message : 'Unknown error'}` 
+        text: `Network error: ${error instanceof Error ? error.message : 'Unknown error'}` 
       });
     } finally {
       setLoading(false);

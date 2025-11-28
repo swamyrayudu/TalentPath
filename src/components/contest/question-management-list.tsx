@@ -6,6 +6,16 @@ import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Trash2, TestTube, Code2, Trophy, Clock, Target, Zap, Award } from 'lucide-react';
 import { deleteQuestion } from '@/actions/contest.actions';
 import { toast } from 'sonner';
@@ -30,10 +40,9 @@ interface QuestionManagementListProps {
 export function QuestionManagementList({ questions, contestSlug }: QuestionManagementListProps) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
 
   const handleDelete = async (questionId: string) => {
-    if (!confirm('Are you sure you want to delete this question?')) return;
-
     setDeletingId(questionId);
     try {
       const result = await deleteQuestion(questionId);
@@ -47,6 +56,7 @@ export function QuestionManagementList({ questions, contestSlug }: QuestionManag
       toast.error(error instanceof Error ? error.message : String(error));
     } finally {
       setDeletingId(null);
+      setQuestionToDelete(null);
     }
   };
 
@@ -156,7 +166,7 @@ export function QuestionManagementList({ questions, contestSlug }: QuestionManag
                 <Button
                   size="default"
                   variant="destructive"
-                  onClick={() => handleDelete(question.id)}
+                  onClick={() => setQuestionToDelete(question.id)}
                   disabled={deletingId === question.id}
                   className="w-full sm:w-auto font-semibold"
                 >
@@ -168,6 +178,26 @@ export function QuestionManagementList({ questions, contestSlug }: QuestionManag
           </CardContent>
         </Card>
       ))}
+
+      <AlertDialog open={!!questionToDelete} onOpenChange={(open) => !open && setQuestionToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this question and all its test cases. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => questionToDelete && handleDelete(questionToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
