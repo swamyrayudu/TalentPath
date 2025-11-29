@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
-  Loader2, 
+  Loader2,
   CheckCircle2, 
   ChevronRight,
   Code2,
@@ -232,14 +232,8 @@ export default function DSASheetPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-        <div className="text-center space-y-4">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin mx-auto" />
-            <Code2 className="h-6 w-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary" />
-          </div>
-          <p className="text-sm text-muted-foreground font-medium">Loading DSA Sheet...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -516,7 +510,6 @@ export default function DSASheetPage() {
                   .map(([slug, topic]) => {
                     const topicProgress = topic.total > 0 ? (topic.solved / topic.total) * 100 : 0;
                     const isCompleted = topic.solved === topic.total && topic.total > 0;
-                    const config = difficultyConfig[selectedDifficulty];
                     
                     return (
                       <Link
