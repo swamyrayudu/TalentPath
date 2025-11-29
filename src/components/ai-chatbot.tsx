@@ -56,10 +56,12 @@ export default function AIChatbot() {
   const [expandedThinking, setExpandedThinking] = useState<Set<string>>(new Set());
   const [isMobile, setIsMobile] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const hasLoadedHistory = useRef(false);
 
   // Create a new conversation when user is logged in and starts chatting
   const createConversation = async (title = 'New Conversation') => {
@@ -149,9 +151,9 @@ export default function AIChatbot() {
     }
   };
 
-  // Start a new chat
-  const startNewChat = async () => {
-    // Immediately reset UI to a fresh conversation so previous messages are not shown
+  // Start a new chat - just reset UI, don't create server conversation yet
+  const startNewChat = () => {
+    // Reset UI to a fresh conversation so previous messages are not shown
     const greeting: Message = {
       id: '1',
       role: 'assistant',
@@ -161,19 +163,7 @@ export default function AIChatbot() {
 
     setMessages([greeting]);
     setCurrentConversationId(null);
-
-    // If the user is logged in, create a server-side conversation and store its id
-    if (!session?.user?.id) return;
-
-    try {
-      const newConvId = await createConversation();
-      if (newConvId) {
-        setCurrentConversationId(newConvId);
-      }
-    } catch (error) {
-      // creation failure shouldn't break UI — we'll keep the local cleared state
-      console.error('Error creating new conversation:', error);
-    }
+    // Conversation will be created when user sends first message
   };
 
   // Delete a conversation
@@ -192,11 +182,33 @@ export default function AIChatbot() {
 
         // If deleted current conversation, start new chat
         if (conversationId === currentConversationId) {
-          await startNewChat();
+          startNewChat();
         }
       }
     } catch (error) {
       console.error('Error deleting conversation:', error);
+    }
+  };
+
+  // Clear all conversations
+  const clearAllConversations = async () => {
+    if (!session?.user?.id || conversations.length === 0) return;
+
+    try {
+      // Delete all conversations one by one
+      for (const conv of conversations) {
+        await fetch('/api/chat-history', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conversationId: conv.id }),
+        });
+      }
+      
+      // Clear the list and start fresh
+      setConversations([]);
+      startNewChat();
+    } catch (error) {
+      console.error('Error clearing all conversations:', error);
     }
   };
 
@@ -219,6 +231,10 @@ export default function AIChatbot() {
   useEffect(() => {
     const loadChatHistory = async () => {
       if (!session?.user?.id || !isOpen) return;
+      
+      // Only load history once per session
+      if (hasLoadedHistory.current) return;
+      hasLoadedHistory.current = true;
 
       try {
         // Get user's conversations
@@ -255,6 +271,7 @@ export default function AIChatbot() {
             setMessages(formattedMessages);
           }
         }
+        // If no conversations exist, just show the default greeting (no new conversation created)
       } catch (error) {
         console.error('Error loading chat history:', error);
       }
@@ -417,6 +434,11 @@ export default function AIChatbot() {
     setDeleteDialogOpen(false);
   };
 
+  const handleConfirmClearAll = async () => {
+    await clearAllConversations();
+    setClearAllDialogOpen(false);
+  };
+
   // Hide chatbot on contest and aptitude pages
   const shouldHideChatbot = pathname?.startsWith('/contest') || pathname?.startsWith('/aptitude');
 
@@ -431,7 +453,8 @@ export default function AIChatbot() {
         <button
           onClick={() => {
             setIsOpen(true);
-            startNewChat();
+            // Don't create new chat here - just open the chatbot
+            // Chat history will be loaded by the useEffect
           }}
           className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-primary rounded-full shadow-lg hover:shadow-xl transition-shadow flex items-center justify-center"
         >
@@ -456,14 +479,27 @@ export default function AIChatbot() {
                 <CardTitle className="text-sm font-semibold">Chat History</CardTitle>
               </CardHeader>
               <CardContent className="flex-1 overflow-y-auto p-2 space-y-2">
-                <Button
-                  onClick={startNewChat}
-                  className="w-full justify-start gap-2 bg-primary hover:bg-primary/90"
-                  size="sm"
-                >
-                  <MessageSquarePlus className="w-4 h-4" />
-                  New Chat
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={startNewChat}
+                    className="flex-1 justify-center gap-2 bg-primary hover:bg-primary/90"
+                    size="sm"
+                  >
+                    <MessageSquarePlus className="w-4 h-4" />
+                    New Chat
+                  </Button>
+                  {conversations.length > 0 && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setClearAllDialogOpen(true)}
+                      className="px-2"
+                      title="Clear all chats"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
                 {conversations.map((conv) => (
                   <div
                     key={conv.id}
@@ -792,6 +828,23 @@ export default function AIChatbot() {
             <AlertDialogCancel onClick={() => { setConversationToDelete(null); setDeleteDialogOpen(false); }}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={clearAllDialogOpen} onOpenChange={setClearAllDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear all conversations?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all {conversations.length} conversation{conversations.length !== 1 ? 's' : ''} from your chat history. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setClearAllDialogOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmClearAll} className="bg-red-600 hover:bg-red-700">
+              Clear All
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

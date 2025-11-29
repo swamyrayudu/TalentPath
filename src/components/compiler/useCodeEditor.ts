@@ -173,8 +173,25 @@ function extractPrompts(code: string, language: string): string[] {
 }
 
 export function useCodeEditor() {
-  const [language, setLanguage] = useState('python');
-  const [code, setCode] = useState(DEFAULT_CODE.python);
+  // Initialize with session storage or default
+  const getInitialLanguage = () => {
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem('compiler-language');
+      return saved || 'python';
+    }
+    return 'python';
+  };
+
+  const getInitialCode = () => {
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem('compiler-code');
+      if (saved) return saved;
+    }
+    return DEFAULT_CODE.python;
+  };
+
+  const [language, setLanguage] = useState(getInitialLanguage());
+  const [code, setCode] = useState(getInitialCode());
   const [userInputs, setUserInputs] = useState<string[]>([]);
   const [output, setOutput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
@@ -182,6 +199,12 @@ export function useCodeEditor() {
   const [snippetsEnabled, setSnippetsEnabled] = useState(true);
   const [showInputModal, setShowInputModal] = useState(false);
   const [activeTab, setActiveTab] = useState('editor');
+  
+  // Terminal-style input handling
+  const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
+  const [currentInputIndex, setCurrentInputIndex] = useState(0);
+  const [terminalInput, setTerminalInput] = useState('');
+  const [waitingForInput, setWaitingForInput] = useState(false);
   
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
@@ -195,6 +218,18 @@ export function useCodeEditor() {
   const isProcessingRef = useRef<boolean>(false);
   const enterPressCountRef = useRef<number>(0);
   const lastRunTimeRef = useRef<number>(0);
+
+  // Auto-save code and language to session storage
+  useEffect(() => {
+    const saveTimer = setTimeout(() => {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('compiler-code', code);
+        sessionStorage.setItem('compiler-language', language);
+      }
+    }, 500); // Debounce save by 500ms
+
+    return () => clearTimeout(saveTimer);
+  }, [code, language]);
 
   // Stable prompts extraction with proper memoization
   const prompts = useMemo(() => {
@@ -224,10 +259,16 @@ export function useCodeEditor() {
 
   const handleLanguageChange = useCallback((newLanguage: string) => {
     setLanguage(newLanguage);
-    setCode(DEFAULT_CODE[newLanguage] || '');
+    const newCode = DEFAULT_CODE[newLanguage] || '';
+    setCode(newCode);
     setUserInputs([]);
     setOutput('');
     setShowInputModal(false);
+    // Save to session storage
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('compiler-language', newLanguage);
+      sessionStorage.setItem('compiler-code', newCode);
+    }
   }, []);
 
   // Optimized code change handler with improved debouncing
@@ -308,10 +349,9 @@ export function useCodeEditor() {
   }, [userInputs, prompts]);
 
   const handleRunClick = useCallback(() => {
-    // Prevent multiple rapid run executions
     const now = Date.now();
     if (now - lastRunTimeRef.current < 1000) {
-      return; // Ignore if run was triggered less than 1 second ago
+      return;
     }
     lastRunTimeRef.current = now;
 
@@ -320,17 +360,51 @@ export function useCodeEditor() {
       return;
     }
 
+    // Switch to output tab and clear terminal
+    setActiveTab('output');
+    setTerminalOutput(['$ Executing code...\n']);
+    setUserInputs([]);
+    setCurrentInputIndex(0);
+    setTerminalInput('');
+    
     if (prompts.length === 0) {
       executeCode([]);
     } else {
-      setShowInputModal(true);
-      setActiveTab('input');
-      toast.info(`Please provide ${prompts.length} input(s)`);
+      // Show first input prompt in terminal (don't add extra colon if prompt already ends with punctuation)
+      const firstPrompt = prompts[0];
+      const needsColon = !firstPrompt.match(/[:\s?!]$/);
+      setTerminalOutput([`$ Executing code...\n\n${firstPrompt}${needsColon ? ': ' : ''}`]);
+      setWaitingForInput(true);
     }
-  }, [code, prompts.length]);
+  }, [code, prompts]);
+
+  const handleTerminalInputSubmit = useCallback(() => {
+    if (!terminalInput.trim() || !waitingForInput) return;
+    
+    const newInputs = [...userInputs, terminalInput];
+    setUserInputs(newInputs);
+    
+    // Add input to terminal output
+    setTerminalOutput(prev => [...prev, terminalInput + '\n']);
+    
+    if (currentInputIndex < prompts.length - 1) {
+      // Show next prompt (don't add extra colon if prompt already ends with punctuation)
+      const nextIndex = currentInputIndex + 1;
+      setCurrentInputIndex(nextIndex);
+      const nextPrompt = prompts[nextIndex];
+      const needsColon = !nextPrompt.match(/[:\s?!]$/);
+      setTerminalOutput(prev => [...prev, `${nextPrompt}${needsColon ? ': ' : ''}`]);
+      setTerminalInput('');
+    } else {
+      // All inputs collected, execute
+      setWaitingForInput(false);
+      setTerminalOutput(prev => [...prev, '\n━━━ Compiling & Running ━━━\n\n']);
+      setTerminalInput('');
+      executeCode(newInputs);
+    }
+  }, [terminalInput, waitingForInput, currentInputIndex, prompts, userInputs]);
 
   const handleSubmitInputs = useCallback(() => {
-    // Prevent duplicate submissions
     if (isProcessingRef.current) {
       return;
     }
@@ -345,7 +419,6 @@ export function useCodeEditor() {
     setActiveTab('output');
     executeCode(userInputs);
     
-    // Reset processing flag after a delay
     setTimeout(() => {
       isProcessingRef.current = false;
     }, 1000);
@@ -417,7 +490,6 @@ export function useCodeEditor() {
     const stdin = inputs.join('\n');
 
     setIsRunning(true);
-    setOutput('⏳ Compiling and running...\n');
     setActiveTab('output');
 
     try {
@@ -448,7 +520,7 @@ export function useCodeEditor() {
       });
 
       if (result.timeout) {
-        setOutput(result.stderr);
+        setTerminalOutput(prev => [...prev, '\n❌ Timeout Error\n', result.stderr]);
         toast.error('Execution timeout!');
         setIsRunning(false);
         return;
@@ -456,7 +528,7 @@ export function useCodeEditor() {
 
       if (result.limitExceeded) {
         const displayOutput = result.output ? result.output + '\n\n' + result.stderr : result.stderr;
-        setOutput(displayOutput);
+        setTerminalOutput(prev => [...prev, '\n⚠️  Output Limit Exceeded\n', displayOutput]);
         toast.warning('Output limit exceeded!');
         setIsRunning(false);
         return;
@@ -465,12 +537,10 @@ export function useCodeEditor() {
       if (result.success) {
         const rawOutput = result.output || '';
         
-        console.log('Raw output:', rawOutput.substring(0, 200)); // Log first 200 chars
-        
         if (rawOutput && rawOutput.trim()) {
-          setOutput(rawOutput + '\n\nCode Execution Successful');
+          setTerminalOutput(prev => [...prev, rawOutput, '\n\n✅ Process exited with code 0\n']);
         } else {
-          setOutput(`No output received\n\nDebug: ${JSON.stringify(result.debug, null, 2)}\n\nCode executed without errors`);
+          setTerminalOutput(prev => [...prev, '\n✅ Code executed successfully (no output)\n']);
         }
         
         toast.success('Executed successfully!');
@@ -480,12 +550,12 @@ export function useCodeEditor() {
         }
       } else {
         const errorOutput = result.stderr || result.output || result.error || 'Execution failed. Please check your code.';
-        setOutput(errorOutput);
+        setTerminalOutput(prev => [...prev, '\n❌ Execution Failed\n\n', errorOutput, '\n']);
         toast.error('Execution failed');
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      setOutput(`Network Error\n\n${errorMessage}\n\nPlease check your connection and try again.`);
+      setTerminalOutput(prev => [...prev, `\n❌ Network Error\n\n${errorMessage}\n`]);
       toast.error('Failed to execute');
     } finally {
       setIsRunning(false);
@@ -542,32 +612,6 @@ export function useCodeEditor() {
     
     registerCompletionProviders(monaco);
     registerSnippets();
-    
-    // Add keyboard shortcut with enhanced throttling
-    let lastCommandTime = 0;
-    let commandCount = 0;
-    
-    // Prevent default Enter behavior when Ctrl is pressed
-    editor.onKeyDown((e) => {
-      if ((e.ctrlKey || e.metaKey) && e.keyCode === monaco.KeyCode.Enter) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const now = Date.now();
-        
-        // Reset counter if more than 2 seconds passed
-        if (now - lastCommandTime > 2000) {
-          commandCount = 0;
-        }
-        
-        // Allow max 1 command per second, max 3 within 2 seconds
-        if (now - lastCommandTime > 1000 && commandCount < 3) {
-          lastCommandTime = now;
-          commandCount++;
-          handleRunClick();
-        }
-      }
-    });
 
     // Performance optimizations
     editor.updateOptions({
@@ -643,6 +687,10 @@ export function useCodeEditor() {
     prompts,
     allInputsFilled,
     currentLang,
+    terminalOutput,
+    terminalInput,
+    waitingForInput,
+    currentInputIndex,
     
     // Refs
     inputRefs,
@@ -655,10 +703,12 @@ export function useCodeEditor() {
     handleRunClick,
     handleSubmitInputs,
     handleInputKeyDown,
-    handleInputChange, // New optimized handler
+    handleInputChange,
     handleEditorDidMount,
+    handleTerminalInputSubmit,
     setUserInputs,
     setActiveTab,
+    setTerminalInput,
     
     // Options
     editorOptions,
