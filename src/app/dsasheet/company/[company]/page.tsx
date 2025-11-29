@@ -81,7 +81,7 @@ export default function CompanyDSAPage({
 }: {
   params: Promise<{ company: string }>;
 }) {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
 
   const [problems, setProblems] = useState<Problem[]>([]);
@@ -112,12 +112,8 @@ export default function CompanyDSAPage({
 
   useEffect(() => {
     if (status === 'loading') return;
-    if (!session?.user) {
-      router.push('/auth/signin');
-      return;
-    }
     fetchCompanyProblems();
-  }, [status, session, router, selectedDifficulty, selectedPlatform, sortBy, currentPage, searchQuery, paramsCompany]);
+  }, [status, selectedDifficulty, selectedPlatform, sortBy, currentPage, searchQuery, paramsCompany]);
 
   const fetchCompanyProblems = useCallback(async () => {
     try {

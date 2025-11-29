@@ -1,13 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useSession, signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { 
   Loader2, 
@@ -17,7 +15,13 @@ import {
   Target,
   Building2,
   Search,
-  RefreshCw
+  RefreshCw,
+  Flame,
+  Trophy,
+  Zap,
+  Lock,
+  TrendingUp,
+  BookOpen
 } from 'lucide-react';
 
 interface TopicStats {
@@ -52,7 +56,6 @@ interface UserProgressItem {
 
 export default function DSASheetPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
   
   const [topicsData, setTopicsData] = useState<TopicData[]>([]);
   const [userProgress, setUserProgress] = useState<UserProgressItem[]>([]);
@@ -65,23 +68,17 @@ export default function DSASheetPage() {
 
   useEffect(() => {
     if (status === 'loading') return;
-    if (!session?.user) {
-      router.push('/auth/signin');
-      return;
-    }
     fetchStats();
-    fetchUserProgress();
-  }, [status, session, router]);
+    if (session?.user) {
+      fetchUserProgress();
+    }
+  }, [status, session]);
 
   const fetchStats = async () => {
     try {
       setLoading(true);
-      
-      // Fetch stats from visible_problems table
       const response = await fetch('/api/visible-problems/stats');
       const result = await response.json();
-
-      console.log('API Response:', result);
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to fetch stats');
@@ -89,7 +86,6 @@ export default function DSASheetPage() {
 
       setTopicsData(result.data || []);
       
-      // Process unique counts
       const counts: Record<string, number> = {};
       if (result.uniqueCounts && Array.isArray(result.uniqueCounts)) {
         result.uniqueCounts.forEach((row: { platform: string; difficulty: string; unique_count: number }) => {
@@ -98,9 +94,6 @@ export default function DSASheetPage() {
         });
       }
       setUniqueCounts(counts);
-      
-      console.log('Topics loaded:', result.data?.length || 0);
-      console.log('Unique counts:', counts);
     } catch (error) {
       console.error('Error fetching DSA stats:', error);
     } finally {
@@ -110,15 +103,11 @@ export default function DSASheetPage() {
 
   const fetchUserProgress = async () => {
     try {
-      // Fetch user progress with problem details
       const response = await fetch('/api/progress/with-problems');
       const result = await response.json();
 
-      console.log('User Progress Response:', result);
-
       if (result.success && result.data) {
         setUserProgress(result.data);
-        console.log('User progress loaded:', result.data.length);
       }
     } catch (error) {
       console.error('Error fetching user progress:', error);
@@ -131,14 +120,12 @@ export default function DSASheetPage() {
     setRefreshing(false);
   };
 
-  // Calculate solved counts by platform and difficulty
   const solvedCounts = useMemo(() => {
     const counts: Record<string, Record<string, number>> = {
       LEETCODE: { EASY: 0, MEDIUM: 0, HARD: 0 },
       GEEKSFORGEEKS: { EASY: 0, MEDIUM: 0, HARD: 0 },
     };
 
-    // Track unique problem IDs to avoid double counting
     const countedProblems = new Set<number>();
 
     userProgress.forEach((p) => {
@@ -155,7 +142,6 @@ export default function DSASheetPage() {
     return counts;
   }, [userProgress]);
 
-  // Calculate solved by topic
   const solvedByTopic = useMemo(() => {
     const topicCounts: Record<string, Record<string, Record<string, number>>> = {};
 
@@ -179,7 +165,6 @@ export default function DSASheetPage() {
     return topicCounts;
   }, [userProgress]);
 
-  // Process topics data into organized structure
   const organizedData = useMemo(() => {
     const result: Record<string, Record<string, Record<string, TopicStats>>> = {
       LEETCODE: { EASY: {}, MEDIUM: {}, HARD: {} },
@@ -205,7 +190,6 @@ export default function DSASheetPage() {
     return result;
   }, [topicsData, solvedByTopic]);
 
-  // Calculate platform stats
   const platformStats = useMemo((): PlatformStats => {
     return {
       EASY: {
@@ -223,7 +207,6 @@ export default function DSASheetPage() {
     };
   }, [selectedPlatform, uniqueCounts, solvedCounts]);
 
-  // Filter topics by search term
   const filteredTopics = useMemo(() => {
     const currentTopics = organizedData[selectedPlatform]?.[selectedDifficulty] || {};
     
@@ -249,123 +232,225 @@ export default function DSASheetPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center space-y-3">
-          <Loader2 className="h-10 w-10 animate-spin mx-auto text-primary" />
-          <p className="text-sm text-muted-foreground">Loading DSA Sheet...</p>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+        <div className="text-center space-y-4">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin mx-auto" />
+            <Code2 className="h-6 w-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary" />
+          </div>
+          <p className="text-sm text-muted-foreground font-medium">Loading DSA Sheet...</p>
         </div>
       </div>
     );
   }
 
+  const difficultyConfig = {
+    EASY: {
+      icon: Zap,
+      bgGradient: 'bg-primary/10',
+      borderColor: 'border-primary/30',
+      textColor: 'text-green-500',
+      ringColor: 'ring-primary/40',
+      barColor: 'bg-primary',
+    },
+    MEDIUM: {
+      icon: Flame,
+      bgGradient: 'bg-primary/10',
+      borderColor: 'border-primary/30',
+      textColor: 'text-yellow-500',
+      ringColor: 'ring-primary/40',
+      barColor: 'bg-primary',
+    },
+    HARD: {
+      icon: Trophy,
+      bgGradient: 'bg-primary/10',
+      borderColor: 'border-primary/30',
+      textColor: 'text-red-500',
+      ringColor: 'ring-primary/40',
+      barColor: 'bg-primary',
+    },
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-6 px-4 max-w-6xl">
-        <div className="space-y-6">
+      <div className="container mx-auto py-4 sm:py-5 px-3 sm:px-4 max-w-6xl">
+        <div className="space-y-4">
+          
           {/* Header */}
-          <div className="flex items-start justify-between">
-            <div className="space-y-2">
-              <h1 className="text-2xl md:text-3xl font-bold">DSA Practice Sheet</h1>
-              <p className="text-sm text-muted-foreground">
-                Track your progress across {totalProgress.total} curated problems
-              </p>
-            </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleRefresh}
-              disabled={refreshing}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-          </div>
-
-          {/* Navigation */}
-          <div className="flex gap-2 flex-wrap">
-            <Link href="/companies" className="flex-1 min-w-[200px]">
-              <Button variant="outline" size="sm" className="w-full gap-2">
-                <Building2 className="h-4 w-4" />
-                Company-wise Questions
-              </Button>
-            </Link>
-          </div>
-
-          {/* Platform Selector */}
-          <div className="flex gap-2">
-            <Button
-              variant={selectedPlatform === 'LEETCODE' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedPlatform('LEETCODE')}
-              className="flex-1"
-            >
-              <Code2 className="h-4 w-4 mr-2" />
-              LeetCode
-            </Button>
-            <Button
-              variant={selectedPlatform === 'GEEKSFORGEEKS' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedPlatform('GEEKSFORGEEKS')}
-              className="flex-1"
-            >
-              <Target className="h-4 w-4 mr-2" />
-              GeeksforGeeks
-            </Button>
-          </div>
-
-          {/* Overall Stats */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Overall Progress</span>
-                  <span className="text-sm text-muted-foreground">
-                    {totalProgress.solved} / {totalProgress.total}
-                  </span>
-                </div>
-                <Progress value={totalPercentage} className="h-2" />
-                <p className="text-xs text-muted-foreground">
-                  {totalPercentage.toFixed(1)}% complete
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <BookOpen className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground">DSA Practice Sheet</h1>
+                <p className="text-sm text-muted-foreground">
+                  {totalProgress.total} curated problems
                 </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="h-9 px-3"
+              >
+                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              </Button>
+              <Link href="/companies">
+                <Button variant="default" size="sm" className="gap-2 h-9 px-4">
+                  <Building2 className="h-4 w-4" />
+                  <span className="text-sm">Companies</span>
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* Platform Tabs */}
+          <div className="flex gap-1 p-1 bg-muted rounded-lg">
+            {[
+              { key: 'LEETCODE' as const, label: 'LeetCode', icon: Code2 },
+              { key: 'GEEKSFORGEEKS' as const, label: 'GeeksforGeeks', shortLabel: 'GFG', icon: Target },
+            ].map((platform) => (
+              <button
+                key={platform.key}
+                onClick={() => setSelectedPlatform(platform.key)}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-colors ${
+                  selectedPlatform === platform.key
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <platform.icon className="h-4 w-4" />
+                <span className="hidden sm:inline">{platform.label}</span>
+                <span className="sm:hidden">{platform.shortLabel || platform.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Progress Overview Card */}
+          <Card className="border">
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-center gap-4">
+                {/* Circular Progress */}
+                <div className="relative w-14 h-14 sm:w-16 sm:h-16 shrink-0">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle
+                      cx="50%"
+                      cy="50%"
+                      r="40%"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                      className="text-muted"
+                    />
+                    <circle
+                      cx="50%"
+                      cy="50%"
+                      r="40%"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth="4"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeDasharray={`${totalPercentage * 2.51} 251`}
+                      className="transition-all duration-500"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-sm font-bold text-foreground">{totalPercentage.toFixed(0)}%</span>
+                  </div>
+                </div>
+                  
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">Overall Progress</span>
+                  </div>
+                  <p className="text-xl font-bold text-foreground">
+                    {totalProgress.solved}
+                    <span className="text-sm text-muted-foreground font-normal"> / {totalProgress.total}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {totalProgress.total - totalProgress.solved} remaining
+                  </p>
+                </div>
+
+                {/* Sign in prompt for guests */}
+                {!session?.user && (
+                  <div className="ml-auto flex items-center gap-3 pl-4 border-l border-border">
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => signIn('google', { callbackUrl: window.location.href })}
+                      className="h-8 text-sm"
+                    >
+                      Sign In
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Difficulty Stats */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* Difficulty Cards */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {(['EASY', 'MEDIUM', 'HARD'] as const).map((diff) => {
               const stats = platformStats[diff];
+              const config = difficultyConfig[diff];
               const isSelected = selectedDifficulty === diff;
               const percentage = stats.total > 0 ? (stats.solved / stats.total) * 100 : 0;
-              
-              const colorClasses = {
-                EASY: 'text-green-600 dark:text-green-400',
-                MEDIUM: 'text-yellow-600 dark:text-yellow-400',
-                HARD: 'text-red-600 dark:text-red-400',
-              };
+              const DiffIcon = config.icon;
               
               return (
                 <button
                   key={diff}
                   onClick={() => setSelectedDifficulty(diff)}
-                  className="text-left"
+                  className="text-left w-full"
                 >
-                  <Card className={`transition-colors ${isSelected ? 'border-primary border-2' : 'hover:border-muted-foreground'}`}>
-                    <CardContent className="p-3">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className={`text-xs font-medium ${colorClasses[diff]}`}>
-                            {diff}
-                          </span>
-                          {isSelected && (
-                            <CheckCircle2 className="h-3 w-3 text-primary" />
-                          )}
+                  <Card className={`h-full transition-all ${
+                    isSelected 
+                      ? `ring-2 ${config.ringColor} border-transparent` 
+                      : 'hover:border-muted-foreground/30'
+                  }`}>
+                    <CardContent className="p-2 sm:p-3">
+                      <div className="flex items-center justify-between gap-1 sm:hidden">
+                        <div>
+                          <span className={`text-[10px] font-semibold ${config.textColor}`}>{diff}</span>
+                          <p className="text-sm font-bold text-foreground">
+                            {stats.solved}<span className="text-[10px] text-muted-foreground font-normal">/{stats.total}</span>
+                          </p>
                         </div>
-                        <p className="text-lg font-bold">
-                          {stats.solved}
-                          <span className="text-sm text-muted-foreground">/{stats.total}</span>
-                        </p>
-                        <Progress value={percentage} className="h-1" />
+                        <div className="text-right">
+                          <p className="text-[10px] text-muted-foreground">{percentage.toFixed(0)}%</p>
+                          {isSelected && <CheckCircle2 className={`h-3 w-3 ${config.textColor} ml-auto`} />}
+                        </div>
+                      </div>
+                      <div className="h-1 bg-muted rounded-full overflow-hidden sm:hidden mt-1">
+                        <div className={`h-full rounded-full ${config.barColor}`} style={{ width: `${percentage}%` }} />
+                      </div>
+                      
+                      <div className="hidden sm:block space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className={`p-1.5 rounded-md ${config.bgGradient}`}>
+                            <DiffIcon className={`h-4 w-4 ${config.textColor}`} />
+                          </div>
+                          {isSelected && <CheckCircle2 className={`h-4 w-4 ${config.textColor}`} />}
+                        </div>
+                        <div>
+                          <span className={`text-xs font-semibold ${config.textColor}`}>{diff}</span>
+                          <p className="text-lg font-bold text-foreground">
+                            {stats.solved}<span className="text-xs text-muted-foreground font-normal">/{stats.total}</span>
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${config.barColor}`} style={{ width: `${percentage}%` }} />
+                          </div>
+                          <p className="text-xs text-muted-foreground">{percentage.toFixed(0)}% done</p>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -374,87 +459,98 @@ export default function DSASheetPage() {
             })}
           </div>
 
-          {/* Search */}
+          {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search topics..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 h-10 text-sm"
             />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 px-3 text-sm"
+              >
+                Clear
+              </Button>
+            )}
           </div>
 
-          {/* Topics */}
+          {/* Topics Section */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">
-                {selectedDifficulty} Topics
-              </h2>
+              <div className="flex items-center gap-2">
+                <div className={`p-1.5 rounded-md ${difficultyConfig[selectedDifficulty].bgGradient}`}>
+                  {React.createElement(difficultyConfig[selectedDifficulty].icon, { 
+                    className: `h-4 w-4 ${difficultyConfig[selectedDifficulty].textColor}` 
+                  })}
+                </div>
+                <h2 className="text-base font-semibold text-foreground">
+                  {selectedDifficulty} Topics
+                </h2>
+              </div>
               <Badge variant="secondary" className="text-xs">
                 {Object.keys(filteredTopics).length} topics
               </Badge>
             </div>
 
+            {/* Topics Grid */}
             {Object.keys(filteredTopics).length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Code2 className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+              <Card className="border-dashed">
+                <CardContent className="py-8 text-center">
+                  <Code2 className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                   <p className="text-sm font-medium">No topics available</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {searchTerm ? 'Try a different search term' : 'Check back later for new problems'}
+                    {searchTerm ? 'Try a different search term' : 'Check back later'}
                   </p>
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {Object.entries(filteredTopics)
                   .sort(([, a], [, b]) => b.total - a.total)
                   .map(([slug, topic]) => {
                     const topicProgress = topic.total > 0 ? (topic.solved / topic.total) * 100 : 0;
                     const isCompleted = topic.solved === topic.total && topic.total > 0;
+                    const config = difficultyConfig[selectedDifficulty];
                     
                     return (
                       <Link
                         key={slug}
                         href={`/dsasheet/${selectedPlatform.toLowerCase()}/${selectedDifficulty.toLowerCase()}/${slug}`}
                       >
-                        <Card className="h-full hover:border-primary transition-colors group cursor-pointer">
-                          <CardContent className="p-4">
-                            <div className="space-y-3">
+                        <Card className={`h-full group cursor-pointer transition-colors hover:border-primary/50 ${
+                          isCompleted ? 'border-primary/30' : ''
+                        }`}>
+                          <CardContent className="p-3 sm:p-4">
+                            <div className="space-y-2.5">
                               <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1 min-w-0">
-                                  <h3 className="font-medium text-sm group-hover:text-primary transition-colors line-clamp-2">
-                                    {topic.name}
-                                  </h3>
-                                  <p className="text-xs text-muted-foreground mt-0.5">
-                                    {topic.total} problems
-                                  </p>
-                                </div>
+                                <h3 className="font-medium text-sm leading-tight group-hover:text-primary transition-colors line-clamp-2 flex-1 text-foreground">
+                                  {topic.name}
+                                </h3>
                                 {isCompleted ? (
-                                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500 flex-shrink-0" />
+                                  <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
                                 ) : (
-                                  <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-all group-hover:translate-x-0.5 flex-shrink-0" />
+                                  <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary shrink-0" />
                                 )}
                               </div>
 
                               <div className="space-y-1.5">
                                 <div className="flex items-center justify-between text-xs">
-                                  <span className="text-muted-foreground">Progress</span>
-                                  <span className="font-medium">
+                                  <span className="text-muted-foreground">{topic.total} problems</span>
+                                  <span className={`font-medium ${isCompleted ? 'text-primary' : 'text-foreground'}`}>
                                     {topic.solved}/{topic.total}
                                   </span>
                                 </div>
-                                <Progress value={topicProgress} className="h-1.5" />
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xs text-muted-foreground">
-                                    {topicProgress.toFixed(0)}%
-                                  </span>
-                                  {isCompleted && (
-                                    <Badge variant="secondary" className="h-5 text-xs">
-                                      Done
-                                    </Badge>
-                                  )}
+                                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full rounded-full bg-primary"
+                                    style={{ width: `${topicProgress}%` }}
+                                  />
                                 </div>
                               </div>
                             </div>

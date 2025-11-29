@@ -521,7 +521,6 @@ export function useCodeEditor() {
 
       if (result.timeout) {
         setTerminalOutput(prev => [...prev, '\n❌ Timeout Error\n', result.stderr]);
-        toast.error('Execution timeout!');
         setIsRunning(false);
         return;
       }
@@ -529,7 +528,6 @@ export function useCodeEditor() {
       if (result.limitExceeded) {
         const displayOutput = result.output ? result.output + '\n\n' + result.stderr : result.stderr;
         setTerminalOutput(prev => [...prev, '\n⚠️  Output Limit Exceeded\n', displayOutput]);
-        toast.warning('Output limit exceeded!');
         setIsRunning(false);
         return;
       }
@@ -543,20 +541,16 @@ export function useCodeEditor() {
           setTerminalOutput(prev => [...prev, '\n✅ Code executed successfully (no output)\n']);
         }
         
-        toast.success('Executed successfully!');
-        
         if (prompts.length > 0) {
           setUserInputs(new Array(prompts.length).fill(''));
         }
       } else {
         const errorOutput = result.stderr || result.output || result.error || 'Execution failed. Please check your code.';
         setTerminalOutput(prev => [...prev, '\n❌ Execution Failed\n\n', errorOutput, '\n']);
-        toast.error('Execution failed');
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       setTerminalOutput(prev => [...prev, `\n❌ Network Error\n\n${errorMessage}\n`]);
-      toast.error('Failed to execute');
     } finally {
       setIsRunning(false);
       isProcessingRef.current = false;

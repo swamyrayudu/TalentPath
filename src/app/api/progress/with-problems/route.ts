@@ -16,9 +16,10 @@ export async function GET() {
     const session = await auth();
 
     if (!session?.user?.id) {
+      // Return empty progress for unauthenticated users instead of 401
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
+        { success: true, data: [] },
+        { status: 200 }
       );
     }
 
