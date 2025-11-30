@@ -28,26 +28,33 @@ export async function GET(request: NextRequest) {
     const baseTable = useVisibleProblems ? visibleProblems : problems;
     const baseTableName = useVisibleProblems ? 'visible_problems' : 'problems';
 
-    // Helper for JSONB arrays (visible_problems) vs text[] arrays (problems)
-    const jsonbArrayText = (column: string) =>
-      sql.raw(`jsonb_array_elements_text(
+    const arrayElementExpr = (column: string) => sql.raw(`
+      jsonb_array_elements_text(
         CASE
           WHEN "${baseTableName}"."${column}" IS NULL THEN '[]'::jsonb
-          WHEN jsonb_typeof("${baseTableName}"."${column}") = 'array' THEN "${baseTableName}"."${column}"
-          WHEN jsonb_typeof("${baseTableName}"."${column}") = 'string' THEN jsonb_build_array("${baseTableName}"."${column}")
-          ELSE '[]'::jsonb
-        END 
-      )`);
+          WHEN pg_typeof("${baseTableName}"."${column}")::text IN ('json', 'jsonb') THEN
+            CASE
+              WHEN jsonb_typeof("${baseTableName}"."${column}"::jsonb) = 'array' THEN "${baseTableName}"."${column}"::jsonb
+              WHEN jsonb_typeof("${baseTableName}"."${column}"::jsonb) = 'string' AND (("${baseTableName}"."${column}"::jsonb) #>> '{}') LIKE '[%' THEN
+                COALESCE(NULLIF(BTRIM(("${baseTableName}"."${column}"::jsonb) #>> '{}'), '')::jsonb, '[]'::jsonb)
+              WHEN jsonb_typeof("${baseTableName}"."${column}"::jsonb) = 'string' THEN jsonb_build_array(("${baseTableName}"."${column}"::jsonb) #>> '{}')
+              ELSE '[]'::jsonb
+            END
+          ELSE
+            CASE
+              WHEN jsonb_typeof(to_jsonb("${baseTableName}"."${column}")) = 'array' THEN to_jsonb("${baseTableName}"."${column}")
+              WHEN jsonb_typeof(to_jsonb("${baseTableName}"."${column}")) = 'string' AND (to_jsonb("${baseTableName}"."${column}") #>> '{}') LIKE '[%' THEN
+                COALESCE(NULLIF(BTRIM((to_jsonb("${baseTableName}"."${column}") #>> '{}')), '')::jsonb, '[]'::jsonb)
+              WHEN jsonb_typeof(to_jsonb("${baseTableName}"."${column}")) = 'string' THEN jsonb_build_array((to_jsonb("${baseTableName}"."${column}") #>> '{}'))
+              ELSE '[]'::jsonb
+            END
+        END
+      )
+    `);
 
-    const topicTagsExpr = useVisibleProblems 
-      ? jsonbArrayText('topic_tags')
-      : sql.raw(`unnest(coalesce("${baseTableName}"."topic_tags", ARRAY[]::text[]))`);
-    const topicSlugsExpr = useVisibleProblems
-      ? jsonbArrayText('topic_slugs')
-      : sql.raw(`unnest(coalesce("${baseTableName}"."topic_slugs", ARRAY[]::text[]))`);
-    const companyTagsExpr = useVisibleProblems
-      ? jsonbArrayText('company_tags')
-      : sql.raw(`unnest(coalesce("${baseTableName}"."company_tags", ARRAY[]::text[]))`);
+    const topicTagsExpr = arrayElementExpr('topic_tags');
+    const topicSlugsExpr = arrayElementExpr('topic_slugs');
+    const companyTagsExpr = arrayElementExpr('company_tags');
 
     console.log('🔍 Fetching problems with filters:', { 
       topic, company, difficulty, platform, onlyApproved, bypassVisibility, hasSession: !!session?.user?.id,

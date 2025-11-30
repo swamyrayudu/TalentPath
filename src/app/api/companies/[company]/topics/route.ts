@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { problems } from '@/lib/db/schema';
 import { sql } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
@@ -25,27 +24,49 @@ export async function GET(
     const startTime = Date.now();
 
     const platformCondition = platform
-      ? sql`AND p.platform = ${platform}`
+      ? sql`AND np.platform = ${platform}`
       : sql``;
 
     // ✅ Efficient SQL to get unique topics and counts
     const result = await db.execute<{ topic: string; count: string }>(sql`
+      WITH normalized_problems AS (
+        SELECT
+          p.id,
+          p.platform,
+          CASE
+            WHEN p.topic_tags IS NULL THEN '[]'::jsonb
+            WHEN jsonb_typeof(p.topic_tags) = 'array' THEN p.topic_tags
+            WHEN jsonb_typeof(p.topic_tags) = 'string' AND (p.topic_tags #>> '{}') LIKE '[%' THEN
+              COALESCE(NULLIF(BTRIM(p.topic_tags #>> '{}'), '')::jsonb, '[]'::jsonb)
+            WHEN jsonb_typeof(p.topic_tags) = 'string' THEN jsonb_build_array(p.topic_tags #>> '{}')
+            ELSE '[]'::jsonb
+          END AS normalized_topic_tags,
+          CASE
+            WHEN p.company_tags IS NULL THEN '[]'::jsonb
+            WHEN jsonb_typeof(p.company_tags) = 'array' THEN p.company_tags
+            WHEN jsonb_typeof(p.company_tags) = 'string' AND (p.company_tags #>> '{}') LIKE '[%' THEN
+              COALESCE(NULLIF(BTRIM(p.company_tags #>> '{}'), '')::jsonb, '[]'::jsonb)
+            WHEN jsonb_typeof(p.company_tags) = 'string' THEN jsonb_build_array(p.company_tags #>> '{}')
+            ELSE '[]'::jsonb
+          END AS normalized_company_tags
+        FROM "problems" p
+      )
       SELECT 
-        TRIM(topic) AS topic,
-        COUNT(DISTINCT p.id) AS count
+        TRIM(topic_values.topic) AS topic,
+        COUNT(DISTINCT np.id) AS count
       FROM 
-        ${problems} p,
-        UNNEST(p.topic_tags) AS topic
+        normalized_problems np
+      CROSS JOIN LATERAL jsonb_array_elements_text(np.normalized_topic_tags) AS topic_values(topic)
       WHERE 
-        EXISTS (
+        TRIM(topic_values.topic) != ''
+        AND EXISTS (
           SELECT 1 
-          FROM UNNEST(p.company_tags) AS company_tag 
-          WHERE LOWER(TRIM(company_tag)) = LOWER(${companyName})
+          FROM jsonb_array_elements_text(np.normalized_company_tags) AS company_values(company)
+          WHERE LOWER(TRIM(company_values.company)) = LOWER(${companyName})
         )
-        AND TRIM(topic) != ''
         ${platformCondition}
       GROUP BY 
-        TRIM(topic)
+        TRIM(topic_values.topic)
       ORDER BY 
         count DESC, topic ASC
     `);

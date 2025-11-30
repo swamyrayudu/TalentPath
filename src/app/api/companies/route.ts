@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { problems } from '@/lib/db/schema';
 import { sql } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
@@ -22,17 +21,40 @@ export async function GET(request: NextRequest) {
     const startTime = Date.now();
 
     // Build WHERE clause for search
-    const searchCondition = search 
-      ? sql`AND LOWER(TRIM(company)) LIKE LOWER(${'%' + search + '%'})`
+    const searchValue = search ? `%${search.trim()}%` : null;
+    const searchCondition = searchValue
+      ? sql`AND LOWER(TRIM(company)) LIKE LOWER(${searchValue})`
       : sql``;
+
+    const companySource = sql`
+      WITH normalized_problems AS (
+        SELECT
+          p.id,
+          CASE
+            WHEN p.company_tags IS NULL THEN '[]'::jsonb
+            WHEN jsonb_typeof(p.company_tags) = 'array' THEN p.company_tags
+            WHEN jsonb_typeof(p.company_tags) = 'string' AND (p.company_tags #>> '{}') LIKE '[%' THEN 
+              COALESCE(NULLIF(BTRIM(p.company_tags #>> '{}'), '')::jsonb, '[]'::jsonb)
+            WHEN jsonb_typeof(p.company_tags) = 'string' THEN jsonb_build_array(p.company_tags #>> '{}')
+            ELSE '[]'::jsonb
+          END AS normalized_company_tags
+        FROM "problems" p
+      )
+      SELECT 
+        np.id,
+        TRIM(company) as company
+      FROM normalized_problems np
+      CROSS JOIN LATERAL (
+        SELECT jsonb_array_elements_text(np.normalized_company_tags) AS company
+      ) extracted
+      WHERE TRIM(company) != ''
+      ${searchCondition}
+    `;
 
     // Get total count for pagination
     const countResult = await db.execute<{ total: string }>(sql`
-      SELECT COUNT(DISTINCT TRIM(company)) as total
-      FROM ${problems},
-           unnest(company_tags) as company
-      WHERE TRIM(company) != ''
-      ${searchCondition}
+      SELECT COUNT(*) as total
+      FROM (${companySource}) company_list
     `);
 
     const total = parseInt(Array.from(countResult)[0]?.total || '0', 10);
@@ -40,16 +62,12 @@ export async function GET(request: NextRequest) {
     // Use SQL to efficiently extract and count company tags with pagination
     const result = await db.execute<{ name: string; count: string }>(sql`
       SELECT 
-        TRIM(company) as name,
+        company as name,
         COUNT(DISTINCT id) as count
       FROM 
-        ${problems},
-        unnest(company_tags) as company
-      WHERE 
-        TRIM(company) != ''
-        ${searchCondition}
+        (${companySource}) companies
       GROUP BY 
-        TRIM(company)
+        company
       ORDER BY 
         count DESC, name ASC
       LIMIT ${limit}
