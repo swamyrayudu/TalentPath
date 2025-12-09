@@ -9,6 +9,7 @@ import { DsaProblemsCacheProvider } from '@/components/context/DsaProblemsCacheC
 import { ColorThemeProvider } from '@/components/context/ColorThemeContext';
 import { Toaster } from 'sonner';
 import AIChatbot from '@/components/ai-chatbot';
+import { ActivityTracker } from '@/components/providers/activity-tracker';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -67,6 +68,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <meta name="google-site-verification" content="lxkb-K7mRGEDZvcd8QIBFZVzYJODUAv3LVFtvne2BWI" />
         <script dangerouslySetInnerHTML={{ __html: colorThemeScript }} />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
@@ -74,7 +76,7 @@ export default function RootLayout({
           <DsaProblemsCacheProvider>
             <ThemeProvider
               attribute="class"
-              defaultTheme="light"
+              defaultTheme="dark"
               enableSystem={false}
               disableTransitionOnChange
             >
@@ -83,6 +85,7 @@ export default function RootLayout({
                 <main>{children}</main>
                 <Toaster richColors position="top-right" />
                 <AIChatbot />
+                <ActivityTracker />
               </ColorThemeProvider>
             </ThemeProvider>
           </DsaProblemsCacheProvider>

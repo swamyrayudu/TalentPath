@@ -232,8 +232,11 @@ export default function DSASheetPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+          <p className="text-muted-foreground text-lg">Loading DSA Sheet...</p>
+        </div>
       </div>
     );
   }

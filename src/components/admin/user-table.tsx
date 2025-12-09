@@ -31,7 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { MoreHorizontal, Shield, User, Trash2, CheckCircle2, Clock } from 'lucide-react';
+import { MoreHorizontal, Shield, User, Trash2, CheckCircle2, Clock, Activity, LogOut } from 'lucide-react';
 import { updateUserRole, deleteUser } from '@/actions/user';
 import { toast } from 'sonner';
 
@@ -44,6 +44,8 @@ type UserType = {
   emailVerified: Date | null;
   createdAt: Date | null;
   lastLoginAt: Date | null;
+  lastActiveAt: Date | null;
+  lastLogoutAt: Date | null;
 };
 
 export function UserTable({ users, currentUserId }: { users: UserType[]; currentUserId: string }) {
@@ -141,6 +143,72 @@ export function UserTable({ users, currentUserId }: { users: UserType[]; current
     }
   };
 
+  const formatLastActive = (date: Date | null) => {
+    if (!date) return 'Never';
+    
+    const activeDate = new Date(date);
+    const now = new Date();
+    const diffMs = now.getTime() - activeDate.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    // If active within last 5 minutes, show as "Online"
+    if (diffMinutes < 5) {
+      return 'Online';
+    } else if (diffMinutes < 60) {
+      return `${diffMinutes} min ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours} hr ago`;
+    } else if (diffDays < 7) {
+      return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    } else {
+      return activeDate.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
+    }
+  };
+
+  const isOnline = (date: Date | null) => {
+    if (!date) return false;
+    const activeDate = new Date(date);
+    const now = new Date();
+    const diffMs = now.getTime() - activeDate.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    return diffMinutes < 5;
+  };
+
+  const formatLastLogout = (date: Date | null) => {
+    if (!date) return 'Never';
+    
+    const logoutDate = new Date(date);
+    const now = new Date();
+    const diffMs = now.getTime() - logoutDate.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffMinutes < 60) {
+      return `${diffMinutes} min ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours} hr ago`;
+    } else if (diffDays < 7) {
+      return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    } else {
+      return logoutDate.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
+    }
+  };
+
   return (
     <>
       <div className="rounded-md border">
@@ -153,13 +221,15 @@ export function UserTable({ users, currentUserId }: { users: UserType[]; current
               <TableHead>Verified</TableHead>
               <TableHead>Joined</TableHead>
               <TableHead>Last Login</TableHead>
+              <TableHead>Last Active</TableHead>
+              <TableHead>Last Left</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell colSpan={9} className="text-center text-muted-foreground">
                   No users found
                 </TableCell>
               </TableRow>
@@ -210,6 +280,30 @@ export function UserTable({ users, currentUserId }: { users: UserType[]; current
                     <div className="flex items-center gap-1.5">
                       <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="text-sm">{formatLastLogin(user.lastLoginAt)}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      {isOnline(user.lastActiveAt) ? (
+                        <>
+                          <span className="relative flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                          </span>
+                          <span className="text-sm text-green-600 font-medium">Online</span>
+                        </>
+                      ) : (
+                        <>
+                          <Activity className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="text-sm">{formatLastActive(user.lastActiveAt)}</span>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <LogOut className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-sm">{formatLastLogout(user.lastLogoutAt)}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
