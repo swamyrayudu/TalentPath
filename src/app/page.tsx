@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ContainerTextFlip } from '@/components/ui/container-text-flip';
-import { AnimatedTooltip } from '@/components/ui/animated-tooltip';
 import { 
   Code, 
   Brain, 
@@ -20,7 +19,7 @@ import {
   Heart,
   Instagram,
   MessageCircle,
-  Users
+  
 } from 'lucide-react';
 import { useSession, signIn } from 'next-auth/react';
 
@@ -30,7 +29,7 @@ export default function Home() {
     totalUsers: number;
     recentUsers: { id: string; name: string; designation: string; image: string }[];
   } | null>(null);
-
+console.log(userStats)
   useEffect(() => {
     fetch('/api/users/stats')
       .then(res => res.json())
