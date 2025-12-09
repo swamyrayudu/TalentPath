@@ -107,7 +107,7 @@ export default function Home() {
       socials: {
         github: 'https://github.com/Durga62823',
         linkedin: 'https://www.linkedin.com/in/durga-prasad-peddapalli-1616a8297/',
-        instagram: 'https://www.instagram.com/the_addicted__person_78/',
+        instagram: 'https://www.instagram.com/',
         whatsapp: 'https://wa.me/919030512334',
       }
     },
@@ -185,26 +185,7 @@ export default function Home() {
             </div>
             
             {/* User Stats with Animated Tooltips */}
-            <div className="flex flex-col items-center gap-3 pt-4 min-h-[100px] justify-center">
-              {userStats && userStats.recentUsers.length > 0 ? (
-                <>
-                  <div className="flex items-center gap-1">
-                    <AnimatedTooltip items={userStats.recentUsers.map((user, idx) => ({
-                      ...user,
-                      id: idx
-                    }))} />
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50 border border-border">
-                    <Users className="h-3.5 w-3.5 text-primary" />
-                    <span className="text-xs sm:text-sm font-semibold">
-                      Join <span className="text-primary">{userStats.totalUsers.toLocaleString()}+</span> developers already learning
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <div className="h-[100px]" />
-              )}
-            </div>
+
           </div>
         </div>
       </section>
