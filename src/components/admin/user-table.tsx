@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Table,
   TableBody,
@@ -31,7 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { MoreHorizontal, Shield, User, Trash2, CheckCircle2, Clock, Activity, LogOut } from 'lucide-react';
+import { MoreHorizontal, Shield, User, Trash2, CheckCircle2, Clock, Activity, LogOut, Eye } from 'lucide-react';
 import { updateUserRole, deleteUser } from '@/actions/user';
 import { toast } from 'sonner';
 
@@ -49,9 +50,14 @@ type UserType = {
 };
 
 export function UserTable({ users, currentUserId }: { users: UserType[]; currentUserId: string }) {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
+
+  const handleViewUser = (userId: string) => {
+    router.push(`/admin/viewuser/${userId}`);
+  };
 
   const handleRoleChange = async (userId: string, newRole: 'user' | 'admin') => {
     setIsLoading(userId);
@@ -235,7 +241,11 @@ export function UserTable({ users, currentUserId }: { users: UserType[]; current
               </TableRow>
             ) : (
               users.map((user) => (
-                <TableRow key={user.id}>
+                <TableRow 
+                  key={user.id} 
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleViewUser(user.id)}
+                >
                   <TableCell>
                     <div className="flex items-center space-x-3">
                       <Avatar className="h-10 w-10">
@@ -306,7 +316,7 @@ export function UserTable({ users, currentUserId }: { users: UserType[]; current
                       <span className="text-sm">{formatLastLogout(user.lastLogoutAt)}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -319,6 +329,13 @@ export function UserTable({ users, currentUserId }: { users: UserType[]; current
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => handleViewUser(user.id)}
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         {user.role === 'user' ? (
                           <DropdownMenuItem
