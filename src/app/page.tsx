@@ -130,7 +130,7 @@ console.log(userStats)
                   "Your Complete Career Platform",
                   "Master DSA & Algorithms",
                   "Ace Your Interviews",
-                  "Build Your Portfolio",
+                  "Compete in Coding Contests",
                   "Land Your Dream Job"
                 ]}
                 interval={3000}
