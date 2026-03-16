@@ -110,6 +110,16 @@ console.log(userStats)
         whatsapp: 'https://wa.me/919030512334',
       }
     },
+        {
+      name: 'vamsi kotamsetti',
+      role: 'Full Stack Developer',
+      socials: {
+        github: 'https://github.com/vamsi-lpu18',
+        linkedin: 'https://www.linkedin.com/in/vamsi-kotamsetti-47b302260/',
+        instagram: 'https://www.instagram.com/',
+        whatsapp: 'https://wa.me/9191826 83257',
+      }
+    },
   ];
 
   return (
