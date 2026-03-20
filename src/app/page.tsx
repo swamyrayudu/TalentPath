@@ -90,14 +90,24 @@ console.log(userStats)
   ];
 
   const developers = [
-    {
-      name: 'R.V.V.Swamy',
+    // {
+    //   name: 'R.V.V.Swamy',
+    //   role: 'Full Stack Developer',
+    //   socials: {
+    //     github: 'https://github.com/swamyrayudu',
+    //     linkedin: 'https://www.linkedin.com/in/rayudu-veera-venkata-swamy/',
+    //     instagram: 'https://www.instagram.com/swamy__rayudu/',
+    //     whatsapp: 'https://wa.me/917288819391',
+    //   }
+    // },
+      {
+      name: 'Vamsi kotamsetti',
       role: 'Full Stack Developer',
       socials: {
-        github: 'https://github.com/swamyrayudu',
-        linkedin: 'https://www.linkedin.com/in/rayudu-veera-venkata-swamy/',
-        instagram: 'https://www.instagram.com/swamy__rayudu/',
-        whatsapp: 'https://wa.me/917288819391',
+        github: 'https://github.com/vamsi-lpu18',
+        linkedin: 'https://www.linkedin.com/in/vamsi-kotamsetti-47b302260/',
+        instagram: 'https://www.instagram.com/',
+        whatsapp: 'https://wa.me/919182683257',
       }
     },
     {
@@ -110,16 +120,7 @@ console.log(userStats)
         whatsapp: 'https://wa.me/919030512334',
       }
     },
-        {
-      name: 'vamsi kotamsetti',
-      role: 'Full Stack Developer',
-      socials: {
-        github: 'https://github.com/vamsi-lpu18',
-        linkedin: 'https://www.linkedin.com/in/vamsi-kotamsetti-47b302260/',
-        instagram: 'https://www.instagram.com/',
-        whatsapp: 'https://wa.me/9191826 83257',
-      }
-    },
+
   ];
 
   return (
@@ -455,7 +456,7 @@ console.log(userStats)
               <h3 className="font-semibold mb-4">Crafted by</h3>
               <div className="space-y-4">
                 {/* Developer 1 */}
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <p className="text-sm font-semibold">
                     R.V.V. Swamy
                   </p>
@@ -493,6 +494,50 @@ console.log(userStats)
                       rel="noopener noreferrer"
                       className="p-2 rounded-lg bg-secondary hover:bg-green-600 hover:text-white transition-all"
                       aria-label="WhatsApp - R.V.V. Swamy"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </a>
+                  </div>
+                </div> */}
+
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold">
+                    Vamsi Kotamsetti
+                  </p>
+                  <div className="flex gap-2">
+                    <a 
+                      href="https://github.com/vamsi-lpu18" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-lg bg-secondary hover:bg-foreground hover:text-background transition-all"
+                      aria-label="GitHub - Vamsi Kotamsetti"
+                    >
+                      <Github className="h-4 w-4" />
+                    </a>
+                    <a 
+                      href="https://www.linkedin.com/in/vamsi-kotamsetti-47b302260/ " 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-lg bg-secondary hover:bg-blue-600 hover:text-white transition-all"
+                      aria-label="LinkedIn - Vamsi Kotamsetti"
+                    >
+                      <Linkedin className="h-4 w-4" />
+                    </a>
+                    <a 
+                      href="https://www.instagram.com" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-lg bg-secondary hover:bg-gradient-to-br hover:from-purple-600 hover:to-pink-600 hover:text-white transition-all"
+                      aria-label="Instagram - Vamsi Kotamsetti"
+                    >
+                      <Instagram className="h-4 w-4" />
+                    </a>
+                    <a 
+                      href="https://wa.me/919182683257" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-lg bg-secondary hover:bg-green-600 hover:text-white transition-all"
+                      aria-label="WhatsApp - Vamsi Kotamsetti"
                     >
                       <MessageCircle className="h-4 w-4" />
                     </a>
