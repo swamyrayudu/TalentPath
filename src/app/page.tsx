@@ -90,26 +90,26 @@ console.log(userStats)
   ];
 
   const developers = [
-    // {
-    //   name: 'R.V.V.Swamy',
-    //   role: 'Full Stack Developer',
-    //   socials: {
-    //     github: 'https://github.com/swamyrayudu',
-    //     linkedin: 'https://www.linkedin.com/in/rayudu-veera-venkata-swamy/',
-    //     instagram: 'https://www.instagram.com/swamy__rayudu/',
-    //     whatsapp: 'https://wa.me/917288819391',
-    //   }
-    // },
-      {
-      name: 'Vamsi kotamsetti',
+    {
+      name: 'R.V.V.Swamy',
       role: 'Full Stack Developer',
       socials: {
-        github: 'https://github.com/vamsi-lpu18',
-        linkedin: 'https://www.linkedin.com/in/vamsi-kotamsetti-47b302260/',
-        instagram: 'https://www.instagram.com/',
-        whatsapp: 'https://wa.me/919182683257',
+        github: 'https://github.com/swamyrayudu',
+        linkedin: 'https://www.linkedin.com/in/rayudu-veera-venkata-swamy/',
+        instagram: 'https://www.instagram.com/swamy__rayudu/',
+        whatsapp: 'https://wa.me/917288819391',
       }
     },
+    //   {
+    //   name: 'Vamsi kotamsetti',
+    //   role: 'Full Stack Developer',
+    //   socials: {
+    //     github: 'https://github.com/vamsi-lpu18',
+    //     linkedin: 'https://www.linkedin.com/in/vamsi-kotamsetti-47b302260/',
+    //     instagram: 'https://www.instagram.com/',
+    //     whatsapp: 'https://wa.me/919182683257',
+    //   }
+    // },
     {
       name: 'P.S.V.S.Durga Prasad',
       role: 'Full Stack Developer',
@@ -456,7 +456,7 @@ console.log(userStats)
               <h3 className="font-semibold mb-4">Crafted by</h3>
               <div className="space-y-4">
                 {/* Developer 1 */}
-                {/* <div className="space-y-2">
+                <div className="space-y-2">
                   <p className="text-sm font-semibold">
                     R.V.V. Swamy
                   </p>
@@ -498,9 +498,9 @@ console.log(userStats)
                       <MessageCircle className="h-4 w-4" />
                     </a>
                   </div>
-                </div> */}
+                </div>
 
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <p className="text-sm font-semibold">
                     Vamsi Kotamsetti
                   </p>
@@ -542,7 +542,7 @@ console.log(userStats)
                       <MessageCircle className="h-4 w-4" />
                     </a>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Developer 2 */}
                 <div className="space-y-2">
