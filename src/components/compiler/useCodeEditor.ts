@@ -46,15 +46,15 @@ const LANGUAGES = [
 
 const DEFAULT_CODE: Record<string, string> = {
   python: `print("TalentPath")
-print("Developed by: Swamy Rayudu & Siva Durga Prasad")`,
+print("Developed by: Vamsi kotamsetti & Siva Durga Prasad")`,
   
   javascript: `console.log("TalentPath");
-console.log("Developed by: Swamy Rayudu & Siva Durga Prasad");`,
+console.log("Developed by: Vamsi kotamsetti & Siva Durga Prasad");`,
   
   java: `public class Main {
     public static void main(String[] args) {
         System.out.println("TalentPath");
-        System.out.println("Developed by: Swamy Rayudu & Siva Durga Prasad");
+        System.out.println("Developed by: Vamsi kotamsetti & Siva Durga Prasad");
     }
 }`,
 
@@ -63,7 +63,7 @@ using namespace std;
 
 int main() {
     cout << "TalentPath" << endl;
-    cout << "Developed by: Swamy Rayudu & Siva Durga Prasad" << endl;
+    cout << "Developed by: Vamsi kotamsetti & Siva Durga Prasad" << endl;
     return 0;
 }`,
 
@@ -71,7 +71,7 @@ int main() {
 
 int main() {
     printf("TalentPath\\n");
-    printf("Developed by: Swamy Rayudu & Siva Durga Prasad\\n");
+    printf("Developed by: Vamsi kotamsetti & Siva Durga Prasad\\n");
     return 0;
 }`,
 
@@ -81,7 +81,7 @@ import "fmt"
 
 func main() {
     fmt.Println("TalentPath")
-    fmt.Println("Developed by: Swamy Rayudu & Siva Durga Prasad")
+    fmt.Println("Developed by: Vamsi kotamsetti & Siva Durga Prasad")
 }`,
 };
 
