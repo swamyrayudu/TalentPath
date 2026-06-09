@@ -140,12 +140,15 @@ export async function POST(request: NextRequest) {
       .where(eq(interviewTranscripts.interviewId, interviewId))
       .orderBy(asc(interviewTranscripts.timestamp));
 
-    // Check if Perplexity API is configured
-    if (!process.env.PERPLEXITY_API_KEY) {
+    // Check if Gemini/Perplexity API is configured
+    const apiKey = process.env.GEMINI_API_KEY || process.env.PERPLEXITY_API_KEY;
+    const isGemini = !!process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
       return NextResponse.json(
         {
           success: false,
-          message: 'AI service not configured. Please add PERPLEXITY_API_KEY to environment variables.',
+          message: 'AI service not configured. Please add GEMINI_API_KEY to environment variables.',
         },
         { status: 200 }
       );
@@ -182,14 +185,20 @@ Be encouraging but honest. Consider their experience level: ${experienceLevel ||
         })),
       ];
 
-      const aiResponse = await fetch('https://api.perplexity.ai/chat/completions', {
+      const apiUrl = isGemini 
+        ? 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+        : 'https://api.perplexity.ai/chat/completions';
+
+      const apiModel = isGemini ? 'gemini-2.5-flash' : 'sonar-reasoning';
+
+      const aiResponse = await fetch(apiUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'sonar-reasoning',
+          model: apiModel,
           messages: aiMessages,
         }),
       });
@@ -284,24 +293,33 @@ Be encouraging but honest. Consider their experience level: ${experienceLevel ||
       content: msg.message,
     }));
 
-    // Add system context to first message
+    // Add system context using the system message
     const aiMessages = [
       {
-        role: 'user',
-        content: `[System Instructions: ${systemPrompt}]\n\nCandidate: ${conversationMessages[conversationMessages.length - 1]?.content || message}`,
+        role: 'system',
+        content: systemPrompt,
       },
-      ...conversationMessages.slice(0, -1),
+      ...conversationMessages.map(msg => ({
+        role: msg.role === 'assistant' ? 'assistant' : 'user',
+        content: msg.content,
+      })),
     ];
 
-    // Call Perplexity AI
-    const aiResponse = await fetch('https://api.perplexity.ai/chat/completions', {
+    const apiUrl = isGemini 
+      ? 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+      : 'https://api.perplexity.ai/chat/completions';
+
+    const apiModel = isGemini ? 'gemini-2.5-flash' : 'sonar-reasoning';
+
+    // Call AI API
+    const aiResponse = await fetch(apiUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'sonar-reasoning',
+        model: apiModel,
         messages: aiMessages,
         max_tokens: 1500,
         temperature: 0.7,
@@ -379,7 +397,10 @@ async function generateInterviewFeedback(
   interviewType: string
 ) {
   try {
-    if (!process.env.PERPLEXITY_API_KEY) return null;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.PERPLEXITY_API_KEY;
+    const isGemini = !!process.env.GEMINI_API_KEY;
+
+    if (!apiKey) return null;
 
     const transcript = history
       .map(msg => `${msg.role === 'interviewer' ? 'Interviewer' : 'Candidate'}: ${msg.message}`)
@@ -408,14 +429,20 @@ Respond in JSON format:
   "feedback": "detailed paragraph of feedback"
 }`;
 
-    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+    const apiUrl = isGemini 
+      ? 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+      : 'https://api.perplexity.ai/chat/completions';
+
+    const apiModel = isGemini ? 'gemini-2.5-flash' : 'sonar';
+
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'sonar',
+        model: apiModel,
         messages: [{ role: 'user', content: feedbackPrompt }],
         max_tokens: 1000,
         temperature: 0.5,

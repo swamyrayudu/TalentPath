@@ -90,16 +90,16 @@ console.log(userStats)
   ];
 
   const developers = [
-    // {
-    //   name: 'R.V.V.Swamy',
-    //   role: 'Full Stack Developer',
-    //   socials: {
-    //     github: 'https://github.com/swamyrayudu',
-    //     linkedin: 'https://www.linkedin.com/in/rayudu-veera-venkata-swamy/',
-    //     instagram: 'https://www.instagram.com/swamy__rayudu/',
-    //     whatsapp: 'https://wa.me/917288819391',
-    //   }
-    // },
+    {
+      name: 'R.V.V.Swamy',
+      role: 'Full Stack Developer',
+      socials: {
+        github: 'https://github.com/swamyrayudu',
+        linkedin: 'https://www.linkedin.com/in/rayudu-veera-venkata-swamy/',
+        instagram: 'https://www.instagram.com/swamy__rayudu/',
+        whatsapp: 'https://wa.me/917288819391',
+      }
+    },
       {
       name: 'Vamsi kotamsetti',
       role: 'Full Stack Developer',
@@ -110,16 +110,16 @@ console.log(userStats)
         whatsapp: 'https://wa.me/919182683257',
       }
     },
-    {
-      name: 'P.S.V.S.Durga Prasad',
-      role: 'Full Stack Developer',
-      socials: {
-        github: 'https://github.com/Durga62823',
-        linkedin: 'https://www.linkedin.com/in/durga-prasad-peddapalli-1616a8297/',
-        instagram: 'https://www.instagram.com/',
-        whatsapp: 'https://wa.me/919030512334',
-      }
-    },
+    // {
+    //   name: 'P.S.V.S.Durga Prasad',
+    //   role: 'Full Stack Developer',
+    //   socials: {
+    //     github: 'https://github.com/Durga62823',
+    //     linkedin: 'https://www.linkedin.com/in/durga-prasad-peddapalli-1616a8297/',
+    //     instagram: 'https://www.instagram.com/',
+    //     whatsapp: 'https://wa.me/919030512334',
+    //   }
+    // },
 
   ];
 
@@ -547,7 +547,7 @@ console.log(userStats)
                 {/* Developer 2 */}
                 <div className="space-y-2">
                   <p className="text-sm font-semibold">
-                    P.S.V. Siva Durga Prasad
+                    R.V.V.Swamy
                   </p>
                   <div className="flex gap-2">
                     <a 

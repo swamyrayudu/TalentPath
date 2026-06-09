@@ -28,12 +28,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if API key is configured
-    if (!process.env.PERPLEXITY_API_KEY) {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.PERPLEXITY_API_KEY;
+    const isGemini = !!process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
       return NextResponse.json(
         {
           success: false,
           // Instruct about the env var but present product-friendly name
-          message: 'TalentPath AI is not configured. Please add your API key to the .env file (set PERPLEXITY_API_KEY).',
+          message: 'TalentPath AI is not configured. Please add your API key to the .env file (set GEMINI_API_KEY).',
         },
         { status: 200 }
       );
@@ -81,30 +84,34 @@ Keep responses concise, clear, and beginner-friendly. Use code examples when hel
       );
     }
 
-    // Prepare messages - add system context to first user message
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const aiMessages = filteredMessages.map((msg: any, index: number) => {
-      if (index === 0 && msg.role === 'user') {
-        return {
-          role: 'user',
-          content: `[System Context: ${systemPrompt}]\n\n${msg.content}`,
-        };
-      }
-      return {
-        role: msg.role,
+    // Prepare messages
+    const aiMessages = [
+      {
+        role: 'system',
+        content: systemPrompt,
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ...filteredMessages.map((msg: any) => ({
+        role: msg.role === 'assistant' ? 'assistant' : 'user',
         content: msg.content,
-      };
-    });
+      })),
+    ];
 
-    // Call AI API (Perplexity under the hood)
-    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+    const apiUrl = isGemini 
+      ? 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+      : 'https://api.perplexity.ai/chat/completions';
+
+    const apiModel = isGemini ? 'gemini-2.5-flash' : 'sonar-reasoning';
+
+    // Call AI API (Gemini or Perplexity under the hood)
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'sonar-reasoning', // reasoning model
+        model: apiModel,
         messages: aiMessages,
         max_tokens: 1024,
         temperature: 0.7,

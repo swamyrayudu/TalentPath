@@ -9,6 +9,7 @@ import { DsaProblemsCacheProvider } from '@/components/context/DsaProblemsCacheC
 import { ColorThemeProvider } from '@/components/context/ColorThemeContext';
 import { Toaster } from 'sonner';
 import AIChatbot from '@/components/ai-chatbot';
+import MusicPlayer from '@/components/music-player';
 import { ActivityTracker } from '@/components/providers/activity-tracker';
 
 const geistSans = Geist({
@@ -85,6 +86,7 @@ export default function RootLayout({
                 <main>{children}</main>
                 <Toaster richColors position="top-right" />
                 <AIChatbot />
+                <MusicPlayer />
                 <ActivityTracker />
               </ColorThemeProvider>
             </ThemeProvider>
