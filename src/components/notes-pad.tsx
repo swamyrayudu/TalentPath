@@ -56,14 +56,18 @@ function loadNotes(): Note[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
-  } catch {}
+  } catch (e) {
+    console.error("Failed to load notes", e);
+  }
   return [];
 }
 
 function saveNotes(notes: Note[]) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
-  } catch {}
+  } catch (e) {
+    console.error("Failed to save notes", e);
+  }
 }
 
 // Notes icon SVG — clipboard/note style
@@ -366,7 +370,9 @@ export default function NotesPad() {
         };
         img.src = saved;
       }
-    } catch {}
+    } catch (e) {
+      console.error("Failed to load page image", e);
+    }
   }, []);
 
   // Init canvas when board view opens, size changes, or page changes
@@ -419,7 +425,9 @@ export default function NotesPad() {
     if (!canvas) return;
     try {
       localStorage.setItem(`${BOARD_STORAGE_KEY}-${boardPage}`, canvas.toDataURL('image/png'));
-    } catch {}
+    } catch (e) {
+      console.error("Failed to persist canvas", e);
+    }
   }, [boardPage]);
 
   const stopDrawing = useCallback(() => {
@@ -441,7 +449,11 @@ export default function NotesPad() {
   const clearCanvas = useCallback(() => {
     saveCanvasState();
     // Clear saved data for current page
-    try { localStorage.removeItem(`${BOARD_STORAGE_KEY}-${boardPage}`); } catch {}
+    try { 
+      localStorage.removeItem(`${BOARD_STORAGE_KEY}-${boardPage}`); 
+    } catch (e) {
+      console.error("Failed to remove board page", e);
+    }
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
