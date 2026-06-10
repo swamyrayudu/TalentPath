@@ -1,6 +1,6 @@
 import React from 'react'
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Geist, Geist_Mono, Space_Grotesk, Inter } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '../components/layouts/theme-provider';
 import ConditionalNavbar from '../components/layouts/conditional-navbar';
@@ -9,7 +9,7 @@ import { DsaProblemsCacheProvider } from '@/components/context/DsaProblemsCacheC
 import { ColorThemeProvider } from '@/components/context/ColorThemeContext';
 import { Toaster } from 'sonner';
 import AIChatbot from '@/components/ai-chatbot';
-import MusicPlayer from '@/components/music-player';
+import NotesPad from '@/components/notes-pad';
 import { ActivityTracker } from '@/components/providers/activity-tracker';
 
 const geistSans = Geist({
@@ -20,6 +20,18 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
+});
+
+const spaceGrotesk = Space_Grotesk({
+  variable: '--font-space-grotesk',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+});
+
+const inter = Inter({
+  variable: '--font-inter',
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
 });
 
 export const metadata: Metadata = {
@@ -72,7 +84,7 @@ export default function RootLayout({
         <meta name="google-site-verification" content="lxkb-K7mRGEDZvcd8QIBFZVzYJODUAv3LVFtvne2BWI" />
         <script dangerouslySetInnerHTML={{ __html: colorThemeScript }} />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${inter.variable} antialiased`} suppressHydrationWarning>
         <AuthProvider>
           <DsaProblemsCacheProvider>
             <ThemeProvider
@@ -86,7 +98,7 @@ export default function RootLayout({
                 <main>{children}</main>
                 <Toaster richColors position="top-right" />
                 <AIChatbot />
-                <MusicPlayer />
+                <NotesPad />
                 <ActivityTracker />
               </ColorThemeProvider>
             </ThemeProvider>
