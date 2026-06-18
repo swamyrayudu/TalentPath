@@ -2,9 +2,11 @@
 // Used when user clicks on a topic card in DSA sheet
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { visibleProblems } from '@/lib/db/schema';
+import { visibleProblems, patternProblems, dsaPatterns } from '@/lib/db/schema';
 import { eq, and, or, isNull, SQL } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
@@ -41,8 +43,35 @@ export async function GET(request: Request) {
 
     // Get all problems matching base conditions
     const allProblems = await db
-      .select()
+      .select({
+        id: visibleProblems.id,
+        title: visibleProblems.title,
+        slug: visibleProblems.slug,
+        isPremium: visibleProblems.isPremium,
+        difficulty: visibleProblems.difficulty,
+        platform: visibleProblems.platform,
+        likes: visibleProblems.likes,
+        dislikes: visibleProblems.dislikes,
+        acceptanceRate: visibleProblems.acceptanceRate,
+        url: visibleProblems.url,
+        topicTags: visibleProblems.topicTags,
+        companyTags: visibleProblems.companyTags,
+        mainTopics: visibleProblems.mainTopics,
+        topicSlugs: visibleProblems.topicSlugs,
+        accepted: visibleProblems.accepted,
+        submissions: visibleProblems.submissions,
+        similarQuestions: visibleProblems.similarQuestions,
+        isVisibleToUsers: visibleProblems.isVisibleToUsers,
+        createdAt: visibleProblems.createdAt,
+        updatedAt: visibleProblems.updatedAt,
+        patternId: dsaPatterns.id,
+        patternName: dsaPatterns.name,
+        patternSlug: dsaPatterns.slug,
+        patternOrderIndex: dsaPatterns.orderIndex,
+      })
       .from(visibleProblems)
+      .leftJoin(patternProblems, eq(visibleProblems.id, patternProblems.problemId))
+      .leftJoin(dsaPatterns, eq(patternProblems.patternId, dsaPatterns.id))
       .where(and(...conditions));
 
     console.log(`📦 Found ${allProblems.length} problems with base filters`);

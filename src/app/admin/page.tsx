@@ -16,7 +16,8 @@ import {
   Settings,
   BarChart,
   Mail,
-  Bell
+  Bell,
+  Layers
 } from 'lucide-react';
 
 interface UserSession {
@@ -112,6 +113,26 @@ export default async function AdminDashboard() {
             <Link href="/admin/dsa-questions">
               <Button className="w-full cursor-pointer" variant="outline">
                 Manage Questions
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* DSA Patterns */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <div className="flex items-center gap-2 mb-2">
+              <Layers className="h-6 w-6 text-indigo-600" />
+              <CardTitle>DSA Patterns</CardTitle>
+            </div>
+            <CardDescription>
+              Create patterns and link DSA questions to patterns (e.g. Sliding Window).
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/admin/dsa-patterns">
+              <Button className="w-full cursor-pointer" variant="outline">
+                Manage Patterns
               </Button>
             </Link>
           </CardContent>

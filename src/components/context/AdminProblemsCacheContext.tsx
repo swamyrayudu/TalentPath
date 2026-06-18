@@ -23,6 +23,9 @@ export interface Problem {
   submissions?: number;
   isPremium?: boolean;
   isVisibleToUsers?: boolean;
+  patternId?: string;
+  patternName?: string;
+  patternSlug?: string;
 }
 
 export interface AdminProblemsCache {

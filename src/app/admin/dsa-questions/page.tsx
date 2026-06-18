@@ -12,9 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, Edit, Trash2, Search, Download, AlertCircle, CheckCircle, Loader2, ExternalLink, Eye, EyeOff } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Download, AlertCircle, CheckCircle, Loader2, ExternalLink, Eye, EyeOff, Check, ChevronsUpDown } from 'lucide-react';
 import { useAdminProblemsCache } from '@/components/context/AdminProblemsCacheContext';
 import type { Problem } from '@/components/context/AdminProblemsCacheContext';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 
 // ...existing code...
 interface ProblemFormData {
@@ -33,55 +36,9 @@ interface ProblemFormData {
   accepted: string;
   submissions: string;
   isPremium: boolean;
-  selectedTopic: string; // New field for single topic selection
+  selectedPattern: string; // Dynamic pattern selection instead of static topic selection
 }
 
-// All available topics organized by platform and difficulty
-const ALL_TOPICS = {
-  LEETCODE: {
-    EASY: [
-      { name: 'Arrays', slug: 'array' },
-      { name: 'Strings', slug: 'string' },
-      { name: 'Linked Lists', slug: 'linked-list' },
-      { name: 'Stacks & Queues', slug: 'stack' },
-      { name: 'Hash Maps & Sets', slug: 'hash-table' },
-      { name: 'Trees', slug: 'tree' },
-      { name: 'Sorting & Searching', slug: 'sorting' },
-    ],
-    MEDIUM: [
-      { name: 'Arrays & Hashing', slug: 'array' },
-      { name: 'Two Pointers', slug: 'two-pointers' },
-      { name: 'Linked Lists', slug: 'linked-list' },
-      { name: 'Stacks & Queues', slug: 'stack' },
-      { name: 'Trees', slug: 'tree' },
-      { name: 'Graphs', slug: 'graph' },
-      { name: 'Sorting & Searching', slug: 'binary-search' },
-      { name: 'Dynamic Programming', slug: 'dynamic-programming' },
-    ],
-    HARD: [
-      { name: 'Dynamic Programming', slug: 'dynamic-programming' },
-      { name: 'Graphs', slug: 'graph' },
-      { name: 'Trees & Tries', slug: 'tree' },
-      { name: 'Arrays & Strings', slug: 'array' },
-      { name: 'Greedy', slug: 'greedy' },
-      { name: 'Bit Manipulation', slug: 'bit-manipulation' },
-      { name: 'Advanced Data Structures', slug: 'heap' },
-    ],
-  },
-  GEEKSFORGEEKS: {
-    EASY: [
-      { name: 'Arrays', slug: 'array' },
-      { name: 'Strings', slug: 'string' },
-    ],
-    MEDIUM: [
-      { name: 'Linked List', slug: 'linked-list' },
-      { name: 'Stacks & Queues', slug: 'stack' },
-    ],
-    HARD: [
-      { name: 'Dynamic Programming', slug: 'dynamic-programming' },
-    ],
-  },
-};
 const ITEMS_PER_PAGE = 50;
 
 export default function AdminProblemsPage() {
@@ -92,7 +49,7 @@ export default function AdminProblemsPage() {
   const [displayedProblems, setDisplayedProblems] = useState<Problem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [platformFilter, setPlatformFilter] = useState<string>('ALL');
-  const [topicFilter, setTopicFilter] = useState<string>('ALL');
+  const [patternFilter, setPatternFilter] = useState<string>('ALL');
   const [loading, setLoading] = useState<boolean>(allProblems.length === 0);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [error, setError] = useState('');
@@ -102,7 +59,51 @@ export default function AdminProblemsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [page, setPage] = useState<number>(1);
   const [hasMore, setHasMore] = useState<boolean>(true);
-  const [toggleLoading, setToggleLoading] = useState<string | null>(null); // Track which problem is being toggled
+  const [patterns, setPatterns] = useState<{ id: string; name: string }[]>([]); // Dynamic patterns list
+  const [isVisibilityDialogOpen, setIsVisibilityDialogOpen] = useState(false);
+  const [visibilityDialogProblem, setVisibilityDialogProblem] = useState<Problem | null>(null);
+  const [visibilityDialogVisible, setVisibilityDialogVisible] = useState(false);
+  const [visibilityDialogPattern, setVisibilityDialogPattern] = useState('none');
+  const [isVisibilityPatternOpen, setIsVisibilityPatternOpen] = useState(false);
+ 
+  const openVisibilityDialog = (problem: Problem) => {
+    setVisibilityDialogProblem(problem);
+    setVisibilityDialogVisible(problem.isVisibleToUsers ?? false);
+    setVisibilityDialogPattern(problem.patternId ?? 'none');
+    setIsVisibilityDialogOpen(true);
+  };
+ 
+  const handleSaveVisibilitySettings = async () => {
+    if (!visibilityDialogProblem) return;
+    setSubmitting(true);
+    setError('');
+    setSuccess('');
+    try {
+      const response = await fetch('/api/admin/problems/visibility', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          problemIds: [visibilityDialogProblem.id],
+          isVisible: visibilityDialogVisible,
+          patternId: visibilityDialogPattern === 'none' ? null : visibilityDialogPattern,
+        }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setSuccess(data.message || 'Updated successfully!');
+        setIsVisibilityDialogOpen(false);
+        await fetchProblems();
+        clearDsaStatsCache();
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(data.error || 'Failed to update settings');
+      }
+    } catch {
+      setError('Failed to update settings');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const observerTarget = useRef<HTMLDivElement>(null);
 
@@ -110,13 +111,26 @@ export default function AdminProblemsPage() {
     title: '', slug: '', difficulty: 'EASY', platform: 'LEETCODE',
     likes: '0', dislikes: '0', acceptanceRate: '0', url: '',
     topicTags: '', companyTags: '', mainTopics: '', topicSlugs: '',
-    accepted: '0', submissions: '0', isPremium: false, selectedTopic: ''
+    accepted: '0', submissions: '0', isPremium: false, selectedPattern: 'none'
   });
+
+  const fetchPatternsList = async () => {
+    try {
+      const response = await fetch('/api/patterns');
+      const result = await response.json();
+      if (result.success) {
+        setPatterns(result.data || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch patterns list:', error);
+    }
+  };
 
   useEffect(() => {
     if (status === 'loading') return;
     if (!session?.user) { router.push('/auth/signin'); return; }
     if ((session.user as { role?: string }).role !== 'admin') { router.push('/dashboard'); return; }
+    fetchPatternsList();
     if (allProblems.length === 0) fetchProblems();
     else setLoading(false);
   }, [status, session, router, allProblems]);
@@ -134,7 +148,7 @@ export default function AdminProblemsPage() {
     setDisplayedProblems(filtered.slice(0, ITEMS_PER_PAGE));
     setPage(1);
     setHasMore(filtered.length > ITEMS_PER_PAGE);
-  }, [allProblems, searchQuery, platformFilter, topicFilter]);
+  }, [allProblems, searchQuery, platformFilter, patternFilter]);
 
   const fetchProblems = async () => {
     try {
@@ -171,9 +185,13 @@ export default function AdminProblemsPage() {
     if (platformFilter !== 'ALL') {
       filtered = filtered.filter(p => p.platform === platformFilter);
     }
-    // Apply topic filter
-    if (topicFilter !== 'ALL') {
-      filtered = filtered.filter(p => Array.isArray(p.topicSlugs) && p.topicSlugs?.includes(topicFilter));
+    // Apply pattern filter
+    if (patternFilter !== 'ALL') {
+      if (patternFilter === 'none') {
+        filtered = filtered.filter(p => !p.patternId);
+      } else {
+        filtered = filtered.filter(p => String(p.patternId) === String(patternFilter));
+      }
     }
     // Apply search filter
     if (searchQuery.trim() !== '') {
@@ -215,11 +233,6 @@ export default function AdminProblemsPage() {
     setError('');
     setSuccess('');
     try {
-      // Use selectedTopic as the primary topic
-      const selectedTopicSlug = formData.selectedTopic;
-      const topicSlugsArray = selectedTopicSlug ? [selectedTopicSlug] : [];
-      const mainTopicsArray = selectedTopicSlug ? [selectedTopicSlug] : [];
-      
       const payload = {
         title: formData.title,
         slug: formData.slug,
@@ -231,11 +244,12 @@ export default function AdminProblemsPage() {
         url: formData.url,
         topicTags: formData.topicTags.split(',').map(t => t.trim()).filter(Boolean),
         companyTags: formData.companyTags.split(',').map(t => t.trim()).filter(Boolean),
-        mainTopics: mainTopicsArray,
-        topicSlugs: topicSlugsArray,
+        mainTopics: [],
+        topicSlugs: [],
         accepted: parseInt(formData.accepted) || 0,
         submissions: parseInt(formData.submissions) || 0,
         isPremium: formData.isPremium,
+        patternId: formData.selectedPattern && formData.selectedPattern !== 'none' ? formData.selectedPattern : null,
       };
       const url = editingProblem
         ? `/api/problems/${editingProblem.id}` : '/api/problems';
@@ -252,12 +266,10 @@ export default function AdminProblemsPage() {
         setSuccess(editingProblem ? 'Problem updated successfully!' : 'Problem created successfully!');
         setIsDialogOpen(false);
         resetForm();
-        // Update context cache (instant reflect)
-        if (editingProblem) {
-          setAllProblems(allProblems.map(p => p.id === data.data.id ? data.data : p));
-        } else {
-          setAllProblems([data.data, ...allProblems]);
-        }
+        
+        // Fetch fresh list to get patterns information instantly mapped
+        await fetchProblems();
+        
         // Clear DSA stats cache so user side updates immediately
         clearDsaStatsCache();
         setTimeout(() => setSuccess(''), 3000);
@@ -272,8 +284,6 @@ export default function AdminProblemsPage() {
 
   const handleEdit = (problem: Problem) => {
     setEditingProblem(problem);
-    // Extract the first topic slug if available
-    const firstTopicSlug = Array.isArray(problem.topicSlugs) && problem.topicSlugs.length > 0 ? problem.topicSlugs[0] : '';
     setFormData({
       title: problem.title,
       slug: problem.slug ?? '',
@@ -290,7 +300,7 @@ export default function AdminProblemsPage() {
       accepted: problem.accepted !== undefined ? problem.accepted.toString() : '0',
       submissions: problem.submissions !== undefined ? problem.submissions.toString() : '0',
       isPremium: problem.isPremium ?? false,
-      selectedTopic: firstTopicSlug,
+      selectedPattern: problem.patternId ?? 'none',
     });
     setIsDialogOpen(true);
   };
@@ -322,7 +332,7 @@ export default function AdminProblemsPage() {
       title: '', slug: '', difficulty: 'EASY', platform: 'LEETCODE',
       likes: '0', dislikes: '0', acceptanceRate: '0', url: '',
       topicTags: '', companyTags: '', mainTopics: '', topicSlugs: '',
-      accepted: '0', submissions: '0', isPremium: false, selectedTopic: ''
+      accepted: '0', submissions: '0', isPremium: false, selectedPattern: 'none'
     });
     setEditingProblem(null);
   };
@@ -359,33 +369,7 @@ export default function AdminProblemsPage() {
     }
   };
 
-  const handleToggleSingleVisibility = async (problemId: string | number, currentVisibility: boolean | undefined) => {
-    try {
-      setToggleLoading(String(problemId));
-      const response = await fetch('/api/admin/problems/visibility', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ problemIds: [problemId], isVisible: !currentVisibility }),
-      });
-      const data = await response.json();
-      if (response.ok && data.success) {
-        setSuccess(data.message);
-        // Update local cache
-        setAllProblems(allProblems.map(p => 
-          String(p.id) === String(problemId) ? { ...p, isVisibleToUsers: !currentVisibility } : p
-        ));
-        // Clear DSA stats cache so user side updates immediately
-        clearDsaStatsCache();
-        setTimeout(() => setSuccess(''), 3000);
-      } else {
-        setError(data.error || 'Failed to update visibility');
-      }
-    } catch {
-      setError('Failed to update visibility');
-    } finally {
-      setToggleLoading(null);
-    }
-  };
+
 
   if (status === 'loading' || loading) {
     return (
@@ -460,80 +444,27 @@ export default function AdminProblemsPage() {
                     </div>
                   </div>
                   
-                  {/* Topic Selection - Shows topics based on selected platform and difficulty */}
+                   {/* Pattern Selection - Shows patterns fetched dynamically */}
                   <div className="grid gap-2">
-                    <Label>DSA Sheet Topic *</Label>
+                    <Label>DSA Sheet Pattern *</Label>
                     <Select 
-                      value={formData.selectedTopic} 
-                      onValueChange={v => setFormData({ ...formData, selectedTopic: v })}
+                      value={formData.selectedPattern} 
+                      onValueChange={v => setFormData({ ...formData, selectedPattern: v })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a topic for this question" />
+                        <SelectValue placeholder="Select a pattern for this question" />
                       </SelectTrigger>
-                      <SelectContent>
-                        {formData.platform === 'LEETCODE' && formData.difficulty === 'EASY' && (
-                          <>
-                            {ALL_TOPICS.LEETCODE.EASY.map(topic => (
-                              <SelectItem key={topic.slug} value={topic.slug}>
-                                {topic.name} ({topic.slug})
-                              </SelectItem>
-                            ))}
-                          </>
-                        )}
-                        {formData.platform === 'LEETCODE' && formData.difficulty === 'MEDIUM' && (
-                          <>
-                            {ALL_TOPICS.LEETCODE.MEDIUM.map(topic => (
-                              <SelectItem key={topic.slug} value={topic.slug}>
-                                {topic.name} ({topic.slug})
-                              </SelectItem>
-                            ))}
-                          </>
-                        )}
-                        {formData.platform === 'LEETCODE' && formData.difficulty === 'HARD' && (
-                          <>
-                            {ALL_TOPICS.LEETCODE.HARD.map(topic => (
-                              <SelectItem key={topic.slug} value={topic.slug}>
-                                {topic.name} ({topic.slug})
-                              </SelectItem>
-                            ))}
-                          </>
-                        )}
-                        {formData.platform === 'GEEKSFORGEEKS' && formData.difficulty === 'EASY' && (
-                          <>
-                            {ALL_TOPICS.GEEKSFORGEEKS.EASY.map(topic => (
-                              <SelectItem key={topic.slug} value={topic.slug}>
-                                {topic.name} ({topic.slug})
-                              </SelectItem>
-                            ))}
-                          </>
-                        )}
-                        {formData.platform === 'GEEKSFORGEEKS' && formData.difficulty === 'MEDIUM' && (
-                          <>
-                            {ALL_TOPICS.GEEKSFORGEEKS.MEDIUM.map(topic => (
-                              <SelectItem key={topic.slug} value={topic.slug}>
-                                {topic.name} ({topic.slug})
-                              </SelectItem>
-                            ))}
-                          </>
-                        )}
-                        {formData.platform === 'GEEKSFORGEEKS' && formData.difficulty === 'HARD' && (
-                          <>
-                            {ALL_TOPICS.GEEKSFORGEEKS.HARD.map(topic => (
-                              <SelectItem key={topic.slug} value={topic.slug}>
-                                {topic.name} ({topic.slug})
-                              </SelectItem>
-                            ))}
-                          </>
-                        )}
-                        {(formData.platform === 'CODEFORCES' || formData.platform === 'HACKERRANK') && (
-                          <SelectItem value="" disabled>
-                            Topic selection only available for LeetCode and GeeksforGeeks
+                      <SelectContent className="max-h-[300px]">
+                        <SelectItem value="none">No Pattern (Uncategorized)</SelectItem>
+                        {patterns.map(pattern => (
+                          <SelectItem key={pattern.id} value={pattern.id}>
+                            {pattern.name}
                           </SelectItem>
-                        )}
+                        ))}
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      This question will appear in the <span className="font-semibold">{formData.platform}</span> - <span className="font-semibold">{formData.difficulty}</span> sheet under the selected topic
+                      This question will be grouped under the selected DSA Pattern.
                     </p>
                   </div>
 
@@ -635,40 +566,28 @@ export default function AdminProblemsPage() {
                 </Select>
               </div>
               
-              {/* Topic Filter */}
+              {/* Pattern Filter */}
               <div className="grid gap-2">
-                <Label>Topic</Label>
-                <Select value={topicFilter} onValueChange={setTopicFilter}>
+                <Label>Pattern</Label>
+                <Select value={patternFilter} onValueChange={setPatternFilter}>
                   <SelectTrigger>
-                    <SelectValue placeholder="All Topics" />
+                    <SelectValue placeholder="All Patterns" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
-                    <SelectItem value="ALL">All Topics</SelectItem>
-                    
-                    {/* Common Topics (LeetCode + GFG) */}
-                    <SelectItem value="array">Arrays</SelectItem>
-                    <SelectItem value="string">Strings</SelectItem>
-                    <SelectItem value="linked-list">Linked Lists</SelectItem>
-                    <SelectItem value="stack">Stacks & Queues</SelectItem>
-                    <SelectItem value="dynamic-programming">Dynamic Programming</SelectItem>
-                    
-                    {/* LeetCode Only Topics */}
-                    <SelectItem value="hash-table">Hash Table</SelectItem>
-                    <SelectItem value="tree">Trees</SelectItem>
-                    <SelectItem value="graph">Graphs</SelectItem>
-                    <SelectItem value="two-pointers">Two Pointers</SelectItem>
-                    <SelectItem value="binary-search">Binary Search</SelectItem>
-                    <SelectItem value="greedy">Greedy</SelectItem>
-                    <SelectItem value="bit-manipulation">Bit Manipulation</SelectItem>
-                    <SelectItem value="heap">Heap</SelectItem>
-                    <SelectItem value="sorting">Sorting</SelectItem>
+                    <SelectItem value="ALL">All Patterns</SelectItem>
+                    <SelectItem value="none">No Pattern (Uncategorized)</SelectItem>
+                    {patterns.map(pattern => (
+                      <SelectItem key={pattern.id} value={pattern.id}>
+                        {pattern.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             
             {/* Active Filters Display */}
-            {(platformFilter !== 'ALL' || topicFilter !== 'ALL') && (
+            {(platformFilter !== 'ALL' || patternFilter !== 'ALL') && (
               <div className="flex flex-wrap gap-2 items-center">
                 <span className="text-sm text-muted-foreground">Active Filters:</span>
                 {platformFilter !== 'ALL' && (
@@ -679,10 +598,10 @@ export default function AdminProblemsPage() {
                     </button>
                   </Badge>
                 )}
-                {topicFilter !== 'ALL' && (
+                {patternFilter !== 'ALL' && (
                   <Badge variant="secondary" className="gap-1">
-                    Topic: {topicFilter}
-                    <button onClick={() => setTopicFilter('ALL')} className="ml-1 hover:bg-destructive/20 rounded-full">
+                    Pattern: {patternFilter === 'none' ? 'No Pattern' : patterns.find(p => p.id === patternFilter)?.name || patternFilter}
+                    <button onClick={() => setPatternFilter('ALL')} className="ml-1 hover:bg-destructive/20 rounded-full">
                       ×
                     </button>
                   </Badge>
@@ -690,7 +609,7 @@ export default function AdminProblemsPage() {
                 <Button 
                   size="sm" 
                   variant="ghost" 
-                  onClick={() => { setPlatformFilter('ALL'); setTopicFilter('ALL'); }}
+                  onClick={() => { setPlatformFilter('ALL'); setPatternFilter('ALL'); }}
                 >
                   Clear All
                 </Button>
@@ -715,7 +634,7 @@ export default function AdminProblemsPage() {
                 <TableHead>Title</TableHead>
                 <TableHead>Difficulty</TableHead>
                 <TableHead>Platform</TableHead>
-                <TableHead>Topics</TableHead>
+                <TableHead>Pattern</TableHead>
                 <TableHead>Stats</TableHead>
                 <TableHead>Visibility</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -749,10 +668,14 @@ export default function AdminProblemsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {/* Primary DSA Sheet Topic */}
-                        {problem.topicSlugs && problem.topicSlugs.length > 0 && (
+                        {/* Linked Pattern Name */}
+                        {problem.patternName ? (
                           <Badge className="bg-primary text-primary-foreground border-primary">
-                            📌 {problem.topicSlugs[0]}
+                            📌 {problem.patternName}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground border-muted-foreground/30">
+                            Uncategorized
                           </Badge>
                         )}
                         {/* Additional tags */}
@@ -776,18 +699,11 @@ export default function AdminProblemsPage() {
                       <Button
                         size="sm"
                         variant="default"
-                        onClick={() => handleToggleSingleVisibility(problem.id, problem.isVisibleToUsers)}
-                        disabled={toggleLoading === String(problem.id)}
+                        onClick={() => openVisibilityDialog(problem)}
                         className="bg-green-600 hover:bg-green-700"
                       >
-                        {toggleLoading === String(problem.id) ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <>
-                            <Eye className="h-4 w-4 mr-1" />
-                            Visible
-                          </>
-                        )}
+                        <Eye className="h-4 w-4 mr-1" />
+                        Visible
                       </Button>
                     </TableCell>
                     <TableCell className="text-right">
@@ -829,7 +745,7 @@ export default function AdminProblemsPage() {
                 <TableHead>Title</TableHead>
                 <TableHead>Difficulty</TableHead>
                 <TableHead>Platform</TableHead>
-                <TableHead>Topics</TableHead>
+                <TableHead>Pattern</TableHead>
                 <TableHead>Stats</TableHead>
                 <TableHead>Visibility</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -863,10 +779,14 @@ export default function AdminProblemsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {/* Primary DSA Sheet Topic */}
-                        {problem.topicSlugs && problem.topicSlugs.length > 0 && (
+                        {/* Linked Pattern Name */}
+                        {problem.patternName ? (
                           <Badge className="bg-primary text-primary-foreground border-primary">
-                            📌 {problem.topicSlugs[0]}
+                            📌 {problem.patternName}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground border-muted-foreground/30">
+                            Uncategorized
                           </Badge>
                         )}
                         {/* Additional tags */}
@@ -890,17 +810,10 @@ export default function AdminProblemsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleToggleSingleVisibility(problem.id, problem.isVisibleToUsers)}
-                        disabled={toggleLoading === String(problem.id)}
+                        onClick={() => openVisibilityDialog(problem)}
                       >
-                        {toggleLoading === String(problem.id) ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <>
-                            <EyeOff className="h-4 w-4 mr-1" />
-                            Hidden
-                          </>
-                        )}
+                        <EyeOff className="h-4 w-4 mr-1" />
+                        Hidden
                       </Button>
                     </TableCell>
                     <TableCell className="text-right">
@@ -939,6 +852,123 @@ export default function AdminProblemsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Visibility and Pattern dialog */}
+      <Dialog open={isVisibilityDialogOpen} onOpenChange={setIsVisibilityDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update Problem Settings</DialogTitle>
+            <DialogDescription>
+              Update visibility and DSA pattern for &quot;{visibilityDialogProblem?.title}&quot;
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="dialog-visibility" className="font-semibold text-foreground">
+                Visible to Users
+              </Label>
+              <input
+                id="dialog-visibility"
+                type="checkbox"
+                checked={visibilityDialogVisible}
+                onChange={(e) => setVisibilityDialogVisible(e.target.checked)}
+                className="h-5 w-5 cursor-pointer"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="dialog-pattern" className="font-semibold text-foreground">
+                DSA Pattern
+              </Label>
+              <Popover open={isVisibilityPatternOpen} onOpenChange={setIsVisibilityPatternOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="dialog-pattern"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={isVisibilityPatternOpen}
+                    className="w-full justify-between font-normal text-left"
+                  >
+                    <span className="truncate">
+                      {visibilityDialogPattern === 'none'
+                        ? 'No Pattern (Uncategorized)'
+                        : patterns.find((p) => String(p.id) === String(visibilityDialogPattern))?.name || 'Select pattern...'}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search patterns..." />
+                    <CommandList className="max-h-[250px] overflow-y-auto">
+                      <CommandEmpty>No pattern found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="No Pattern (Uncategorized)"
+                          onSelect={() => {
+                            setVisibilityDialogPattern('none');
+                            setIsVisibilityPatternOpen(false);
+                          }}
+                          className="flex items-center justify-between cursor-pointer"
+                        >
+                          <span>No Pattern (Uncategorized)</span>
+                          <Check
+                            className={cn(
+                              "h-4 w-4",
+                              visibilityDialogPattern === 'none' ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                        </CommandItem>
+                        {patterns.map((pattern: { id: string; name: string }) => (
+                          <CommandItem
+                            key={pattern.id}
+                            value={pattern.name}
+                            onSelect={() => {
+                              setVisibilityDialogPattern(pattern.id);
+                              setIsVisibilityPatternOpen(false);
+                            }}
+                            className="flex items-center justify-between cursor-pointer"
+                          >
+                            <span className="truncate">{pattern.name}</span>
+                            <Check
+                              className={cn(
+                                "h-4 w-4",
+                                String(visibilityDialogPattern) === String(pattern.id) ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsVisibilityDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={submitting}
+              onClick={handleSaveVisibilitySettings}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Settings'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

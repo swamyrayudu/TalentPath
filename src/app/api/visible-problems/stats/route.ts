@@ -6,7 +6,7 @@ import { db } from '@/lib/db';
 import { visibleProblems } from '@/lib/db/schema';
 import { eq, or, isNull } from 'drizzle-orm';
 
-export const revalidate = 300; // Cache for 5 minutes
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {

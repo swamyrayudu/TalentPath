@@ -559,6 +559,37 @@ export const interviewTranscripts = pgTable('interview_transcripts', {
   timestampIdx: index('idx_interview_transcripts_timestamp').on(table.timestamp),
 }));
 
+// ============================================
+// DSA PATTERNS SYSTEM
+// ============================================
+
+export const dsaPatterns = pgTable('dsa_patterns', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: text('name').notNull().unique(),
+  slug: text('slug').notNull().unique(),
+  description: text('description'),
+  topic: text('topic'),
+  orderIndex: integer('order_index').default(0).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const patternProblems = pgTable('pattern_problems', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  patternId: text('pattern_id').notNull().references(() => dsaPatterns.id, { onDelete: 'cascade' }),
+  problemId: bigint('problem_id', { mode: 'number' }).notNull().references(() => problems.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  patternIdIdx: index('idx_pattern_problems_pattern_id').on(table.patternId),
+  problemIdIdx: index('idx_pattern_problems_problem_id').on(table.problemId),
+  uniquePatternProblem: index('idx_pattern_problems_unique').on(table.patternId, table.problemId),
+}));
+
+export type DsaPattern = typeof dsaPatterns.$inferSelect;
+export type DsaPatternInsert = typeof dsaPatterns.$inferInsert;
+export type PatternProblem = typeof patternProblems.$inferSelect;
+export type PatternProblemInsert = typeof patternProblems.$inferInsert;
+
 // Chat History Types
 export type ChatConversation = typeof chatConversations.$inferSelect;
 export type ChatConversationInsert = typeof chatConversations.$inferInsert;

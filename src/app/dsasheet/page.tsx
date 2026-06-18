@@ -21,7 +21,8 @@ import {
   Zap,
   Lock,
   TrendingUp,
-  BookOpen
+  BookOpen,
+  Layers
 } from 'lucide-react';
 
 interface TopicStats {
@@ -54,6 +55,16 @@ interface UserProgressItem {
   topicSlugs?: string[];
 }
 
+interface PatternData {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  topic?: string | null;
+  problemCount: number;
+  problemIds: number[];
+}
+
 export default function DSASheetPage() {
   const { data: session, status } = useSession();
   
@@ -65,10 +76,16 @@ export default function DSASheetPage() {
   const [selectedDifficulty, setSelectedDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>('EASY');
   const [searchTerm, setSearchTerm] = useState('');
   const [uniqueCounts, setUniqueCounts] = useState<Record<string, number>>({});
+  
+  // Patterns Mode States
+  const [activeMode, setActiveMode] = useState<'topics' | 'patterns'>('patterns');
+  const [patterns, setPatterns] = useState<PatternData[]>([]);
+  const [loadingPatterns, setLoadingPatterns] = useState(false);
 
   useEffect(() => {
     if (status === 'loading') return;
     fetchStats();
+    fetchPatterns();
     if (session?.user) {
       fetchUserProgress();
     }
@@ -101,6 +118,21 @@ export default function DSASheetPage() {
     }
   };
 
+  const fetchPatterns = async () => {
+    try {
+      setLoadingPatterns(true);
+      const response = await fetch('/api/patterns');
+      const result = await response.json();
+      if (result.success) {
+        setPatterns(result.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching patterns:', error);
+    } finally {
+      setLoadingPatterns(false);
+    }
+  };
+
   const fetchUserProgress = async () => {
     try {
       const response = await fetch('/api/progress/with-problems');
@@ -116,7 +148,7 @@ export default function DSASheetPage() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([fetchStats(), fetchUserProgress()]);
+    await Promise.all([fetchStats(), fetchPatterns(), fetchUserProgress()]);
     setRefreshing(false);
   };
 
@@ -189,6 +221,42 @@ export default function DSASheetPage() {
 
     return result;
   }, [topicsData, solvedByTopic]);
+
+  const computedPatterns = useMemo(() => {
+    const solvedIds = new Set(
+      userProgress.filter(p => p.status === 'solved').map(p => Number(p.problemId))
+    );
+
+    return patterns.map(pattern => {
+      const pIds = Array.isArray(pattern.problemIds) ? pattern.problemIds : [];
+      const solvedCount = pIds.filter(id => solvedIds.has(Number(id))).length;
+      return {
+        ...pattern,
+        solvedCount,
+      };
+    });
+  }, [patterns, userProgress]);
+
+  const filteredPatterns = useMemo(() => {
+    if (!searchTerm) return computedPatterns;
+    const q = searchTerm.toLowerCase();
+    return computedPatterns.filter(p => 
+      p.name.toLowerCase().includes(q) || 
+      (p.description && p.description.toLowerCase().includes(q))
+    );
+  }, [computedPatterns, searchTerm]);
+
+  const groupedPatternsByTopic = useMemo(() => {
+    const groups: Record<string, typeof filteredPatterns> = {};
+    filteredPatterns.forEach(pattern => {
+      const topic = pattern.topic ? pattern.topic.trim().toLowerCase() : 'other';
+      if (!groups[topic]) {
+        groups[topic] = [];
+      }
+      groups[topic].push(pattern);
+    });
+    return groups;
+  }, [filteredPatterns]);
 
   const platformStats = useMemo((): PlatformStats => {
     return {
@@ -305,259 +373,391 @@ export default function DSASheetPage() {
             </div>
           </div>
 
-          {/* Platform Tabs */}
-          <div className="flex gap-1 p-1 bg-muted rounded-lg">
-            {[
-              { key: 'LEETCODE' as const, label: 'LeetCode', icon: Code2 },
-              { key: 'GEEKSFORGEEKS' as const, label: 'GeeksforGeeks', shortLabel: 'GFG', icon: Target },
-            ].map((platform) => (
-              <button
-                key={platform.key}
-                onClick={() => setSelectedPlatform(platform.key)}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-colors ${
-                  selectedPlatform === platform.key
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <platform.icon className="h-4 w-4" />
-                <span className="hidden sm:inline">{platform.label}</span>
-                <span className="sm:hidden">{platform.shortLabel || platform.label}</span>
-              </button>
-            ))}
+          {/* Practice Mode Selector */}
+          <div className="flex gap-4 border-b border-border pb-2">
+            <button
+              onClick={() => setActiveMode('topics')}
+              className={`flex items-center gap-2 pb-2 px-1 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+                activeMode === 'topics'
+                  ? 'border-primary text-primary font-bold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <BookOpen className="h-4 w-4" />
+              Practice by Topics
+            </button>
+            <button
+              onClick={() => setActiveMode('patterns')}
+              className={`flex items-center gap-2 pb-2 px-1 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+                activeMode === 'patterns'
+                  ? 'border-primary text-primary font-bold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Layers className="h-4 w-4" />
+              Practice by Patterns
+            </button>
           </div>
 
-          {/* Progress Overview Card */}
-          <Card className="border">
-            <CardContent className="p-4 sm:p-5">
-              <div className="flex items-center gap-4">
-                {/* Circular Progress */}
-                <div className="relative w-14 h-14 sm:w-16 sm:h-16 shrink-0">
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle
-                      cx="50%"
-                      cy="50%"
-                      r="40%"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                      className="text-muted"
-                    />
-                    <circle
-                      cx="50%"
-                      cy="50%"
-                      r="40%"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth="4"
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeDasharray={`${totalPercentage * 2.51} 251`}
-                      className="transition-all duration-500"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-sm font-bold text-foreground">{totalPercentage.toFixed(0)}%</span>
-                  </div>
+          {activeMode === 'patterns' ? (
+            <div className="space-y-4">
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search patterns by name or description..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 h-10 text-sm border-muted-foreground/20"
+                />
+                {searchTerm && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 px-3 text-sm"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+
+              {/* Patterns Grid */}
+              {loadingPatterns ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-                  
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium text-foreground">Overall Progress</span>
+              ) : filteredPatterns.length === 0 ? (
+                <Card className="border-dashed">
+                  <CardContent className="py-12 text-center">
+                    <Layers className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-50" />
+                    <p className="text-sm font-semibold text-foreground">No patterns available</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {searchTerm ? 'Try a different search term' : 'Check back later for curated patterns'}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-8">
+                  {Object.entries(groupedPatternsByTopic).map(([topicSlug, topicPatterns]) => (
+                    <div key={topicSlug} className="space-y-3">
+                      <h2 className="text-lg font-bold text-foreground border-l-4 border-primary pl-2 capitalize">
+                        {topicSlug.replace('-', ' ')}
+                      </h2>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {topicPatterns.map((pattern) => {
+                          const progress = pattern.problemCount > 0 
+                            ? (pattern.solvedCount / pattern.problemCount) * 100 
+                            : 0;
+                          const isCompleted = pattern.solvedCount === pattern.problemCount && pattern.problemCount > 0;
+                          
+                          return (
+                            <Link
+                              key={pattern.id}
+                              href={`/dsasheet/patterns/${pattern.slug}`}
+                            >
+                              <Card className={`h-full group cursor-pointer transition-all hover:border-primary/50 hover:shadow-sm ${
+                                isCompleted ? 'border-primary/30 bg-primary/5 dark:bg-primary/10' : ''
+                              }`}>
+                                <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full space-y-4">
+                                  <div className="space-y-1.5">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <h3 className="font-bold text-base group-hover:text-primary transition-colors text-foreground line-clamp-1">
+                                        {pattern.name}
+                                      </h3>
+                                      {isCompleted ? (
+                                        <CheckCircle2 className="h-4.5 w-4.5 text-primary shrink-0" />
+                                      ) : (
+                                        <ChevronRight className="h-4.5 w-4.5 text-muted-foreground group-hover:text-primary shrink-0" />
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground line-clamp-2 min-h-[2rem] leading-relaxed">
+                                      {pattern.description || 'Curated design pattern problems.'}
+                                    </p>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span className="text-muted-foreground">{pattern.problemCount} problems</span>
+                                      <span className={`font-semibold ${isCompleted ? 'text-primary' : 'text-foreground'}`}>
+                                        {pattern.solvedCount}/{pattern.problemCount} solved
+                                      </span>
+                                    </div>
+                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                      <div 
+                                        className="h-full rounded-full bg-primary transition-all duration-500"
+                                        style={{ width: `${progress}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Platform Tabs */}
+              <div className="flex gap-1 p-1 bg-muted rounded-lg">
+                {[
+                  { key: 'LEETCODE' as const, label: 'LeetCode', icon: Code2 },
+                  { key: 'GEEKSFORGEEKS' as const, label: 'GeeksforGeeks', shortLabel: 'GFG', icon: Target },
+                ].map((platform) => (
+                  <button
+                    key={platform.key}
+                    onClick={() => setSelectedPlatform(platform.key)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                      selectedPlatform === platform.key
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <platform.icon className="h-4 w-4" />
+                    <span className="hidden sm:inline">{platform.label}</span>
+                    <span className="sm:hidden">{platform.shortLabel || platform.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Progress Overview Card */}
+              <Card className="border">
+                <CardContent className="p-4 sm:p-5">
+                  <div className="flex items-center gap-4">
+                    {/* Circular Progress */}
+                    <div className="relative w-14 h-14 sm:w-16 sm:h-16 shrink-0">
+                      <svg className="w-full h-full transform -rotate-90">
+                        <circle
+                          cx="50%"
+                          cy="50%"
+                          r="40%"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                          fill="none"
+                          className="text-muted"
+                        />
+                        <circle
+                          cx="50%"
+                          cy="50%"
+                          r="40%"
+                          stroke="hsl(var(--primary))"
+                          strokeWidth="4"
+                          fill="none"
+                          strokeLinecap="round"
+                          strokeDasharray={`${totalPercentage * 2.51} 251`}
+                          className="transition-all duration-500"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-sm font-bold text-foreground">{totalPercentage.toFixed(0)}%</span>
+                      </div>
+                    </div>
+                      
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-medium text-foreground">Overall Progress</span>
+                      </div>
+                      <p className="text-xl font-bold text-foreground">
+                        {totalProgress.solved}
+                        <span className="text-sm text-muted-foreground font-normal"> / {totalProgress.total}</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {totalProgress.total - totalProgress.solved} remaining
+                      </p>
+                    </div>
+
+                    {/* Sign in prompt for guests */}
+                    {!session?.user && (
+                      <div className="ml-auto flex items-center gap-3 pl-4 border-l border-border">
+                        <Lock className="h-4 w-4 text-muted-foreground" />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => signIn('google', { callbackUrl: window.location.href })}
+                          className="h-8 text-sm cursor-pointer"
+                        >
+                          Sign In
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                  <p className="text-xl font-bold text-foreground">
-                    {totalProgress.solved}
-                    <span className="text-sm text-muted-foreground font-normal"> / {totalProgress.total}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {totalProgress.total - totalProgress.solved} remaining
-                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Difficulty Cards */}
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                {(['EASY', 'MEDIUM', 'HARD'] as const).map((diff) => {
+                  const stats = platformStats[diff];
+                  const config = difficultyConfig[diff];
+                  const isSelected = selectedDifficulty === diff;
+                  const percentage = stats.total > 0 ? (stats.solved / stats.total) * 100 : 0;
+                  const DiffIcon = config.icon;
+                  
+                  return (
+                    <button
+                      key={diff}
+                      onClick={() => setSelectedDifficulty(diff)}
+                      className="text-left w-full cursor-pointer"
+                    >
+                      <Card className={`h-full transition-all ${
+                        isSelected 
+                          ? `ring-2 ${config.ringColor} border-transparent` 
+                          : 'hover:border-muted-foreground/30'
+                      }`}>
+                        <CardContent className="p-2 sm:p-3">
+                          <div className="flex items-center justify-between gap-1 sm:hidden">
+                            <div>
+                              <span className={`text-[10px] font-semibold ${config.textColor}`}>{diff}</span>
+                              <p className="text-sm font-bold text-foreground">
+                                {stats.solved}<span className="text-[10px] text-muted-foreground font-normal">/{stats.total}</span>
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[10px] text-muted-foreground">{percentage.toFixed(0)}%</p>
+                              {isSelected && <CheckCircle2 className={`h-3 w-3 ${config.textColor} ml-auto`} />}
+                            </div>
+                          </div>
+                          <div className="h-1 bg-muted rounded-full overflow-hidden sm:hidden mt-1">
+                            <div className={`h-full rounded-full ${config.barColor}`} style={{ width: `${percentage}%` }} />
+                          </div>
+                          
+                          <div className="hidden sm:block space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className={`p-1.5 rounded-md ${config.bgGradient}`}>
+                                <DiffIcon className={`h-4 w-4 ${config.textColor}`} />
+                              </div>
+                              {isSelected && <CheckCircle2 className={`h-4 w-4 ${config.textColor}`} />}
+                            </div>
+                            <div>
+                              <span className={`text-xs font-semibold ${config.textColor}`}>{diff}</span>
+                              <p className="text-lg font-bold text-foreground">
+                                {stats.solved}<span className="text-xs text-muted-foreground font-normal">/{stats.total}</span>
+                              </p>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${config.barColor}`} style={{ width: `${percentage}%` }} />
+                              </div>
+                              <p className="text-xs text-muted-foreground">{percentage.toFixed(0)}% done</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search topics..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 h-10 text-sm border-muted-foreground/20"
+                />
+                {searchTerm && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 px-3 text-sm cursor-pointer"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+
+              {/* Topics Section */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`p-1.5 rounded-md ${difficultyConfig[selectedDifficulty].bgGradient}`}>
+                      {React.createElement(difficultyConfig[selectedDifficulty].icon, { 
+                        className: `h-4 w-4 ${difficultyConfig[selectedDifficulty].textColor}` 
+                      })}
+                    </div>
+                    <h2 className="text-base font-semibold text-foreground">
+                      {selectedDifficulty} Topics
+                    </h2>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    {Object.keys(filteredTopics).length} topics
+                  </Badge>
                 </div>
 
-                {/* Sign in prompt for guests */}
-                {!session?.user && (
-                  <div className="ml-auto flex items-center gap-3 pl-4 border-l border-border">
-                    <Lock className="h-4 w-4 text-muted-foreground" />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => signIn('google', { callbackUrl: window.location.href })}
-                      className="h-8 text-sm"
-                    >
-                      Sign In
-                    </Button>
+                {/* Topics Grid */}
+                {Object.keys(filteredTopics).length === 0 ? (
+                  <Card className="border-dashed">
+                    <CardContent className="py-8 text-center">
+                      <Code2 className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm font-medium">No topics available</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {searchTerm ? 'Try a different search term' : 'Check back later'}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {Object.entries(filteredTopics)
+                      .sort(([, a], [, b]) => b.total - a.total)
+                      .map(([slug, topic]) => {
+                        const topicProgress = topic.total > 0 ? (topic.solved / topic.total) * 100 : 0;
+                        const isCompleted = topic.solved === topic.total && topic.total > 0;
+                        
+                        return (
+                          <Link
+                            key={slug}
+                            href={`/dsasheet/${selectedPlatform.toLowerCase()}/${selectedDifficulty.toLowerCase()}/${slug}`}
+                          >
+                            <Card className={`h-full group cursor-pointer transition-colors hover:border-primary/50 ${
+                              isCompleted ? 'border-primary/30' : ''
+                            }`}>
+                              <CardContent className="p-3 sm:p-4">
+                                <div className="space-y-2.5">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <h3 className="font-medium text-sm leading-tight group-hover:text-primary transition-colors line-clamp-2 flex-1 text-foreground">
+                                      {topic.name}
+                                    </h3>
+                                    {isCompleted ? (
+                                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary shrink-0" />
+                                    )}
+                                  </div>
+
+                                  <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span className="text-muted-foreground">{topic.total} problems</span>
+                                      <span className={`font-medium ${isCompleted ? 'text-primary' : 'text-foreground'}`}>
+                                        {topic.solved}/{topic.total}
+                                      </span>
+                                    </div>
+                                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                                      <div 
+                                        className="h-full rounded-full bg-primary"
+                                        style={{ width: `${topicProgress}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </Link>
+                        );
+                      })}
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Difficulty Cards */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            {(['EASY', 'MEDIUM', 'HARD'] as const).map((diff) => {
-              const stats = platformStats[diff];
-              const config = difficultyConfig[diff];
-              const isSelected = selectedDifficulty === diff;
-              const percentage = stats.total > 0 ? (stats.solved / stats.total) * 100 : 0;
-              const DiffIcon = config.icon;
-              
-              return (
-                <button
-                  key={diff}
-                  onClick={() => setSelectedDifficulty(diff)}
-                  className="text-left w-full"
-                >
-                  <Card className={`h-full transition-all ${
-                    isSelected 
-                      ? `ring-2 ${config.ringColor} border-transparent` 
-                      : 'hover:border-muted-foreground/30'
-                  }`}>
-                    <CardContent className="p-2 sm:p-3">
-                      <div className="flex items-center justify-between gap-1 sm:hidden">
-                        <div>
-                          <span className={`text-[10px] font-semibold ${config.textColor}`}>{diff}</span>
-                          <p className="text-sm font-bold text-foreground">
-                            {stats.solved}<span className="text-[10px] text-muted-foreground font-normal">/{stats.total}</span>
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[10px] text-muted-foreground">{percentage.toFixed(0)}%</p>
-                          {isSelected && <CheckCircle2 className={`h-3 w-3 ${config.textColor} ml-auto`} />}
-                        </div>
-                      </div>
-                      <div className="h-1 bg-muted rounded-full overflow-hidden sm:hidden mt-1">
-                        <div className={`h-full rounded-full ${config.barColor}`} style={{ width: `${percentage}%` }} />
-                      </div>
-                      
-                      <div className="hidden sm:block space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className={`p-1.5 rounded-md ${config.bgGradient}`}>
-                            <DiffIcon className={`h-4 w-4 ${config.textColor}`} />
-                          </div>
-                          {isSelected && <CheckCircle2 className={`h-4 w-4 ${config.textColor}`} />}
-                        </div>
-                        <div>
-                          <span className={`text-xs font-semibold ${config.textColor}`}>{diff}</span>
-                          <p className="text-lg font-bold text-foreground">
-                            {stats.solved}<span className="text-xs text-muted-foreground font-normal">/{stats.total}</span>
-                          </p>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full ${config.barColor}`} style={{ width: `${percentage}%` }} />
-                          </div>
-                          <p className="text-xs text-muted-foreground">{percentage.toFixed(0)}% done</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search topics..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-10 text-sm"
-            />
-            {searchTerm && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 px-3 text-sm"
-              >
-                Clear
-              </Button>
-            )}
-          </div>
-
-          {/* Topics Section */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className={`p-1.5 rounded-md ${difficultyConfig[selectedDifficulty].bgGradient}`}>
-                  {React.createElement(difficultyConfig[selectedDifficulty].icon, { 
-                    className: `h-4 w-4 ${difficultyConfig[selectedDifficulty].textColor}` 
-                  })}
-                </div>
-                <h2 className="text-base font-semibold text-foreground">
-                  {selectedDifficulty} Topics
-                </h2>
-              </div>
-              <Badge variant="secondary" className="text-xs">
-                {Object.keys(filteredTopics).length} topics
-              </Badge>
-            </div>
-
-            {/* Topics Grid */}
-            {Object.keys(filteredTopics).length === 0 ? (
-              <Card className="border-dashed">
-                <CardContent className="py-8 text-center">
-                  <Code2 className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm font-medium">No topics available</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {searchTerm ? 'Try a different search term' : 'Check back later'}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {Object.entries(filteredTopics)
-                  .sort(([, a], [, b]) => b.total - a.total)
-                  .map(([slug, topic]) => {
-                    const topicProgress = topic.total > 0 ? (topic.solved / topic.total) * 100 : 0;
-                    const isCompleted = topic.solved === topic.total && topic.total > 0;
-                    
-                    return (
-                      <Link
-                        key={slug}
-                        href={`/dsasheet/${selectedPlatform.toLowerCase()}/${selectedDifficulty.toLowerCase()}/${slug}`}
-                      >
-                        <Card className={`h-full group cursor-pointer transition-colors hover:border-primary/50 ${
-                          isCompleted ? 'border-primary/30' : ''
-                        }`}>
-                          <CardContent className="p-3 sm:p-4">
-                            <div className="space-y-2.5">
-                              <div className="flex items-start justify-between gap-2">
-                                <h3 className="font-medium text-sm leading-tight group-hover:text-primary transition-colors line-clamp-2 flex-1 text-foreground">
-                                  {topic.name}
-                                </h3>
-                                {isCompleted ? (
-                                  <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                                ) : (
-                                  <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary shrink-0" />
-                                )}
-                              </div>
-
-                              <div className="space-y-1.5">
-                                <div className="flex items-center justify-between text-xs">
-                                  <span className="text-muted-foreground">{topic.total} problems</span>
-                                  <span className={`font-medium ${isCompleted ? 'text-primary' : 'text-foreground'}`}>
-                                    {topic.solved}/{topic.total}
-                                  </span>
-                                </div>
-                                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full rounded-full bg-primary"
-                                    style={{ width: `${topicProgress}%` }}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-                    );
-                  })}
-              </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
       </div>
     </div>

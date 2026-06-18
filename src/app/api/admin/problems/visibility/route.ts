@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { problems, users } from '@/lib/db/schema';
+import { problems, users, patternProblems } from '@/lib/db/schema';
 import { eq, inArray, sql } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
@@ -65,7 +65,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { problemIds, isVisible } = await request.json();
+    const { problemIds, isVisible, patternId } = await request.json();
 
     if (!Array.isArray(problemIds) || problemIds.length === 0) {
       return NextResponse.json(
@@ -93,7 +93,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    console.log('📝 Updating visibility for problems:', numericProblemIds, 'to:', isVisible);
+    console.log('📝 Updating visibility for problems:', numericProblemIds, 'to:', isVisible, 'and pattern:', patternId);
 
     // Update the visibility of the specified problems
     const result = await db
@@ -107,13 +107,29 @@ export async function PATCH(request: NextRequest) {
 
     console.log('✅ Updated', result.length, 'problems');
 
+    // Handle pattern update if patternId is passed (can be 'none', null, or a UUID)
+    if (patternId !== undefined) {
+      for (const pid of numericProblemIds) {
+        // Delete existing pattern links for this problem
+        await db.delete(patternProblems).where(eq(patternProblems.problemId, pid));
+        
+        if (patternId && patternId !== 'none') {
+          await db.insert(patternProblems).values({
+            id: crypto.randomUUID(),
+            patternId: patternId,
+            problemId: pid
+          });
+        }
+      }
+    }
+
     // Sync visible_problems table after update
     await syncVisibleProblems();
 
     return NextResponse.json({
       success: true,
       data: result,
-      message: `Successfully ${isVisible ? 'showed' : 'hidden'} ${result.length} problem(s)`,
+      message: `Successfully updated ${result.length} problem(s)`,
     });
   } catch (error) {
     console.error('Error updating problem visibility:', error);

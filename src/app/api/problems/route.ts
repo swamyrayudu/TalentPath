@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { userProgress, problems, users, visibleProblems } from '@/lib/db/schema';
+import { userProgress, problems, users, visibleProblems, patternProblems, dsaPatterns } from '@/lib/db/schema';
 import { eq, and, desc, sql, or, ilike } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
@@ -149,10 +149,36 @@ export async function GET(request: NextRequest) {
 
     const total = countResult[0]?.count || 0;
 
-    // Fetch paginated results
+    // Fetch paginated results with pattern info
     const result = await db
-      .select()
+      .select({
+        id: baseTable.id,
+        title: baseTable.title,
+        slug: baseTable.slug,
+        isPremium: baseTable.isPremium,
+        difficulty: baseTable.difficulty,
+        platform: baseTable.platform,
+        likes: baseTable.likes,
+        dislikes: baseTable.dislikes,
+        acceptanceRate: baseTable.acceptanceRate,
+        url: baseTable.url,
+        topicTags: baseTable.topicTags,
+        companyTags: baseTable.companyTags,
+        mainTopics: baseTable.mainTopics,
+        topicSlugs: baseTable.topicSlugs,
+        accepted: baseTable.accepted,
+        submissions: baseTable.submissions,
+        similarQuestions: baseTable.similarQuestions,
+        isVisibleToUsers: baseTable.isVisibleToUsers,
+        createdAt: baseTable.createdAt,
+        updatedAt: baseTable.updatedAt,
+        patternId: dsaPatterns.id,
+        patternName: dsaPatterns.name,
+        patternSlug: dsaPatterns.slug,
+      })
       .from(baseTable)
+      .leftJoin(patternProblems, eq(baseTable.id, patternProblems.problemId))
+      .leftJoin(dsaPatterns, eq(patternProblems.patternId, dsaPatterns.id))
       .where(whereClause || sql`TRUE`)
       .orderBy(orderByClause)
       .limit(limit)
@@ -306,9 +332,20 @@ export async function POST(request: NextRequest) {
 
       const result = await db.insert(problems).values(problemData).returning();
 
+      if (result.length > 0 && data.patternId) {
+        await db.insert(patternProblems).values({
+          id: crypto.randomUUID(),
+          patternId: data.patternId,
+          problemId: result[0].id
+        });
+      }
+
       return NextResponse.json({
         success: true,
-        data: result[0],
+        data: {
+          ...result[0],
+          patternId: data.patternId || null
+        },
       });
     }
   } catch (error) {

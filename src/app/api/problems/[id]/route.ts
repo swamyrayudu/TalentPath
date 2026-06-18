@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { problems, users } from '@/lib/db/schema';
+import { problems, users, patternProblems } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
@@ -67,9 +67,27 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ success: false, error: 'Problem not found' }, { status: 404 });
     }
 
+    // Handle pattern ID updates if passed in request body
+    if (data.patternId !== undefined) {
+      // Delete existing patterns links for this problem
+      await db.delete(patternProblems).where(eq(patternProblems.problemId, parsedId));
+      
+      // If a valid pattern ID is provided, insert a new link
+      if (data.patternId) {
+        await db.insert(patternProblems).values({
+          id: crypto.randomUUID(),
+          patternId: data.patternId,
+          problemId: parsedId
+        });
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      data: result[0],
+      data: {
+        ...result[0],
+        patternId: data.patternId || null
+      },
     });
   } catch (error) {
     console.error('Error updating problem:', error);
