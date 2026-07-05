@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { dsaPatterns, patternProblems, users } from '@/lib/db/schema';
 import { eq, sql } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
+import { patternCache } from '@/lib/redis';
 
 async function verifyAdmin() {
   const session = await auth();
@@ -98,6 +99,9 @@ export async function POST(request: NextRequest) {
         orderIndex: parseInt(orderIndex) || 0,
       })
       .returning();
+
+    // Clear pattern cache
+    await patternCache.clear();
 
     return NextResponse.json({
       success: true,

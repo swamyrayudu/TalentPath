@@ -3,6 +3,8 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { userProgress, problems, users, visibleProblems, patternProblems, dsaPatterns } from '@/lib/db/schema';
 import { eq, and, desc, sql, or, ilike } from 'drizzle-orm';
+import { recalculatePatternCounts } from '@/lib/db/patterns';
+import { patternCache } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 300; // Cache for 5 minutes
@@ -338,7 +340,11 @@ export async function POST(request: NextRequest) {
           patternId: data.patternId,
           problemId: result[0].id
         });
+        await recalculatePatternCounts([data.patternId]);
       }
+
+      // Clear pattern cache
+      await patternCache.clear();
 
       return NextResponse.json({
         success: true,

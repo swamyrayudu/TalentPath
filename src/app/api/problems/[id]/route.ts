@@ -3,6 +3,8 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { problems, users, patternProblems } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { recalculatePatternCounts } from '@/lib/db/patterns';
+import { patternCache } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -69,6 +71,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     // Handle pattern ID updates if passed in request body
     if (data.patternId !== undefined) {
+      // Get existing patterns first
+      const existing = await db.select().from(patternProblems).where(eq(patternProblems.problemId, parsedId));
+      const oldPatternIds = existing.map(p => p.patternId);
+
       // Delete existing patterns links for this problem
       await db.delete(patternProblems).where(eq(patternProblems.problemId, parsedId));
       
@@ -80,6 +86,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           problemId: parsedId
         });
       }
+
+      // Recalculate counts and clear cache
+      const affectedPatterns = [...new Set([...oldPatternIds, data.patternId].filter(Boolean) as string[])];
+      if (affectedPatterns.length > 0) {
+        await recalculatePatternCounts(affectedPatterns);
+      }
+      await patternCache.clear();
     }
 
     return NextResponse.json({
@@ -116,6 +129,12 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       return NextResponse.json({ success: false, error: 'Invalid problem ID' }, { status: 400 });
     }
 
+    // Find pattern ID(s) linked to this problem before deleting
+    const linkedPatterns = await db
+      .select({ patternId: patternProblems.patternId })
+      .from(patternProblems)
+      .where(eq(patternProblems.problemId, parsedId));
+
     const result = await db
       .delete(problems)
       .where(eq(problems.id, parsedId))
@@ -124,6 +143,15 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     if (result.length === 0) {
       return NextResponse.json({ success: false, error: 'Problem not found' }, { status: 404 });
     }
+
+    // Recalculate counts for the affected patterns
+    const affectedPatterns = linkedPatterns.map(l => l.patternId).filter(Boolean);
+    if (affectedPatterns.length > 0) {
+      await recalculatePatternCounts(affectedPatterns);
+    }
+
+    // Clear pattern cache
+    await patternCache.clear();
 
     return NextResponse.json({
       success: true,

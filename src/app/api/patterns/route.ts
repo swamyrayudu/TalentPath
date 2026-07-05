@@ -1,12 +1,23 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { dsaPatterns, patternProblems, visibleProblems } from '@/lib/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { dsaPatterns } from '@/lib/db/schema';
+import { sql } from 'drizzle-orm';
+import { patternCache } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    const cacheKey = 'patterns:all';
+    const cached = await patternCache.get(cacheKey);
+    if (cached) {
+      console.log('[Redis Queue Cache] Hit for all patterns');
+      return NextResponse.json({
+        success: true,
+        data: cached
+      });
+    }
+
     // Get all patterns along with the count of VISIBLE problems linked to each
     const patterns = await db
       .select({
@@ -16,14 +27,24 @@ export async function GET() {
         description: dsaPatterns.description,
         topic: dsaPatterns.topic,
         orderIndex: dsaPatterns.orderIndex,
-        problemCount: sql<number>`cast(count(${visibleProblems.id}) as int)`,
-        problemIds: sql<number[]>`coalesce(json_agg(${visibleProblems.id}) filter (where ${visibleProblems.id} is not null), '[]'::json)`
+        problemCount: dsaPatterns.problemCount,
+        problemIds: sql<number[]>`
+          coalesce(
+            (
+              SELECT json_agg(pp.problem_id)
+              FROM pattern_problems pp
+              JOIN visible_problems vp ON pp.problem_id = vp.id
+              WHERE pp.pattern_id = dsa_patterns.id
+            ),
+            '[]'::json
+          )
+        `
       })
       .from(dsaPatterns)
-      .leftJoin(patternProblems, eq(dsaPatterns.id, patternProblems.patternId))
-      .leftJoin(visibleProblems, eq(patternProblems.problemId, visibleProblems.id))
-      .groupBy(dsaPatterns.id)
       .orderBy(dsaPatterns.orderIndex);
+
+    // Save to Cache
+    await patternCache.set(cacheKey, patterns);
 
     return NextResponse.json({
       success: true,

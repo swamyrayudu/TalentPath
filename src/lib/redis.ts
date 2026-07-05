@@ -64,3 +64,92 @@ export async function invalidateDashboardCache(userId: string): Promise<void> {
     console.error(`[Redis Cache] Error invalidating cache for user ${userId}:`, error);
   }
 }
+
+/**
+ * Universal Queue-Based Cache with Limit (FIFO/LRU Eviction)
+ */
+export class LimitedQueueCache {
+  private queueKey: string;
+  private limit: number;
+
+  constructor(queueKey: string, limit: number = 10) {
+    this.queueKey = queueKey;
+    this.limit = limit;
+  }
+
+  async get(key: string): Promise<unknown | null> {
+    if (!redis) return null;
+    try {
+      const data = await redis.get(key);
+      if (data) {
+        // Move key to front of queue (LRU behavior)
+        await redis.lrem(this.queueKey, 0, key);
+        await redis.lpush(this.queueKey, key);
+        return data;
+      }
+    } catch (error) {
+      console.error(`[Redis Queue Cache] Error getting key ${key}:`, error);
+    }
+    return null;
+  }
+
+  async set(key: string, data: unknown): Promise<void> {
+    if (!redis) return;
+    try {
+      // 1. Set the data in Redis
+      await redis.set(key, data);
+
+      // 2. Move key to front of queue
+      await redis.lrem(this.queueKey, 0, key);
+      await redis.lpush(this.queueKey, key);
+
+      // 3. Trim the list if limit is exceeded
+      const len = await redis.llen(this.queueKey);
+      if (len > this.limit) {
+        const keysToEvictCount = len - this.limit;
+        for (let i = 0; i < keysToEvictCount; i++) {
+          const evictedKey = await redis.rpop(this.queueKey);
+          if (evictedKey) {
+            await redis.del(evictedKey);
+            console.log(`[Redis Queue Cache] Evicted key: ${evictedKey}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`[Redis Queue Cache] Error setting key ${key}:`, error);
+    }
+  }
+
+  async invalidate(key: string): Promise<void> {
+    if (!redis) return;
+    try {
+      await redis.del(key);
+      await redis.lrem(this.queueKey, 0, key);
+      console.log(`[Redis Queue Cache] Invalidated key: ${key}`);
+    } catch (error) {
+      console.error(`[Redis Queue Cache] Error invalidating key ${key}:`, error);
+    }
+  }
+
+  async clear(): Promise<void> {
+    if (!redis) return;
+    try {
+      const keys = await redis.lrange(this.queueKey, 0, -1);
+      if (keys.length > 0) {
+        // Filter out empty/null values
+        const validKeys = keys.filter(Boolean);
+        if (validKeys.length > 0) {
+          await redis.del(...validKeys);
+        }
+      }
+      await redis.del(this.queueKey);
+      console.log(`[Redis Queue Cache] Cleared queue ${this.queueKey}`);
+    } catch (error) {
+      console.error(`[Redis Queue Cache] Error clearing queue ${this.queueKey}:`, error);
+    }
+  }
+}
+
+// Global pattern cache with a limit of 10
+export const patternCache = new LimitedQueueCache('pattern_cache_keys', 10);
+

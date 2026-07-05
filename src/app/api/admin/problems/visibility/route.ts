@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { problems, users, patternProblems } from '@/lib/db/schema';
 import { eq, inArray, sql } from 'drizzle-orm';
+import { patternCache } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +32,29 @@ async function syncVisibleProblems() {
       FROM problems
       WHERE is_visible_to_users = true
     `);
+    
+    // Recalculate pattern problem counts
+    await db.execute(sql`
+      WITH pattern_counts AS (
+        SELECT 
+          dp.id as pattern_id,
+          CAST(COUNT(vp.id) AS INTEGER) as cnt
+        FROM dsa_patterns dp
+        LEFT JOIN pattern_problems pp ON dp.id = pp.pattern_id
+        LEFT JOIN visible_problems vp ON pp.problem_id = vp.id
+        GROUP BY dp.id
+      )
+      UPDATE dsa_patterns
+      SET problem_count = pattern_counts.cnt
+      FROM pattern_counts
+      WHERE dsa_patterns.id = pattern_counts.pattern_id;
+    `);
+    
+    console.log('✅ dsa_patterns problem counts synced successfully');
+
+    // Clear pattern cache
+    await patternCache.clear();
+    console.log('✅ pattern cache cleared successfully');
     
     console.log('✅ visible_problems table synced successfully');
   } catch (error) {

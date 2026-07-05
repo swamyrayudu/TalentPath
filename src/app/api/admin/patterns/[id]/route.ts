@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { dsaPatterns, users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
+import { patternCache } from '@/lib/redis';
 
 async function verifyAdmin() {
   const session = await auth();
@@ -70,6 +71,9 @@ export async function PUT(
       return NextResponse.json({ error: 'Pattern not found' }, { status: 404 });
     }
 
+    // Clear pattern cache
+    await patternCache.clear();
+
     return NextResponse.json({
       success: true,
       data: updated[0]
@@ -106,6 +110,9 @@ export async function DELETE(
     if (deleted.length === 0) {
       return NextResponse.json({ error: 'Pattern not found' }, { status: 404 });
     }
+
+    // Clear pattern cache
+    await patternCache.clear();
 
     return NextResponse.json({
       success: true,

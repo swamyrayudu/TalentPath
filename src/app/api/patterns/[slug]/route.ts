@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { dsaPatterns, patternProblems, visibleProblems } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { patternCache } from '@/lib/redis';
 
 export async function GET(
   request: NextRequest,
@@ -10,6 +11,17 @@ export async function GET(
   try {
     const { slug } = await params;
     
+    // Check Cache
+    const cacheKey = `pattern:slug:${slug}`;
+    const cachedData = await patternCache.get(cacheKey);
+    if (cachedData) {
+      console.log(`[Redis Queue Cache] Hit for pattern slug: ${slug}`);
+      return NextResponse.json({
+        success: true,
+        ...cachedData
+      });
+    }
+
     // Get pattern details
     const pattern = await db
       .select()
@@ -50,10 +62,17 @@ export async function GET(
       .where(eq(dsaPatterns.slug, slug))
       .orderBy(visibleProblems.title);
 
-    return NextResponse.json({
-      success: true,
+    const result = {
       pattern: pattern[0],
       data: problems
+    };
+
+    // Save to Cache
+    await patternCache.set(cacheKey, result);
+
+    return NextResponse.json({
+      success: true,
+      ...result
     });
   } catch (error) {
     console.error('Error fetching pattern problems:', error);

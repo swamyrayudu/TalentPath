@@ -3,6 +3,8 @@ import { db } from '@/lib/db';
 import { patternProblems, users, problems } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
+import { recalculatePatternCounts } from '@/lib/db/patterns';
+import { patternCache } from '@/lib/redis';
 
 async function verifyAdmin() {
   const session = await auth();
@@ -92,6 +94,12 @@ export async function POST(
       })
       .returning();
 
+    // Recalculate pattern count
+    await recalculatePatternCounts([id]);
+
+    // Clear pattern cache
+    await patternCache.clear();
+
     return NextResponse.json({
       success: true,
       data: link[0]
@@ -142,6 +150,12 @@ export async function DELETE(
     if (deleted.length === 0) {
       return NextResponse.json({ error: 'Relation not found' }, { status: 404 });
     }
+
+    // Recalculate pattern count
+    await recalculatePatternCounts([id]);
+
+    // Clear pattern cache
+    await patternCache.clear();
 
     return NextResponse.json({
       success: true,
