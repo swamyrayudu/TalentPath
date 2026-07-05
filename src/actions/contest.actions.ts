@@ -15,6 +15,7 @@ import {
 import { eq, and, desc, sql, asc, or } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
+import { invalidateDashboardCache } from '@/lib/redis';
 // Helper function to get the base URL for API calls
 async function getBaseUrl(): Promise<string> {
   // In production with NEXT_PUBLIC_APP_URL set
@@ -1203,6 +1204,9 @@ export async function submitSolution(data: {
 
     // Update leaderboard
     await updateLeaderboard(data.contestId, session.user.id);
+
+    // Invalidate dashboard cache for this user
+    await invalidateDashboardCache(session.user.id);
 
     revalidatePath(`/contest/${data.contestId}`);
     return { success: true, data: submission };

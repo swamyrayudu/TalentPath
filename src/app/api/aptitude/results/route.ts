@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { aptitudeResults } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
+import { invalidateDashboardCache } from '@/lib/redis';
 
 // Save aptitude test result
 export async function POST(request: NextRequest) {
@@ -40,6 +41,9 @@ export async function POST(request: NextRequest) {
         answers: answers || {},
       })
       .returning();
+
+    // Invalidate dashboard cache for this user
+    await invalidateDashboardCache(session.user.id);
 
     return NextResponse.json({ 
       success: true, 

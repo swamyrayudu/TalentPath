@@ -7,6 +7,7 @@ import {
   aptitudeResults,
 } from '@/lib/db/schema';
 import { eq, desc, sql } from 'drizzle-orm';
+import { getCachedDashboardData, setCachedDashboardData } from '@/lib/redis';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -42,6 +43,32 @@ interface ProgressWithProblem {
   slug: string | null;
 }
 
+interface ContestQuestionStat {
+  questionId: string;
+  questionTitle: string;
+  totalSubmissions: number;
+  acceptedSubmissions: number;
+  lastSubmittedAt: Date | string | null;
+}
+
+interface ContestRecentSubmission {
+  id: string;
+  contestId: string;
+  questionId: string;
+  questionTitle: string | null;
+  verdict: string;
+  score: number | null;
+  submittedAt: Date | string;
+}
+
+interface ContestStats {
+  totalSubmissions: number;
+  totalAccepted: number;
+  uniqueProblemsSolved: number;
+  questionStats: ContestQuestionStat[];
+  recentSubmissions: ContestRecentSubmission[];
+}
+
 export default async function Dashboard() {
   const session = await auth();
 
@@ -51,43 +78,72 @@ export default async function Dashboard() {
 
   const userId = session.user.id as string;
 
-  // Fetch user progress with visible_problems join using raw SQL
-  const userProgressData = await db.execute(sql`
-    SELECT 
-      up.id,
-      up.status,
-      up.solved_at as "solvedAt",
-      up.created_at as "createdAt",
-      up.updated_at as "updatedAt",
-      up.problem_id as "problemId",
-      vp.title,
-      vp.difficulty,
-      vp.platform,
-      vp.slug
-    FROM user_progress up
-    LEFT JOIN visible_problems vp ON up.problem_id = vp.id
-    WHERE up.user_id = ${userId}
-    ORDER BY up.updated_at DESC
-  `) as unknown as ProgressWithProblem[];
+  // Try to retrieve cached dashboard data
+  let userProgressData: ProgressWithProblem[] = [];
+  let contestStats: ContestStats = {
+    totalSubmissions: 0,
+    totalAccepted: 0,
+    uniqueProblemsSolved: 0,
+    questionStats: [],
+    recentSubmissions: [],
+  };
+  let aptitudeResultsData: any[] = [];
 
-  // Fetch contest submission statistics
-  const contestStatsResult = await getUserContestStats(userId);
-  const contestStats = contestStatsResult.success && contestStatsResult.data 
-    ? contestStatsResult.data 
-    : {
-        totalSubmissions: 0,
-        totalAccepted: 0,
-        uniqueProblemsSolved: 0,
-        questionStats: [],
-        recentSubmissions: [],
-      };
+  const cachedData = await getCachedDashboardData(userId);
 
-  // Fetch aptitude test results
-  const aptitudeResultsData = await db
-    .select()
-    .from(aptitudeResults)
-    .where(eq(aptitudeResults.userId, userId))
-    .orderBy(desc(aptitudeResults.completedAt));
+  if (cachedData) {
+    userProgressData = cachedData.userProgressData;
+    contestStats = cachedData.contestStats;
+    aptitudeResultsData = cachedData.aptitudeResultsData;
+  } else {
+    // Cache miss: Fetch data in parallel
+    const [progressResult, contestStatsResult, aptitudeResult] = await Promise.all([
+      db.execute(sql`
+        SELECT 
+          up.id,
+          up.status,
+          up.solved_at as "solvedAt",
+          up.created_at as "createdAt",
+          up.updated_at as "updatedAt",
+          up.problem_id as "problemId",
+          vp.title,
+          vp.difficulty,
+          vp.platform,
+          vp.slug
+        FROM user_progress up
+        LEFT JOIN visible_problems vp ON up.problem_id = vp.id
+        WHERE up.user_id = ${userId}
+        ORDER BY up.updated_at DESC
+      `) as Promise<unknown>,
+      getUserContestStats(userId),
+      db
+        .select()
+        .from(aptitudeResults)
+        .where(eq(aptitudeResults.userId, userId))
+        .orderBy(desc(aptitudeResults.completedAt))
+    ]);
+
+    userProgressData = progressResult as ProgressWithProblem[];
+    
+    contestStats = contestStatsResult.success && contestStatsResult.data 
+      ? contestStatsResult.data 
+      : {
+          totalSubmissions: 0,
+          totalAccepted: 0,
+          uniqueProblemsSolved: 0,
+          questionStats: [],
+          recentSubmissions: [],
+        };
+
+    aptitudeResultsData = aptitudeResult;
+
+    // Cache the fetched data
+    await setCachedDashboardData(userId, {
+      userProgressData,
+      contestStats,
+      aptitudeResultsData,
+    });
+  }
 
   // Calculate aptitude statistics
   const aptitudeStats = {
