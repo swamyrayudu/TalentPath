@@ -23,7 +23,7 @@ const TOPICS = [
   'Array', 'String', 'Linked List', 'Stack', 'Queue', 'Hash Table',
   'Tree', 'Binary Tree', 'Graph', 'Sorting', 'Binary Search',
   'Two Pointers', 'Dynamic Programming', 'Greedy', 'Backtracking',
-  'Sliding Window', 'Heap', 'Trie', 'Recursion', 'Math'
+  'Sliding Window', 'Heap', 'Trie', 'Recursion', 'Math', 'Database'
 ];
 
 export default function DSAVisibilityManager() {

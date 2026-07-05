@@ -166,7 +166,7 @@ export default function DSAPatternsManager() {
     setEditingPattern(pattern);
     setPatternName(pattern.name);
     setPatternDescription(pattern.description || '');
-    const matchedCommon = ['array', 'string', 'linked-list', 'stack-queue', 'tree', 'graph', 'heap', 'two-pointers', 'binary-search', 'dynamic-programming', 'greedy', 'backtracking', 'bit-manipulation', 'sorting'].includes(pattern.topic || '');
+    const matchedCommon = ['array', 'string', 'linked-list', 'stack-queue', 'tree', 'graph', 'heap', 'two-pointers', 'binary-search', 'dynamic-programming', 'greedy', 'backtracking', 'bit-manipulation', 'sorting', 'database'].includes(pattern.topic || '');
     if (pattern.topic && !matchedCommon) {
       setPatternTopic('custom');
       setCustomTopic(pattern.topic);
@@ -525,6 +525,7 @@ export default function DSAPatternsManager() {
                   <SelectItem value="backtracking">Backtracking</SelectItem>
                   <SelectItem value="bit-manipulation">Bit Manipulation</SelectItem>
                   <SelectItem value="sorting">Sorting</SelectItem>
+                  <SelectItem value="database">Database</SelectItem>
                   <SelectItem value="custom">Custom / Create New...</SelectItem>
                 </SelectContent>
               </Select>

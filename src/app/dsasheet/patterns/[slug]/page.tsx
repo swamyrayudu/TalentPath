@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
@@ -63,6 +63,8 @@ export default function PatternProblemsPage() {
   const [updating, setUpdating] = useState<number | null>(null);
   const [signingIn, setSigningIn] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [visibleCount, setVisibleCount] = useState(25);
+  const loaderRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -71,6 +73,10 @@ export default function PatternProblemsPage() {
       fetchUserProgress();
     }
   }, [status, session, slug]);
+
+  useEffect(() => {
+    setVisibleCount(25);
+  }, [searchTerm]);
 
   const fetchPatternData = async () => {
     try {
@@ -164,6 +170,30 @@ export default function PatternProblemsPage() {
         problem.slug?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : problems;
+
+  const displayedProblems = filteredProblems.slice(0, visibleCount);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => prev + 25);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentLoader = loaderRef.current;
+    if (currentLoader) {
+      observer.observe(currentLoader);
+    }
+
+    return () => {
+      if (currentLoader) {
+        observer.unobserve(currentLoader);
+      }
+    };
+  }, [filteredProblems, visibleCount]);
 
   const solvedCount = problems.filter(p => userProgress[p.id]?.status === 'solved').length;
   const attemptedCount = problems.filter(p => userProgress[p.id]?.status === 'attempted').length;
@@ -363,7 +393,7 @@ export default function PatternProblemsPage() {
           </Card>
         ) : (
           <div className="space-y-3">
-            {filteredProblems.map((problem, index) => {
+            {displayedProblems.map((problem, index) => {
               const progress = userProgress[problem.id];
               const isSolved = progress?.status === 'solved';
               const isAttempted = progress?.status === 'attempted';
@@ -501,6 +531,13 @@ export default function PatternProblemsPage() {
                 </Card>
               );
             })}
+
+            {visibleCount < filteredProblems.length && (
+              <div ref={loaderRef} className="flex justify-center py-6">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <span className="ml-2 text-sm text-muted-foreground">Loading more problems...</span>
+              </div>
+            )}
           </div>
         )}
       </div>
