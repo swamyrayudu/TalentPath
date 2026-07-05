@@ -16,7 +16,7 @@ export const DASHBOARD_CACHE_TTL = 3600; // 1 hour in seconds
  * Retrieve cached dashboard data for a user.
  * Falls back to null on cache miss or connection error.
  */
-export async function getCachedDashboardData(userId: string): Promise<any | null> {
+export async function getCachedDashboardData(userId: string): Promise<unknown | null> {
   if (!redis) {
     console.warn('[Redis Cache] Upstash Redis is not configured. Caching is disabled.');
     return null;
@@ -39,7 +39,7 @@ export async function getCachedDashboardData(userId: string): Promise<any | null
  * Cache dashboard data for a user with TTL.
  * Fails gracefully without throwing on connection error.
  */
-export async function setCachedDashboardData(userId: string, data: any): Promise<void> {
+export async function setCachedDashboardData(userId: string, data: unknown): Promise<void> {
   if (!redis) return;
   try {
     const key = getDashboardCacheKey(userId);

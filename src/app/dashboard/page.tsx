@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import { 
   aptitudeResults,
+  AptitudeResult,
 } from '@/lib/db/schema';
 import { eq, desc, sql } from 'drizzle-orm';
 import { getCachedDashboardData, setCachedDashboardData } from '@/lib/redis';
@@ -87,9 +88,15 @@ export default async function Dashboard() {
     questionStats: [],
     recentSubmissions: [],
   };
-  let aptitudeResultsData: any[] = [];
+  let aptitudeResultsData: AptitudeResult[] = [];
 
-  const cachedData = await getCachedDashboardData(userId);
+  interface DashboardCacheData {
+    userProgressData: ProgressWithProblem[];
+    contestStats: ContestStats;
+    aptitudeResultsData: AptitudeResult[];
+  }
+
+  const cachedData = await getCachedDashboardData(userId) as DashboardCacheData | null;
 
   if (cachedData) {
     userProgressData = cachedData.userProgressData;
