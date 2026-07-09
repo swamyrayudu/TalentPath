@@ -15,7 +15,7 @@ import {
 import { eq, and, desc, sql, asc, or } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
-import { invalidateDashboardCache } from '@/lib/redis';
+import { invalidateDashboardCache, getCachedData, setCachedData, invalidateCacheKey, redis } from '@/lib/redis';
 // Helper function to get the base URL for API calls
 async function getBaseUrl(): Promise<string> {
   // In production with NEXT_PUBLIC_APP_URL set
@@ -44,6 +44,115 @@ async function getBaseUrl(): Promise<string> {
   // Fallback for local development
   return 'http://localhost:3000';
 }
+
+// ============================================
+// REDIS CACHE HELPERS FOR CONTESTS
+// ============================================
+
+// Deserializer for contest objects (rebuilds Date instances)
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+function deserializeContest(contest: any) {
+  if (!contest) return null;
+  return {
+    ...contest,
+    startTime: contest.startTime ? new Date(contest.startTime) : null,
+    endTime: contest.endTime ? new Date(contest.endTime) : null,
+    createdAt: contest.createdAt ? new Date(contest.createdAt) : null,
+    updatedAt: contest.updatedAt ? new Date(contest.updatedAt) : null,
+  };
+}
+
+// Deserializer for contest questions
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+function deserializeContestQuestions(questions: any[]) {
+  if (!questions) return [];
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  return questions.map((q: any) => ({
+    ...q,
+    createdAt: q.createdAt ? new Date(q.createdAt) : null,
+  }));
+}
+
+// Deserializer for sample test cases
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+function deserializeTestCases(testCases: any[]) {
+  if (!testCases) return [];
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  return testCases.map((tc: any) => ({
+    ...tc,
+    createdAt: tc.createdAt ? new Date(tc.createdAt) : null,
+  }));
+}
+
+// Helper to determine if we should cache contest details and questions.
+// Cache is active if the contest has started (live), or if the user is a participant.
+async function shouldCacheContest(contest: { id: string; startTime: Date; endTime: Date }, userId?: string): Promise<boolean> {
+  const now = new Date();
+  const startTime = new Date(contest.startTime);
+  const endTime = new Date(contest.endTime);
+
+  // If the contest has ended, we don't cache with dynamic TTL (since TTL would be <= 0)
+  if (now > endTime) {
+    return false;
+  }
+
+  // If the contest is live, caching is active
+  if (now >= startTime) {
+    return true;
+  }
+
+  // If user is logged in, check if they have clicked to join (are a participant)
+  if (userId) {
+    const existing = await db.select().from(contestParticipants)
+      .where(and(
+        eq(contestParticipants.contestId, contest.id),
+        eq(contestParticipants.userId, userId)
+      )).limit(1);
+    if (existing.length > 0) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Invalidate contest details and questions list
+export async function invalidateContestCache(contestId: string, slug?: string) {
+  if (!redis) return;
+  try {
+    let contestSlug = slug;
+    
+    // Retrieve slug from mapping cache if not provided
+    if (!contestSlug) {
+      contestSlug = await redis.get(`contest:id-to-slug:${contestId}`) || undefined;
+    }
+    
+    if (contestSlug) {
+      await invalidateCacheKey(`contest:detail:${contestSlug}`);
+    }
+    await invalidateCacheKey(`contest:questions:${contestId}`);
+    console.log(`[Redis Cache] Invalidated cache for contest ${contestId} / ${contestSlug}`);
+  } catch (error) {
+    console.error(`[Redis Cache] Error invalidating contest cache for ${contestId}:`, error);
+  }
+}
+
+// Invalidate question details and its test cases, and the parent contest questions list
+export async function invalidateQuestionCache(questionId: string, contestId?: string) {
+  if (!redis) return;
+  try {
+    await invalidateCacheKey(`contest:question:${questionId}`);
+    await invalidateCacheKey(`contest:testcases:${questionId}`);
+    
+    if (contestId) {
+      await invalidateContestCache(contestId);
+    }
+    console.log(`[Redis Cache] Invalidated cache for question ${questionId}`);
+  } catch (error) {
+    console.error(`[Redis Cache] Error invalidating question cache for ${questionId}:`, error);
+  }
+}
+
 
 // ============================================
 // CONTEST MANAGEMENT
@@ -214,6 +323,17 @@ export async function getAllContests() {
 // Get Contest by Slug
 export async function getContest(slug: string) {
   try {
+    const session = await auth();
+    const userId = session?.user?.id;
+
+    const cacheKey = `contest:detail:${slug}`;
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    const cached = await getCachedData<any>(cacheKey);
+    if (cached) {
+      console.log(`[Redis Cache] Hit for contest details: ${slug}`);
+      return { success: true, data: deserializeContest(cached) };
+    }
+
     const [contest] = await db
       .select({
         id: contests.id,
@@ -254,7 +374,16 @@ export async function getContest(slug: string) {
       }
     }
 
-    return { success: true, data: { ...contest, status } };
+    const resultData = { ...contest, status };
+
+    const shouldCache = await shouldCacheContest(contest, userId);
+    if (shouldCache) {
+      const ttl = Math.max(1, Math.floor((new Date(contest.endTime).getTime() - Date.now()) / 1000));
+      await setCachedData(cacheKey, resultData, ttl);
+      await setCachedData(`contest:id-to-slug:${contest.id}`, slug, ttl);
+    }
+
+    return { success: true, data: resultData };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     return { success: false, error: errorMessage };
@@ -283,6 +412,8 @@ export async function updateContestStatus(contestId: string) {
 
     await db.update(contests).set({ status: newStatus }).where(eq(contests.id, contestId));
 
+    await invalidateContestCache(contestId, contest.slug);
+
     return { success: true, status: newStatus };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -306,6 +437,8 @@ export async function deleteContest(contestId: string) {
     }
 
     await db.delete(contests).where(eq(contests.id, contestId));
+
+    await invalidateContestCache(contestId, contest.slug);
 
     revalidatePath('/contest');
     return { success: true };
@@ -469,6 +602,8 @@ export async function addExistingQuestionToContest(data: {
       );
     }
 
+    await invalidateContestCache(data.contestId, contest.slug);
+
     revalidatePath(`/contest/${contest.slug}`);
     return { success: true, data: newQuestion };
   } catch (error) {
@@ -511,6 +646,8 @@ export async function addContestQuestion(data: {
       memoryLimitMb: data.memoryLimitMb || 256,
     }).returning();
 
+    await invalidateContestCache(data.contestId, contest.slug);
+
     revalidatePath(`/contest/${contest.slug}`);
     return { success: true, data: question };
   } catch (error) {
@@ -522,12 +659,38 @@ export async function addContestQuestion(data: {
 // Get Contest Questions
 export async function getContestQuestions(contestId: string) {
   try {
+    const session = await auth();
+    const userId = session?.user?.id;
+
+    const cacheKey = `contest:questions:${contestId}`;
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    const cached = await getCachedData<any[]>(cacheKey);
+    if (cached) {
+      console.log(`[Redis Cache] Hit for contest questions list: ${contestId}`);
+      return { success: true, data: deserializeContestQuestions(cached) };
+    }
+
     const questions = await db
       .select()
       .from(contestQuestions)
       .where(eq(contestQuestions.contestId, contestId))
       .orderBy(asc(contestQuestions.orderIndex));
     
+    // Fetch contest to check shouldCache
+    const [contest] = await db
+      .select({ id: contests.id, startTime: contests.startTime, endTime: contests.endTime })
+      .from(contests)
+      .where(eq(contests.id, contestId))
+      .limit(1);
+
+    if (contest) {
+      const shouldCache = await shouldCacheContest(contest, userId);
+      if (shouldCache) {
+        const ttl = Math.max(1, Math.floor((new Date(contest.endTime).getTime() - Date.now()) / 1000));
+        await setCachedData(cacheKey, questions, ttl);
+      }
+    }
+
     return { success: true, data: questions };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -538,6 +701,24 @@ export async function getContestQuestions(contestId: string) {
 // Get Single Question
 export async function getQuestion(questionId: string) {
   try {
+    const session = await auth();
+    const userId = session?.user?.id;
+
+    const cacheKey = `contest:question:${questionId}`;
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    const cached = await getCachedData<any>(cacheKey);
+    if (cached) {
+      console.log(`[Redis Cache] Hit for contest question: ${questionId}`);
+      const q = cached;
+      return {
+        success: true,
+        data: {
+          ...q,
+          createdAt: q.createdAt ? new Date(q.createdAt) : null,
+        }
+      };
+    }
+
     const [question] = await db
       .select()
       .from(contestQuestions)
@@ -546,6 +727,21 @@ export async function getQuestion(questionId: string) {
 
     if (!question) {
       return { success: false, error: 'Question not found' };
+    }
+
+    // Fetch contest to check shouldCache
+    const [contest] = await db
+      .select({ id: contests.id, startTime: contests.startTime, endTime: contests.endTime })
+      .from(contests)
+      .where(eq(contests.id, question.contestId))
+      .limit(1);
+
+    if (contest) {
+      const shouldCache = await shouldCacheContest(contest, userId);
+      if (shouldCache) {
+        const ttl = Math.max(1, Math.floor((new Date(contest.endTime).getTime() - Date.now()) / 1000));
+        await setCachedData(cacheKey, question, ttl);
+      }
     }
 
     return { success: true, data: question };
@@ -576,6 +772,10 @@ export async function updateQuestion(questionId: string, data: {
       .where(eq(contestQuestions.id, questionId))
       .returning();
 
+    if (question) {
+      await invalidateQuestionCache(questionId, question.contestId);
+    }
+
     return { success: true, data: question };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -591,7 +791,18 @@ export async function deleteQuestion(questionId: string) {
       return { success: false, error: 'Unauthorized' };
     }
 
+    // Get the contestId before deleting
+    const [question] = await db
+      .select({ contestId: contestQuestions.contestId })
+      .from(contestQuestions)
+      .where(eq(contestQuestions.id, questionId))
+      .limit(1);
+
     await db.delete(contestQuestions).where(eq(contestQuestions.id, questionId));
+
+    if (question) {
+      await invalidateQuestionCache(questionId, question.contestId);
+    }
 
     return { success: true };
   } catch (error) {
@@ -653,6 +864,8 @@ export async function addTestCase(data: {
 
     const [testCase] = await db.insert(contestTestCases).values(data).returning();
 
+    await invalidateQuestionCache(data.questionId);
+
     return { success: true, data: testCase };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -683,6 +896,17 @@ export async function getAllTestCases(questionId: string) {
 // Get Sample Test Cases (Public)
 export async function getSampleTestCases(questionId: string) {
   try {
+    const session = await auth();
+    const userId = session?.user?.id;
+
+    const cacheKey = `contest:testcases:${questionId}`;
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    const cached = await getCachedData<any[]>(cacheKey);
+    if (cached) {
+      console.log(`[Redis Cache] Hit for contest sample test cases: ${questionId}`);
+      return { success: true, data: deserializeTestCases(cached) };
+    }
+
     const testCases = await db
       .select()
       .from(contestTestCases)
@@ -692,6 +916,30 @@ export async function getSampleTestCases(questionId: string) {
           eq(contestTestCases.isSample, true)
         )
       );
+
+    // Fetch question to get contestId
+    const [question] = await db
+      .select({ contestId: contestQuestions.contestId })
+      .from(contestQuestions)
+      .where(eq(contestQuestions.id, questionId))
+      .limit(1);
+
+    if (question) {
+      // Fetch the contest details to check shouldCache
+      const [contest] = await db
+        .select({ id: contests.id, startTime: contests.startTime, endTime: contests.endTime })
+        .from(contests)
+        .where(eq(contests.id, question.contestId))
+        .limit(1);
+
+      if (contest) {
+        const shouldCache = await shouldCacheContest(contest, userId);
+        if (shouldCache) {
+          const ttl = Math.max(1, Math.floor((new Date(contest.endTime).getTime() - Date.now()) / 1000));
+          await setCachedData(cacheKey, testCases, ttl);
+        }
+      }
+    }
 
     return { success: true, data: testCases };
   } catch (error) {
@@ -720,6 +968,10 @@ export async function updateTestCase(testCaseId: string, data: {
       .where(eq(contestTestCases.id, testCaseId))
       .returning();
 
+    if (testCase) {
+      await invalidateQuestionCache(testCase.questionId);
+    }
+
     return { success: true, data: testCase };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -735,7 +987,18 @@ export async function deleteTestCase(testCaseId: string) {
       return { success: false, error: 'Unauthorized' };
     }
 
+    // Get the questionId before deleting
+    const [testCase] = await db
+      .select({ questionId: contestTestCases.questionId })
+      .from(contestTestCases)
+      .where(eq(contestTestCases.id, testCaseId))
+      .limit(1);
+
     await db.delete(contestTestCases).where(eq(contestTestCases.id, testCaseId));
+
+    if (testCase) {
+      await invalidateQuestionCache(testCase.questionId);
+    }
 
     return { success: true };
   } catch (error) {
@@ -743,6 +1006,7 @@ export async function deleteTestCase(testCaseId: string) {
     return { success: false, error: errorMessage };
   }
 }
+
 
 // ============================================
 // PARTICIPATION

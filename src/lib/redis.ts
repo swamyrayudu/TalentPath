@@ -66,6 +66,52 @@ export async function invalidateDashboardCache(userId: string): Promise<void> {
 }
 
 /**
+ * Retrieve cached data for a generic key.
+ * Falls back to null on cache miss or connection error.
+ */
+export async function getCachedData<T>(key: string): Promise<T | null> {
+  if (!redis) return null;
+  try {
+    const cached = await redis.get(key);
+    if (cached) {
+      return cached as T;
+    }
+  } catch (error) {
+    console.error(`[Redis Cache] Error reading cache for key ${key}:`, error);
+  }
+  return null;
+}
+
+/**
+ * Cache generic data with TTL.
+ * Fails gracefully without throwing on connection error.
+ */
+export async function setCachedData(key: string, data: unknown, ttlSeconds: number): Promise<void> {
+  if (!redis) return;
+  try {
+    await redis.set(key, data, { ex: ttlSeconds });
+    console.log(`[Redis Cache] Saved cache for key: ${key} with TTL: ${ttlSeconds}s`);
+  } catch (error) {
+    console.error(`[Redis Cache] Error setting cache for key ${key}:`, error);
+  }
+}
+
+/**
+ * Invalidate cached data for a generic key.
+ * Fails gracefully without throwing on connection error.
+ */
+export async function invalidateCacheKey(key: string): Promise<void> {
+  if (!redis) return;
+  try {
+    await redis.del(key);
+    console.log(`[Redis Cache] Invalidated cache key: ${key}`);
+  } catch (error) {
+    console.error(`[Redis Cache] Error invalidating cache key ${key}:`, error);
+  }
+}
+
+/**
+
  * Universal Queue-Based Cache with Limit (FIFO/LRU Eviction)
  */
 export class LimitedQueueCache {

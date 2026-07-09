@@ -4,6 +4,9 @@ import React from 'react';
 import { redirect } from 'next/navigation';
 import { getQuestion, getAllTestCases } from '@/actions/contest.actions';
 import { auth } from '@/lib/auth';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { TestCaseManager } from '@/components/contest/test-case-manager';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';

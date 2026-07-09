@@ -6,6 +6,9 @@ import { getContest, getQuestion, getSampleTestCases, checkParticipation } from 
 import { ProblemSolver } from '@/components/contest/problem-solver';
 import { auth } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function ProblemPage({
   params,
 }: {
