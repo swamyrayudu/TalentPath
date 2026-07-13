@@ -25,10 +25,9 @@ export async function getCachedDashboardData(userId: string): Promise<unknown | 
     const key = getDashboardCacheKey(userId);
     const cached = await cacheRedis.get(key);
     if (cached) {
-      console.log(`[Redis Cache] Hit for user: ${userId}`);
+
       return cached;
     }
-    console.log(`[Redis Cache] Miss for user: ${userId}`);
   } catch (error) {
     console.error(`[Redis Cache] Error reading cache for user ${userId}:`, error);
   }
@@ -44,7 +43,7 @@ export async function setCachedDashboardData(userId: string, data: unknown): Pro
   try {
     const key = getDashboardCacheKey(userId);
     await cacheRedis.set(key, data, { ex: DASHBOARD_CACHE_TTL });
-    console.log(`[Redis Cache] Saved cache for user: ${userId} with TTL: ${DASHBOARD_CACHE_TTL}s`);
+  
   } catch (error) {
     console.error(`[Redis Cache] Error setting cache for user ${userId}:`, error);
   }
@@ -59,7 +58,6 @@ export async function invalidateDashboardCache(userId: string): Promise<void> {
   try {
     const key = getDashboardCacheKey(userId);
     await cacheRedis.del(key);
-    console.log(`[Redis Cache] Invalidated cache for user: ${userId}`);
   } catch (error) {
     console.error(`[Redis Cache] Error invalidating cache for user ${userId}:`, error);
   }
@@ -90,7 +88,6 @@ export async function setCachedData(key: string, data: unknown, ttlSeconds: numb
   if (!cacheRedis) return;
   try {
     await cacheRedis.set(key, data, { ex: ttlSeconds });
-    console.log(`[Redis Cache] Saved cache for key: ${key} with TTL: ${ttlSeconds}s`);
   } catch (error) {
     console.error(`[Redis Cache] Error setting cache for key ${key}:`, error);
   }
@@ -104,7 +101,7 @@ export async function invalidateCacheKey(key: string): Promise<void> {
   if (!cacheRedis) return;
   try {
     await cacheRedis.del(key);
-    console.log(`[Redis Cache] Invalidated cache key: ${key}`);
+   
   } catch (error) {
     console.error(`[Redis Cache] Error invalidating cache key ${key}:`, error);
   }
@@ -156,7 +153,7 @@ export class LimitedQueueCache {
           const evictedKey = await cacheRedis.rpop(this.queueKey);
           if (evictedKey) {
             await cacheRedis.del(evictedKey);
-            console.log(`[Redis Queue Cache] Evicted key: ${evictedKey}`);
+           
           }
         }
       }
@@ -170,7 +167,7 @@ export class LimitedQueueCache {
     try {
       await cacheRedis.del(key);
       await cacheRedis.lrem(this.queueKey, 0, key);
-      console.log(`[Redis Queue Cache] Invalidated key: ${key}`);
+      
     } catch (error) {
       console.error(`[Redis Queue Cache] Error invalidating key ${key}:`, error);
     }
@@ -188,7 +185,6 @@ export class LimitedQueueCache {
         }
       }
       await cacheRedis.del(this.queueKey);
-      console.log(`[Redis Queue Cache] Cleared queue ${this.queueKey}`);
     } catch (error) {
       console.error(`[Redis Queue Cache] Error clearing queue ${this.queueKey}:`, error);
     }

@@ -13,7 +13,6 @@ function getTransporter() {
 
   // Use Google OAuth2 if credentials and a refresh token are provided
   if (user && clientId && clientSecret && refreshToken && !refreshToken.includes('your-refresh-token')) {
-    console.log('[Mailer] Initializing Nodemailer with Google OAuth2 transport');
     transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -33,7 +32,6 @@ function getTransporter() {
   const secure = process.env.SMTP_SECURE === 'true';
   const pass = process.env.SMTP_PASS;
 
-  console.log(`[Mailer] Initializing Nodemailer with SMTP host=${host}:${port}`);
   transporter = nodemailer.createTransport({
     host,
     port,
@@ -237,11 +235,6 @@ export async function sendWelcomeEmail(to: string, name: string) {
   const hasOAuth2 = smtpUser && googleClientId && googleClientSecret && googleRefreshToken && !googleRefreshToken.includes('your-refresh-token');
 
   if (!hasSmtp && !hasOAuth2) {
-    console.log('\n==================================================');
-    console.log('[Mailer] Email credentials (SMTP or Google OAuth2) are not configured.');
-    console.log(`[Mailer] Simulated welcome email for: ${to} (Name: ${name})`);
-    console.log(`[Mailer] Subject: Welcome to TalentPath, ${name}! 🚀`);
-    console.log('==================================================\n');
     return { messageId: 'simulated-message-id' };
   }
 
@@ -252,7 +245,5 @@ export async function sendWelcomeEmail(to: string, name: string) {
     subject: 'Welcome to TalentPath! 🚀',
     html: htmlContent,
   });
-
-  console.log(`[Mailer] Welcome email sent to ${to}. MessageId: ${info.messageId}`);
   return info;
 }

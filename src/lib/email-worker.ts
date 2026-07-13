@@ -8,7 +8,6 @@ const globalForWorker = global as unknown as { emailWorker: Worker | undefined }
 export const emailWorker = globalForWorker.emailWorker || new Worker(
   'email-queue',
   async (job) => {
-    console.log(`[Worker] Processing job ${job.id} of type ${job.name}`);
     if (job.name === 'sendWelcomeEmail') {
       const { email, name } = job.data;
       if (!email) {
