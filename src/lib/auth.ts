@@ -12,6 +12,9 @@ import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { db } from './db';
 import { users } from './db/schema';
 import { eq } from 'drizzle-orm';
+import { emailQueue } from './email-queue';
+// Side effect import to initialize the background worker
+import './email-worker';
 
 /**
  * NextAuth Configuration
@@ -114,6 +117,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           : null;
       }
       return session;
+    },
+  },
+  events: {
+    async createUser({ user }) {
+      if (user.email) {
+        try {
+          await emailQueue.add('sendWelcomeEmail', {
+            email: user.email,
+            name: user.name || 'User',
+          });
+          console.log(`[NextAuth Event] Successfully queued welcome email job for user: ${user.email}`);
+        } catch (error) {
+          console.error('[NextAuth Event] Failed to queue welcome email job:', error);
+        }
+      }
     },
   },
   pages: {

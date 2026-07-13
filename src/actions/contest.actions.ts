@@ -15,7 +15,7 @@ import {
 import { eq, and, desc, sql, asc, or } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
-import { invalidateDashboardCache, getCachedData, setCachedData, invalidateCacheKey, redis } from '@/lib/redis';
+import { invalidateDashboardCache, getCachedData, setCachedData, invalidateCacheKey, cacheRedis } from '@/lib/redis';
 // Helper function to get the base URL for API calls
 async function getBaseUrl(): Promise<string> {
   // In production with NEXT_PUBLIC_APP_URL set
@@ -118,13 +118,13 @@ async function shouldCacheContest(contest: { id: string; startTime: Date; endTim
 
 // Invalidate contest details and questions list
 export async function invalidateContestCache(contestId: string, slug?: string) {
-  if (!redis) return;
+  if (!cacheRedis) return;
   try {
     let contestSlug = slug;
     
     // Retrieve slug from mapping cache if not provided
     if (!contestSlug) {
-      contestSlug = await redis.get(`contest:id-to-slug:${contestId}`) || undefined;
+      contestSlug = await cacheRedis.get(`contest:id-to-slug:${contestId}`) || undefined;
     }
     
     if (contestSlug) {
@@ -139,7 +139,7 @@ export async function invalidateContestCache(contestId: string, slug?: string) {
 
 // Invalidate question details and its test cases, and the parent contest questions list
 export async function invalidateQuestionCache(questionId: string, contestId?: string) {
-  if (!redis) return;
+  if (!cacheRedis) return;
   try {
     await invalidateCacheKey(`contest:question:${questionId}`);
     await invalidateCacheKey(`contest:testcases:${questionId}`);
