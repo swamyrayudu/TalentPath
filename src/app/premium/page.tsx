@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import Link from 'next/link';
-import { Crown, ArrowLeft, Zap, Shield, Infinity } from 'lucide-react';
+import { Crown, ArrowLeft, Zap, Shield, Infinity as InfinityIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function PremiumPage() {
@@ -33,7 +33,7 @@ export default function PremiumPage() {
         {/* Feature Cards */}
         <div className="grid grid-cols-3 gap-3">
           <div className="p-4 bg-muted/50 border border-border rounded-xl space-y-2">
-            <Infinity className="h-5 w-5 text-amber-500 mx-auto" />
+            <InfinityIcon className="h-5 w-5 text-amber-500 mx-auto" />
             <p className="text-xs font-medium text-foreground">Unlimited Runs</p>
             <p className="text-[10px] text-muted-foreground">No rate limits</p>
           </div>
