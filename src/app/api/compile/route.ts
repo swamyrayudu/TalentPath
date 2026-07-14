@@ -25,35 +25,37 @@ async function sleep(ms: number) {
 
 export async function POST(request: NextRequest) {
   try {
-    // --- Rate Limiting (5 requests per 10 seconds per user) ---
-    const session = await auth();
-    const identifier =
-      session?.user?.id ||
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      request.headers.get('x-real-ip') ||
-      'anonymous';
+    // --- Rate Limiting (5 requests per 30 seconds per user) ---
+    if (compilerRateLimiter) {
+      const session = await auth();
+      const identifier =
+        session?.user?.id ||
+        request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+        request.headers.get('x-real-ip') ||
+        'anonymous';
 
-    const { success, remaining, reset } = await compilerRateLimiter.limit(identifier);
+      const { success, remaining, reset } = await compilerRateLimiter.limit(identifier);
 
-    if (!success) {
-      const retryAfterMs = Math.max(0, reset - Date.now());
-      const retryAfterSec = Math.ceil(retryAfterMs / 1000);
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Too many compile requests',
-          output: '',
-          stderr: `⚠️ Rate limit exceeded! You can only run 5 compilations every 30 seconds.\n\nPlease wait ${retryAfterSec} second(s) and try again.`,
-        },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': String(retryAfterSec),
-            'X-RateLimit-Remaining': String(remaining),
-            'X-RateLimit-Reset': String(reset),
+      if (!success) {
+        const retryAfterMs = Math.max(0, reset - Date.now());
+        const retryAfterSec = Math.ceil(retryAfterMs / 1000);
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Too many compile requests',
+            output: '',
+            stderr: `⚠️ Rate limit exceeded! You can only run 5 compilations every 30 seconds.\n\nPlease wait ${retryAfterSec} second(s) and try again.`,
           },
-        }
-      );
+          {
+            status: 429,
+            headers: {
+              'Retry-After': String(retryAfterSec),
+              'X-RateLimit-Remaining': String(remaining),
+              'X-RateLimit-Reset': String(reset),
+            },
+          }
+        );
+      }
     }
 
     const { language, code, stdin } = await request.json();
