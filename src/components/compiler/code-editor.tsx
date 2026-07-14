@@ -23,8 +23,10 @@ import {
   Terminal,
   Settings,
   FileCode,
-  Lock
+  Lock,
+  Crown
 } from 'lucide-react';
+import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCodeEditor } from './useCodeEditor';
 import { useColorTheme, colorThemeColors, ColorTheme } from '@/components/context/ColorThemeContext';
@@ -269,11 +271,31 @@ const DarkTerminalConsole = memo(({
         </div>
       ) : (
         <div className="space-y-0">
-          {terminalOutput.map((line, idx) => (
-            <pre key={idx} className="whitespace-pre-wrap m-0 p-0">
-              {line}
-            </pre>
-          ))}
+          {terminalOutput.map((line, idx) => {
+            // Render Premium upsell line as a clickable link
+            if (line.includes('👑') && line.includes('/premium')) {
+              return (
+                <div key={idx} className="my-3">
+                  <Link 
+                    href="/premium"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-lg hover:from-amber-500/30 hover:to-orange-500/30 transition-all duration-200 group"
+                  >
+                    <Crown className="h-4 w-4 text-amber-400 group-hover:scale-110 transition-transform" />
+                    <span className="text-amber-400 font-semibold text-sm">Upgrade to Premium for unlimited requests →</span>
+                  </Link>
+                </div>
+              );
+            }
+            // Skip the "/premium" visit line since it's now a button
+            if (line.includes('Visit: /premium')) {
+              return null;
+            }
+            return (
+              <pre key={idx} className="whitespace-pre-wrap m-0 p-0">
+                {line}
+              </pre>
+            );
+          })}
         </div>
       )}
       
@@ -470,6 +492,18 @@ export function CodeEditor() {
             >
               <Code2 className={`h-3.5 w-3.5 ${snippetsEnabled ? 'text-blue-500' : 'text-muted-foreground'}`} />
             </Button>
+
+            <Link href="/premium">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-3 text-xs bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0 shadow-sm"
+                title="Get Premium"
+              >
+                <Crown className="h-3.5 w-3.5 mr-1.5" />
+                Premium
+              </Button>
+            </Link>
             
             {isSessionLoading ? (
               <Button 

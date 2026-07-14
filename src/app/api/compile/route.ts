@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: 'Too many compile requests',
           output: '',
-          stderr: `⚠️ Rate limit exceeded! You can only run 5 compilations every 20 seconds.\n\nPlease wait ${retryAfterSec} second(s) and try again.`,
+          stderr: `⚠️ Rate limit exceeded! You can only run 5 compilations every 30 seconds.\n\nPlease wait ${retryAfterSec} second(s) and try again.`,
         },
         {
           status: 429,
