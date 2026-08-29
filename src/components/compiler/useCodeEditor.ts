@@ -46,15 +46,15 @@ const LANGUAGES = [
 
 export const DEFAULT_CODE: Record<string, string> = {
   python: `print("TalentPath")
-print("Developed by: RVV Swamy & durga prasad")`,
+print("Developed by: RVV Swamy, Durga Prasad, P. Hima & Ch. Abhishek")`,
   
   javascript: `console.log("TalentPath");
-console.log("Developed by: RVV Swamy & durga prasad");`,
+console.log("Developed by: RVV Swamy, Durga Prasad, P. Hima & Ch. Abhishek");`,
   
   java: `public class Main {
     public static void main(String[] args) {
         System.out.println("TalentPath");
-        System.out.println("Developed by: RVV Swamy & durga prasad");
+        System.out.println("Developed by: RVV Swamy, Durga Prasad, P. Hima & Ch. Abhishek");
     }
 }`,
 
@@ -63,7 +63,7 @@ using namespace std;
 
 int main() {
     cout << "TalentPath" << endl;
-    cout << "Developed by: RVV Swamy & durga prasad" << endl;
+    cout << "Developed by: RVV Swamy, Durga Prasad, P. Hima & Ch. Abhishek" << endl;
     return 0;
 }`,
 
@@ -71,7 +71,7 @@ int main() {
 
 int main() {
     printf("TalentPath\\n");
-    printf("Developed by: RVV Swamy & durga prasad\\n");
+    printf("Developed by: RVV Swamy, Durga Prasad, P. Hima & Ch. Abhishek\\n");
     return 0;
 }`,
 
@@ -81,7 +81,7 @@ import "fmt"
 
 func main() {
     fmt.Println("TalentPath")
-    fmt.Println("Developed by: RVV Swamy & durga prasad")
+    fmt.Println("Developed by: RVV Swamy, Durga Prasad, P. Hima & Ch. Abhishek")
 }`,
 };
 

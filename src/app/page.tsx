@@ -118,6 +118,26 @@ const developers = [
       whatsapp: 'https://wa.me/919030512334',
     },
   },
+  {
+    name: 'P. Hima',
+    role: 'Full Stack Developer',
+    socials: {
+      github: 'https://github.com',
+      linkedin: 'https://linkedin.com',
+      instagram: 'https://instagram.com',
+      whatsapp: 'https://wa.me/',
+    },
+  },
+  {
+    name: 'Ch. Abhishek',
+    role: 'Full Stack Developer',
+    socials: {
+      github: 'https://github.com',
+      linkedin: 'https://linkedin.com',
+      instagram: 'https://instagram.com',
+      whatsapp: 'https://wa.me/',
+    },
+  },
 ];
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -368,12 +388,12 @@ export default function Home() {
             </h2>
           </div>
 
-          <div className="mx-auto mt-14 grid max-w-2xl gap-4 sm:grid-cols-2">
+          <div className="mx-auto mt-14 grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {developers.map((dev) => (
-              <div key={dev.name} className="rounded-3xl border bg-card p-7">
+              <div key={dev.name} className="rounded-3xl border bg-card p-6">
                 <p className="text-base font-semibold tracking-tight">{dev.name}</p>
                 <p className="mt-1 text-sm text-muted-foreground">{dev.role}</p>
-                <div className="mt-6 flex items-center gap-4 border-t pt-5">
+                <div className="mt-6 flex items-center gap-3.5 border-t pt-5">
                   <SocialLink href={dev.socials.github} label={`GitHub — ${dev.name}`}>
                     <Github className="size-4" />
                   </SocialLink>
