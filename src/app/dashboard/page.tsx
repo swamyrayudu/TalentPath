@@ -1,35 +1,31 @@
-
 import { auth } from '../../lib/auth';
-import React from 'react';
+import React, { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
-import { 
-  aptitudeResults,
-  AptitudeResult,
-} from '@/lib/db/schema';
-import { eq, desc, sql } from 'drizzle-orm';
+import { aptitudeResults, AptitudeResult, mockInterviews } from '@/lib/db/schema';
+import { and, eq, desc, sql } from 'drizzle-orm';
 import { getCachedDashboardData, setCachedDashboardData } from '@/lib/redis';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Code2, 
-  Trophy, 
-  Target, 
-  TrendingUp, 
-  CheckCircle2, 
-  Clock, 
-  Flame,
+import {
+  Code2,
+  Trophy,
   Brain,
-  Award,
-  BarChart3,
-  Activity,
-  BookOpen,
-  Zap
+  Flame,
+  CheckCircle2,
+  ArrowRight,
+  Target,
+  Briefcase,
 } from 'lucide-react';
 import Link from 'next/link';
 import { getUserContestStats } from '@/actions/contest.actions';
+import { getDailyStreak, emptyStreak } from '@/lib/daily-challenge';
+import { CORE_TOPICS } from '@/lib/ai-suggestions';
+import type { LearnerProfile } from '@/lib/ai-suggestions';
+import {
+  AiSuggestionsSection,
+  AiSuggestionsSkeleton,
+} from '@/components/dashboard/ai-suggestions-section';
 
 interface ProgressWithProblem {
   id: number;
@@ -42,6 +38,7 @@ interface ProgressWithProblem {
   difficulty: string | null;
   platform: string | null;
   slug: string | null;
+  topicTags?: unknown;
 }
 
 interface ContestQuestionStat {
@@ -70,6 +67,113 @@ interface ContestStats {
   recentSubmissions: ContestRecentSubmission[];
 }
 
+/* ── Presentational building blocks ─────────────────────────────── */
+
+function Panel({
+  title,
+  action,
+  children,
+  className = '',
+}: {
+  title?: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`rounded-2xl border bg-card ${className}`}>
+      {title && (
+        <div className="flex items-center justify-between gap-4 border-b px-5 py-4">
+          <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
+          {action}
+        </div>
+      )}
+      <div className="p-5">{children}</div>
+    </section>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  caption,
+  icon: Icon,
+}: {
+  label: string;
+  value: string | number;
+  caption: string;
+  icon: React.ElementType;
+}) {
+  return (
+    <div className="rounded-2xl border bg-card p-5">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-muted-foreground">{label}</span>
+        <Icon className="size-4 text-muted-foreground" strokeWidth={1.75} />
+      </div>
+      <p className="mt-4 text-3xl font-semibold tracking-tight tabular-nums">{value}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{caption}</p>
+    </div>
+  );
+}
+
+function StatRow({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="flex items-center justify-between border-b py-2.5 last:border-b-0 last:pb-0">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-sm font-semibold tabular-nums">{value}</span>
+    </div>
+  );
+}
+
+function EmptyState({
+  icon: Icon,
+  message,
+  href,
+  cta,
+}: {
+  icon: React.ElementType;
+  message: string;
+  href: string;
+  cta: string;
+}) {
+  return (
+    <div className="flex flex-col items-center py-10 text-center">
+      <Icon className="size-6 text-muted-foreground/40" strokeWidth={1.5} />
+      <p className="mt-3 text-sm text-muted-foreground">{message}</p>
+      <Link
+        href={href}
+        className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+      >
+        {cta}
+        <ArrowRight className="size-3.5" />
+      </Link>
+    </div>
+  );
+}
+
+function ListRow({
+  title,
+  meta,
+  trailing,
+}: {
+  title: string;
+  meta: string;
+  trailing: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b py-3 last:border-b-0 last:pb-0">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium">{title}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">{meta}</p>
+      </div>
+      {trailing}
+    </div>
+  );
+}
+
+const shortDate = (d: Date | string) =>
+  new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
 export default async function Dashboard() {
   const session = await auth();
 
@@ -79,7 +183,6 @@ export default async function Dashboard() {
 
   const userId = session.user.id as string;
 
-  // Try to retrieve cached dashboard data
   let userProgressData: ProgressWithProblem[] = [];
   let contestStats: ContestStats = {
     totalSubmissions: 0,
@@ -96,17 +199,16 @@ export default async function Dashboard() {
     aptitudeResultsData: AptitudeResult[];
   }
 
-  const cachedData = await getCachedDashboardData(userId) as DashboardCacheData | null;
+  const cachedData = (await getCachedDashboardData(userId)) as DashboardCacheData | null;
 
   if (cachedData) {
     userProgressData = cachedData.userProgressData;
     contestStats = cachedData.contestStats;
     aptitudeResultsData = cachedData.aptitudeResultsData;
   } else {
-    // Cache miss: Fetch data in parallel
     const [progressResult, contestStatsResult, aptitudeResult] = await Promise.all([
       db.execute(sql`
-        SELECT 
+        SELECT
           up.id,
           up.status,
           up.solved_at as "solvedAt",
@@ -116,7 +218,8 @@ export default async function Dashboard() {
           vp.title,
           vp.difficulty,
           vp.platform,
-          vp.slug
+          vp.slug,
+          vp.topic_tags as "topicTags"
         FROM user_progress up
         LEFT JOIN visible_problems vp ON up.problem_id = vp.id
         WHERE up.user_id = ${userId}
@@ -127,24 +230,24 @@ export default async function Dashboard() {
         .select()
         .from(aptitudeResults)
         .where(eq(aptitudeResults.userId, userId))
-        .orderBy(desc(aptitudeResults.completedAt))
+        .orderBy(desc(aptitudeResults.completedAt)),
     ]);
 
     userProgressData = progressResult as ProgressWithProblem[];
-    
-    contestStats = contestStatsResult.success && contestStatsResult.data 
-      ? contestStatsResult.data 
-      : {
-          totalSubmissions: 0,
-          totalAccepted: 0,
-          uniqueProblemsSolved: 0,
-          questionStats: [],
-          recentSubmissions: [],
-        };
+
+    contestStats =
+      contestStatsResult.success && contestStatsResult.data
+        ? contestStatsResult.data
+        : {
+            totalSubmissions: 0,
+            totalAccepted: 0,
+            uniqueProblemsSolved: 0,
+            questionStats: [],
+            recentSubmissions: [],
+          };
 
     aptitudeResultsData = aptitudeResult;
 
-    // Cache the fetched data
     await setCachedDashboardData(userId, {
       userProgressData,
       contestStats,
@@ -152,20 +255,19 @@ export default async function Dashboard() {
     });
   }
 
-  // Calculate aptitude statistics
   const aptitudeStats = {
     totalTests: aptitudeResultsData.length,
-    averageScore: aptitudeResultsData.length > 0
-      ? Math.round(
-          aptitudeResultsData.reduce((sum, r) => sum + r.score, 0) / aptitudeResultsData.length
-        )
-      : 0,
-    bestScore: aptitudeResultsData.length > 0
-      ? Math.max(...aptitudeResultsData.map(r => r.score))
-      : 0,
+    averageScore:
+      aptitudeResultsData.length > 0
+        ? Math.round(
+            aptitudeResultsData.reduce((sum, r) => sum + r.score, 0) / aptitudeResultsData.length
+          )
+        : 0,
+    bestScore:
+      aptitudeResultsData.length > 0 ? Math.max(...aptitudeResultsData.map(r => r.score)) : 0,
     topicStats: (() => {
       const topicMap = new Map<string, { total: number; count: number; best: number }>();
-      
+
       aptitudeResultsData.forEach(result => {
         const existing = topicMap.get(result.topic) || { total: 0, count: 0, best: 0 };
         topicMap.set(result.topic, {
@@ -194,29 +296,30 @@ export default async function Dashboard() {
     })),
   };
 
-  // Calculate DSA statistics - using new flat structure from raw SQL
   const solved = userProgressData.filter(p => p.status === 'solved');
   const dsaStats = {
     totalSolved: solved.length,
     easy: solved.filter(p => p.difficulty?.toUpperCase() === 'EASY').length,
     medium: solved.filter(p => p.difficulty?.toUpperCase() === 'MEDIUM').length,
     hard: solved.filter(p => p.difficulty?.toUpperCase() === 'HARD').length,
-    recentSubmissions: solved.slice(0, 10),
+    recentSubmissions: solved.slice(0, 8),
   };
 
-  // Calculate streak
+  // Solved in the last 7 days — a more actionable number than a lifetime total.
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const solvedThisWeek = solved.filter(
+    p => p.solvedAt && new Date(p.solvedAt).getTime() >= weekAgo
+  ).length;
+
+  const lastSolvedAt = solved.find(p => p.solvedAt)?.solvedAt ?? null;
+
   const calculateStreak = () => {
     if (solved.length === 0) return 0;
-    
-    // Get all dates when problems were solved
+
     const dates = solved
       .filter(p => p.solvedAt)
-      .map(p => {
-        // Handle both timestamp and string formats
-        const date = new Date(p.solvedAt!);
-        return date.toDateString();
-      })
-      .filter((date, index, self) => self.indexOf(date) === index) // unique dates
+      .map(p => new Date(p.solvedAt!).toDateString())
+      .filter((date, index, self) => self.indexOf(date) === index)
       .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
 
     if (dates.length === 0) return 0;
@@ -224,20 +327,18 @@ export default async function Dashboard() {
     let streak = 0;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     for (let i = 0; i < dates.length; i++) {
       const expectedDate = new Date(today);
       expectedDate.setDate(expectedDate.getDate() - i);
-      
+
       if (dates[i] === expectedDate.toDateString()) {
         streak++;
       } else if (i === 0) {
-        // If today hasn't been solved yet, check from yesterday
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
         if (dates[0] === yesterday.toDateString()) {
           streak = 1;
-          // Continue checking from day before yesterday
           for (let j = 1; j < dates.length; j++) {
             const checkDate = new Date(yesterday);
             checkDate.setDate(checkDate.getDate() - j);
@@ -253,548 +354,592 @@ export default async function Dashboard() {
         break;
       }
     }
-    
+
     return streak;
   };
 
   const streak = calculateStreak();
 
+  /* ── Personalised suggestions ───────────────────────────────────── */
+
+  // Outside the dashboard cache: the daily streak feeds the suggestions and has
+  // to reflect what the DSA sheet recorded a moment ago.
+  const [dailyStreak, interviewCountResult] = await Promise.all([
+    getDailyStreak(userId).catch(error => {
+      console.error('[Dashboard] Daily streak unavailable:', error);
+      return emptyStreak();
+    }),
+    db
+      .select({ id: mockInterviews.id })
+      .from(mockInterviews)
+      .where(
+        and(eq(mockInterviews.userId, userId), eq(mockInterviews.status, 'completed'))
+      )
+      .catch(() => [] as { id: string }[]),
+  ]);
+
+  // Topic coverage: what they keep practising, and what they never touch.
+  const topicCounts = new Map<string, number>();
+  for (const item of solved) {
+    const tags = item.topicTags;
+    if (!Array.isArray(tags)) continue;
+    for (const tag of tags) {
+      const name = typeof tag === 'string' ? tag : (tag as { name?: string })?.name;
+      if (name) topicCounts.set(name, (topicCounts.get(name) ?? 0) + 1);
+    }
+  }
+
+  const topTopics = [...topicCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([topic]) => topic);
+
+  const missingTopics = CORE_TOPICS.filter(topic => !topicCounts.has(topic)).slice(0, 5);
+
+  const daysSinceLastSolve = lastSolvedAt
+    ? Math.floor((Date.now() - new Date(lastSolvedAt).getTime()) / 86_400_000)
+    : null;
+
+  const orderedAptitude = aptitudeStats.topicStats;
+
+  const learnerProfile: LearnerProfile = {
+    solvedTotal: dsaStats.totalSolved,
+    easy: dsaStats.easy,
+    medium: dsaStats.medium,
+    hard: dsaStats.hard,
+    solvedThisWeek,
+    daysSinceLastSolve,
+    topTopics,
+    missingTopics,
+    aptitudeTests: aptitudeStats.totalTests,
+    aptitudeAverage: aptitudeStats.averageScore,
+    aptitudeWeakest: orderedAptitude.length
+      ? {
+          topic: orderedAptitude[orderedAptitude.length - 1].topic,
+          score: orderedAptitude[orderedAptitude.length - 1].averageScore,
+        }
+      : null,
+    aptitudeStrongest: orderedAptitude.length
+      ? { topic: orderedAptitude[0].topic, score: orderedAptitude[0].averageScore }
+      : null,
+    contestSubmissions: contestStats.totalSubmissions,
+    contestAcceptance:
+      contestStats.totalSubmissions > 0
+        ? Math.round((contestStats.totalAccepted / contestStats.totalSubmissions) * 100)
+        : null,
+    contestSolved: contestStats.uniqueProblemsSolved,
+    dailyStreak: dailyStreak.current,
+    dailyLongest: dailyStreak.longest,
+    dailyThisMonth: dailyStreak.completedThisMonth,
+    dailySolvedToday: dailyStreak.solvedToday,
+    interviewsCompleted: interviewCountResult.length,
+  };
+
+  const hasAnyActivity =
+    dsaStats.totalSolved > 0 ||
+    contestStats.totalSubmissions > 0 ||
+    aptitudeStats.totalTests > 0;
+
+  const totalDsa = Math.max(dsaStats.totalSolved, 1);
+  const pct = (n: number) => (n / totalDsa) * 100;
+
+  const contestAcceptance =
+    contestStats.totalSubmissions > 0
+      ? `${Math.round((contestStats.totalAccepted / contestStats.totalSubmissions) * 100)}%`
+      : '—';
+
+  const firstName = session.user.name?.split(' ')[0] || 'there';
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-3 md:p-6 space-y-4 md:space-y-6 max-w-7xl">
-        {/* Header Section */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="space-y-0.5">
-            <h1 className="text-xl md:text-2xl font-semibold">
-              Welcome, <span className="text-primary">{session.user.name?.split(' ')[0] || 'User'}</span>
+      <div className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10">
+        {/* ── Header ───────────────────────────────────────────── */}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+              Welcome back, {firstName}
             </h1>
-            <p className="text-xs md:text-sm text-muted-foreground">Track your progress</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {hasAnyActivity
+                ? lastSolvedAt
+                  ? `Last solved ${shortDate(lastSolvedAt)}. Keep the momentum going.`
+                  : 'Here is where your preparation stands.'
+                : 'Let’s get your preparation started.'}
+            </p>
           </div>
-          
-          {/* Streak Badge */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 md:px-3 md:py-2 rounded-lg bg-muted">
-            <Flame className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
-            <div className="flex items-baseline gap-0.5">
-              <span className="text-sm md:text-base font-semibold">{streak}</span>
-              <span className="text-[10px] md:text-xs text-muted-foreground">days</span>
+
+          {streak > 0 && (
+            <div className="flex items-center gap-2 rounded-full border bg-card px-3.5 py-2">
+              <Flame className="size-4 text-primary" strokeWidth={2} />
+              <span className="text-sm font-semibold tabular-nums">{streak}</span>
+              <span className="text-sm text-muted-foreground">
+                day{streak === 1 ? '' : 's'}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* ── First-run guidance ───────────────────────────────── */}
+        {!hasAnyActivity && (
+          <div className="mt-8 rounded-2xl border bg-card p-6 md:p-8">
+            <h2 className="text-lg font-semibold tracking-tight">Start here</h2>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Three things worth doing first. Your stats fill in as you go.
+            </p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              {[
+                {
+                  href: '/dsasheet',
+                  icon: Code2,
+                  title: 'Solve your first problem',
+                  body: 'Work the DSA sheet pattern by pattern.',
+                },
+                {
+                  href: '/aptitude',
+                  icon: Brain,
+                  title: 'Take an aptitude test',
+                  body: 'Find your baseline in 10 minutes.',
+                },
+                {
+                  href: '/contest',
+                  icon: Trophy,
+                  title: 'Enter a contest',
+                  body: 'Practise solving against the clock.',
+                },
+              ].map(item => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="group rounded-xl border p-4 transition-colors hover:border-primary/40 hover:bg-muted/40"
+                >
+                  <item.icon className="size-5 text-primary" strokeWidth={1.75} />
+                  <p className="mt-3 text-sm font-semibold">{item.title}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    {item.body}
+                  </p>
+                  <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary">
+                    Open
+                    <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                </Link>
+              ))}
             </div>
           </div>
+        )}
+
+        {/* ── Overview ─────────────────────────────────────────── */}
+        <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard
+            label="DSA"
+            value={dsaStats.totalSolved}
+            caption={
+              solvedThisWeek > 0 ? `${solvedThisWeek} solved this week` : 'problems solved'
+            }
+            icon={Code2}
+          />
+          <StatCard
+            label="Contest"
+            value={contestStats.uniqueProblemsSolved}
+            caption="unique problems solved"
+            icon={Trophy}
+          />
+          <StatCard
+            label="Tests"
+            value={aptitudeStats.totalTests}
+            caption="aptitude tests taken"
+            icon={Brain}
+          />
+          <StatCard
+            label="Average"
+            value={aptitudeStats.totalTests > 0 ? `${aptitudeStats.averageScore}%` : '—'}
+            caption={
+              aptitudeStats.totalTests > 0
+                ? `best ${aptitudeStats.bestScore}%`
+                : 'no tests yet'
+            }
+            icon={Target}
+          />
         </div>
 
-        {/* Overview Stats - Compact */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-          <Card className="border bg-card hover:bg-accent/5 transition-colors">
-            <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-[10px] md:text-sm font-medium text-foreground">DSA</CardTitle>
-                <Code2 className="h-3 w-3 md:h-4 md:w-4 text-primary" />
-              </div>
-            </CardHeader>
-            <CardContent className="p-2 md:p-4 pt-0">
-              <div className="text-lg md:text-2xl font-bold text-foreground">{dsaStats.totalSolved}</div>
-              <p className="text-[9px] md:text-xs text-muted-foreground">solved</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border bg-card hover:bg-accent/5 transition-colors">
-            <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-[10px] md:text-sm font-medium text-foreground">Contest</CardTitle>
-                <Trophy className="h-3 w-3 md:h-4 md:w-4 text-primary" />
-              </div>
-            </CardHeader>
-            <CardContent className="p-2 md:p-4 pt-0">
-              <div className="text-lg md:text-2xl font-bold text-foreground">{contestStats.uniqueProblemsSolved}</div>
-              <p className="text-[9px] md:text-xs text-muted-foreground">unique</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border bg-card hover:bg-accent/5 transition-colors">
-            <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-[10px] md:text-sm font-medium text-foreground">Tests</CardTitle>
-                <Brain className="h-3 w-3 md:h-4 md:w-4 text-primary" />
-              </div>
-            </CardHeader>
-            <CardContent className="p-2 md:p-4 pt-0">
-              <div className="text-lg md:text-2xl font-bold text-foreground">{aptitudeStats.totalTests}</div>
-              <p className="text-[9px] md:text-xs text-muted-foreground">completed</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border bg-card hover:bg-accent/5 transition-colors">
-            <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-[10px] md:text-sm font-medium text-foreground">Best</CardTitle>
-                <Award className="h-3 w-3 md:h-4 md:w-4 text-primary" />
-              </div>
-            </CardHeader>
-            <CardContent className="p-2 md:p-4 pt-0">
-              <div className="text-lg md:text-2xl font-bold text-foreground">{aptitudeStats.bestScore}%</div>
-              <p className="text-[9px] md:text-xs text-muted-foreground">score</p>
-            </CardContent>
-          </Card>
+        {/* ── Personalised suggestions ─────────────────────────── */}
+        <div className="mt-8">
+          <Suspense fallback={<AiSuggestionsSkeleton />}>
+            <AiSuggestionsSection userId={userId} profile={learnerProfile} />
+          </Suspense>
         </div>
 
-        {/* Tabbed Content */}
-        <Tabs defaultValue="dsa" className="space-y-4 md:space-y-6">
-          <TabsList className="w-full h-9 md:h-10 bg-muted p-1 gap-1">
-            <TabsTrigger 
-              value="dsa" 
-              className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground hover:bg-primary/20 hover:text-primary transition-all text-xs md:text-sm rounded-sm"
+        {/* ── Detail ───────────────────────────────────────────── */}
+        <Tabs defaultValue="dsa" className="mt-8">
+          <TabsList className="h-10 w-full justify-start gap-1 bg-muted p-1">
+            <TabsTrigger
+              value="dsa"
+              className="flex-1 gap-1.5 rounded-md text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
             >
-              <Code2 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
-              <span className="font-semibold">DSA</span>
+              <Code2 className="size-4" strokeWidth={1.75} />
+              DSA
             </TabsTrigger>
-            <TabsTrigger 
-              value="contests" 
-              className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground hover:bg-primary/20 hover:text-primary transition-all text-xs md:text-sm rounded-sm"
+            <TabsTrigger
+              value="contests"
+              className="flex-1 gap-1.5 rounded-md text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
             >
-              <Trophy className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
-              <span className="font-semibold">Contest</span>
+              <Trophy className="size-4" strokeWidth={1.75} />
+              Contest
             </TabsTrigger>
-            <TabsTrigger 
-              value="aptitude" 
-              className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground hover:bg-primary/20 hover:text-primary transition-all text-xs md:text-sm rounded-sm"
+            <TabsTrigger
+              value="aptitude"
+              className="flex-1 gap-1.5 rounded-md text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
             >
-              <Brain className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
-              <span className="font-semibold">Tests</span>
+              <Brain className="size-4" strokeWidth={1.75} />
+              Tests
             </TabsTrigger>
           </TabsList>
 
-          {/* DSA Tab Content */}
-          <TabsContent value="dsa" className="space-y-3 md:space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4">
-              {/* Main Content */}
-              <div className="lg:col-span-2 space-y-3 md:space-y-4">
-                {/* Difficulty Stats */}
-                <Card className="border">
-                  <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5 text-foreground">
-                      <BarChart3 className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
-                      <span className="hidden sm:inline">Difficulty Distribution</span>
-                      <span className="sm:hidden">Difficulty</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-3 md:p-6 pt-0">
-                    <div className="grid grid-cols-3 gap-1.5 md:gap-3 mb-3">
-                      <div className="text-center p-1.5 md:p-3 rounded-md bg-muted">
-                        <div className="text-base md:text-2xl font-bold">{dsaStats.easy}</div>
-                        <p className="text-[9px] md:text-xs text-muted-foreground mt-0.5">Easy</p>
+          {/* ── DSA ──────────────────────────────────────────── */}
+          <TabsContent value="dsa" className="mt-5">
+            <div className="grid gap-4 lg:grid-cols-3">
+              <div className="space-y-4 lg:col-span-2">
+                <Panel title="Difficulty mix">
+                  {dsaStats.totalSolved === 0 ? (
+                    <EmptyState
+                      icon={Code2}
+                      message="Solve a few problems to see how your practice is distributed."
+                      href="/dsasheet"
+                      cta="Open the DSA sheet"
+                    />
+                  ) : (
+                    <>
+                      {/* One stacked bar reads faster than three separate meters */}
+                      <div className="flex h-2.5 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="bg-emerald-500"
+                          style={{ width: `${pct(dsaStats.easy)}%` }}
+                        />
+                        <div
+                          className="bg-amber-500"
+                          style={{ width: `${pct(dsaStats.medium)}%` }}
+                        />
+                        <div
+                          className="bg-rose-500"
+                          style={{ width: `${pct(dsaStats.hard)}%` }}
+                        />
                       </div>
-                      <div className="text-center p-1.5 md:p-3 rounded-md bg-muted">
-                        <div className="text-base md:text-2xl font-bold">{dsaStats.medium}</div>
-                        <p className="text-[9px] md:text-xs text-muted-foreground mt-0.5">Medium</p>
-                      </div>
-                      <div className="text-center p-1.5 md:p-3 rounded-md bg-muted">
-                        <div className="text-base md:text-2xl font-bold">{dsaStats.hard}</div>
-                        <p className="text-[9px] md:text-xs text-muted-foreground mt-0.5">Hard</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-xs md:text-sm">
-                          <span className="font-medium">Easy</span>
-                          <span className="text-muted-foreground">{Math.round((dsaStats.easy / Math.max(dsaStats.totalSolved, 1)) * 100)}%</span>
-                        </div>
-                        <Progress value={(dsaStats.easy / Math.max(dsaStats.totalSolved, 1)) * 100} className="h-1.5" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-xs md:text-sm">
-                          <span className="font-medium">Medium</span>
-                          <span className="text-muted-foreground">{Math.round((dsaStats.medium / Math.max(dsaStats.totalSolved, 1)) * 100)}%</span>
-                        </div>
-                        <Progress value={(dsaStats.medium / Math.max(dsaStats.totalSolved, 1)) * 100} className="h-1.5" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-xs md:text-sm">
-                          <span className="font-medium">Hard</span>
-                          <span className="text-muted-foreground">{Math.round((dsaStats.hard / Math.max(dsaStats.totalSolved, 1)) * 100)}%</span>
-                        </div>
-                        <Progress value={(dsaStats.hard / Math.max(dsaStats.totalSolved, 1)) * 100} className="h-1.5" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Recent Submissions */}
-                <Card className="border">
-                  <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5 text-foreground">
-                      <Clock className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
-                      Recent
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-3 md:p-6 pt-0">
-                    {dsaStats.recentSubmissions.length === 0 ? (
-                      <div className="text-center py-8">
-                        <Code2 className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
-                        <p className="text-xs md:text-sm text-muted-foreground">No submissions yet</p>
-                        <Link href="/dsasheet" className="text-xs text-primary hover:underline mt-1 inline-block">
-                          Start solving →
-                        </Link>
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5 md:space-y-2">
-                        {dsaStats.recentSubmissions.map((item) => (
-                          <div
-                            key={item.id}
-                            className="flex items-center justify-between p-2 md:p-2.5 rounded-md border hover:bg-accent/50 transition-colors"
-                          >
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <CheckCircle2 className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary flex-shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs md:text-sm font-medium truncate">{item.title || 'Unknown'}</p>
-                                <p className="text-[10px] md:text-xs text-muted-foreground">
-                                  {item.solvedAt ? new Date(item.solvedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
-                                </p>
-                              </div>
+                      <div className="mt-5 grid grid-cols-3 gap-3">
+                        {[
+                          { label: 'Easy', n: dsaStats.easy, dot: 'bg-emerald-500' },
+                          { label: 'Medium', n: dsaStats.medium, dot: 'bg-amber-500' },
+                          { label: 'Hard', n: dsaStats.hard, dot: 'bg-rose-500' },
+                        ].map(d => (
+                          <div key={d.label}>
+                            <div className="flex items-center gap-2">
+                              <span className={`size-2 rounded-full ${d.dot}`} />
+                              <span className="text-xs text-muted-foreground">{d.label}</span>
                             </div>
-                            <Badge
-                              variant="outline"
-                              className="text-[10px] md:text-xs"
-                            >
-                              {item.difficulty || 'N/A'}
-                            </Badge>
+                            <p className="mt-1.5 text-2xl font-semibold tabular-nums">{d.n}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {Math.round(pct(d.n))}%
+                            </p>
                           </div>
                         ))}
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
+                    </>
+                  )}
+                </Panel>
+
+                <Panel
+                  title="Recently solved"
+                  action={
+                    dsaStats.recentSubmissions.length > 0 ? (
+                      <Link
+                        href="/dsasheet"
+                        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        View all
+                      </Link>
+                    ) : null
+                  }
+                >
+                  {dsaStats.recentSubmissions.length === 0 ? (
+                    <EmptyState
+                      icon={Code2}
+                      message="Nothing solved yet."
+                      href="/dsasheet"
+                      cta="Start solving"
+                    />
+                  ) : (
+                    <div>
+                      {dsaStats.recentSubmissions.map(item => (
+                        <ListRow
+                          key={item.id}
+                          title={item.title || 'Untitled problem'}
+                          meta={item.solvedAt ? shortDate(item.solvedAt) : '—'}
+                          trailing={
+                            <div className="flex shrink-0 items-center gap-2.5">
+                              <Badge variant="outline" className="text-xs font-normal">
+                                {item.difficulty || 'N/A'}
+                              </Badge>
+                              <CheckCircle2 className="size-4 text-emerald-500" />
+                            </div>
+                          }
+                        />
+                      ))}
+                    </div>
+                  )}
+                </Panel>
               </div>
 
-              {/* Sidebar */}
-              <div className="space-y-3 md:space-y-4">
-                <Card className="border">
-                  <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5 text-foreground">
-                      <Activity className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
-                      Stats
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-3 md:p-6 pt-0 space-y-1.5">
-                    <div className="flex justify-between items-center py-1.5 border-b">
-                      <span className="text-xs md:text-sm text-muted-foreground">Total Solved</span>
-                      <span className="font-semibold text-sm md:text-base">{dsaStats.totalSolved}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-1.5 border-b">
-                      <span className="text-xs md:text-sm text-muted-foreground">Success Rate</span>
-                      <span className="font-semibold text-sm md:text-base">100%</span>
-                    </div>
-                    <div className="flex justify-between items-center py-1.5">
-                      <span className="text-xs md:text-sm text-muted-foreground">Active Days</span>
-                      <span className="font-semibold text-sm md:text-base">{streak}</span>
-                    </div>
-                  </CardContent>
-                </Card>
+              <div className="space-y-4">
+                <Panel title="Summary">
+                  <StatRow label="Total solved" value={dsaStats.totalSolved} />
+                  <StatRow label="This week" value={solvedThisWeek} />
+                  <StatRow label="Solving streak" value={`${streak}d`} />
+                  <StatRow
+                    label="Last solved"
+                    value={lastSolvedAt ? shortDate(lastSolvedAt) : '—'}
+                  />
+                </Panel>
 
-                <Card className="border">
-                  <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base text-foreground">Practice</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-3 md:p-6 pt-0">
-                    <Link
-                      href="/dsasheet"
-                      className="flex items-center justify-between p-3 rounded-md border hover:bg-accent transition-colors group"
-                    >
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="h-4 w-4" />
-                        <span className="text-sm font-medium">DSA Sheet</span>
-                      </div>
-                      <Zap className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
-                    </Link>
-                  </CardContent>
-                </Card>
+                <Panel title="Jump back in">
+                  <div className="space-y-2">
+                    {[
+                      { href: '/dsasheet', label: 'DSA Sheet', icon: Code2 },
+                      { href: '/compiler', label: 'Compiler', icon: Code2 },
+                      { href: '/jobs', label: 'Jobs', icon: Briefcase },
+                    ].map(l => (
+                      <Link
+                        key={l.href}
+                        href={l.href}
+                        className="group flex items-center justify-between rounded-xl border px-4 py-3 transition-colors hover:border-primary/40 hover:bg-muted/40"
+                      >
+                        <span className="flex items-center gap-2.5 text-sm font-medium">
+                          <l.icon
+                            className="size-4 text-muted-foreground"
+                            strokeWidth={1.75}
+                          />
+                          {l.label}
+                        </span>
+                        <ArrowRight className="size-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                      </Link>
+                    ))}
+                  </div>
+                </Panel>
               </div>
             </div>
           </TabsContent>
 
-          {/* Contests Tab Content */}
-          <TabsContent value="contests" className="space-y-3 md:space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4">
-              <div className="lg:col-span-2 space-y-3 md:space-y-4">
-                <Card className="border">
-                  <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5 text-foreground">
-                      <Trophy className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
-                      <span className="hidden sm:inline">Contest Statistics</span>
-                      <span className="sm:hidden">Contest</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-3 md:p-6 pt-0">
-                    <div className="grid grid-cols-3 gap-1.5 md:gap-3 mb-3">
-                      <div className="text-center p-1.5 md:p-3 rounded-md bg-muted">
-                        <div className="text-base md:text-2xl font-bold">{contestStats.totalSubmissions}</div>
-                        <p className="text-[9px] md:text-xs text-muted-foreground mt-0.5">Submissions</p>
-                      </div>
-                      <div className="text-center p-1.5 md:p-3 rounded-md bg-muted">
-                        <div className="text-base md:text-2xl font-bold">{contestStats.totalAccepted}</div>
-                        <p className="text-[9px] md:text-xs text-muted-foreground mt-0.5">Accepted</p>
-                      </div>
-                      <div className="text-center p-1.5 md:p-3 rounded-md bg-muted">
-                        <div className="text-base md:text-2xl font-bold">{contestStats.uniqueProblemsSolved}</div>
-                        <p className="text-[9px] md:text-xs text-muted-foreground mt-0.5">Solved</p>
-                      </div>
-                    </div>
-
-                    {contestStats.questionStats.length > 0 && (
-                      <div className="space-y-2">
-                        <h4 className="font-medium text-xs md:text-sm text-foreground">Question Performance</h4>
-                        {contestStats.questionStats.map((stat, index) => (
-                          <div key={index} className="p-2 md:p-2.5 rounded-md border">
-                            <div className="flex justify-between items-start mb-1">
-                              <span className="text-xs md:text-sm font-medium">{stat.questionTitle}</span>
-                              <Badge variant={stat.acceptedSubmissions > 0 ? "default" : "secondary"} className="text-[10px] md:text-xs">
-                                {stat.acceptedSubmissions > 0 ? 'Solved' : 'Attempted'}
-                              </Badge>
-                            </div>
-                            <div className="flex gap-1.5 text-[10px] md:text-xs text-muted-foreground">
-                              <span>{stat.totalSubmissions} submissions</span>
-                              <span>•</span>
-                              <span>{stat.acceptedSubmissions} accepted</span>
-                            </div>
+          {/* ── Contest ──────────────────────────────────────── */}
+          <TabsContent value="contests" className="mt-5">
+            <div className="grid gap-4 lg:grid-cols-3">
+              <div className="space-y-4 lg:col-span-2">
+                <Panel title="Contest performance">
+                  {contestStats.totalSubmissions === 0 ? (
+                    <EmptyState
+                      icon={Trophy}
+                      message="You haven’t entered a contest yet."
+                      href="/contest"
+                      cta="Browse contests"
+                    />
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-3 gap-3">
+                        {[
+                          { label: 'Submissions', n: contestStats.totalSubmissions },
+                          { label: 'Accepted', n: contestStats.totalAccepted },
+                          { label: 'Solved', n: contestStats.uniqueProblemsSolved },
+                        ].map(s => (
+                          <div key={s.label}>
+                            <p className="text-2xl font-semibold tabular-nums">{s.n}</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">{s.label}</p>
                           </div>
                         ))}
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
 
-                {/* Recent Contest Submissions */}
-                <Card className="border">
-                  <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                      Recent
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-3 md:p-6 pt-0">
-                    {contestStats.recentSubmissions.length === 0 ? (
-                      <div className="text-center py-8">
-                        <Trophy className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
-                        <p className="text-xs md:text-sm text-muted-foreground">No submissions yet</p>
-                        <Link href="/contest" className="text-xs text-primary hover:underline mt-1 inline-block">
-                          Join contest →
-                        </Link>
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5 md:space-y-2">
-                        {contestStats.recentSubmissions.slice(0, 10).map((submission, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between p-2 md:p-2.5 rounded-md border hover:bg-accent/50 transition-colors"
-                          >
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              {submission.verdict === 'accepted' ? (
-                                <CheckCircle2 className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary flex-shrink-0" />
-                              ) : (
-                                <Clock className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground flex-shrink-0" />
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs md:text-sm font-medium truncate">{submission.questionTitle}</p>
-                                <p className="text-[10px] md:text-xs text-muted-foreground">
-                                  {new Date(submission.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                </p>
-                              </div>
-                            </div>
+                      {contestStats.questionStats.length > 0 && (
+                        <div className="mt-6 border-t pt-5">
+                          <h3 className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                            By question
+                          </h3>
+                          <div className="mt-3">
+                            {contestStats.questionStats.map((stat, index) => (
+                              <ListRow
+                                key={index}
+                                title={stat.questionTitle}
+                                meta={`${stat.totalSubmissions} submissions · ${stat.acceptedSubmissions} accepted`}
+                                trailing={
+                                  <Badge
+                                    variant={
+                                      stat.acceptedSubmissions > 0 ? 'default' : 'secondary'
+                                    }
+                                    className="shrink-0 text-xs font-normal"
+                                  >
+                                    {stat.acceptedSubmissions > 0 ? 'Solved' : 'Attempted'}
+                                  </Badge>
+                                }
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </Panel>
+
+                <Panel title="Recent submissions">
+                  {contestStats.recentSubmissions.length === 0 ? (
+                    <EmptyState
+                      icon={Trophy}
+                      message="No contest submissions yet."
+                      href="/contest"
+                      cta="Join a contest"
+                    />
+                  ) : (
+                    <div>
+                      {contestStats.recentSubmissions.slice(0, 8).map((submission, index) => (
+                        <ListRow
+                          key={index}
+                          title={submission.questionTitle || 'Untitled problem'}
+                          meta={shortDate(submission.submittedAt)}
+                          trailing={
                             <Badge
                               variant="outline"
-                              className="text-[10px] md:text-xs"
+                              className={`shrink-0 text-xs font-normal ${
+                                submission.verdict === 'accepted'
+                                  ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400'
+                                  : ''
+                              }`}
                             >
                               {submission.verdict === 'accepted' ? 'Accepted' : 'Pending'}
                             </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                          }
+                        />
+                      ))}
+                    </div>
+                  )}
+                </Panel>
               </div>
 
-              <div className="space-y-3 md:space-y-4">
-                <Card className="border">
-                  <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5 text-foreground">
-                      <TrendingUp className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
-                      Performance
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-3 md:p-6 pt-0 space-y-1.5">
-                    <div className="flex justify-between items-center py-1.5 border-b">
-                      <span className="text-xs md:text-sm text-muted-foreground">Acceptance</span>
-                      <span className="font-semibold text-sm md:text-base">
-                        {contestStats.totalSubmissions > 0 
-                          ? `${Math.round((contestStats.totalAccepted / contestStats.totalSubmissions) * 100)}%`
-                          : '0%'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center py-1.5">
-                      <span className="text-xs md:text-sm text-muted-foreground">Attempts</span>
-                      <span className="font-semibold text-sm md:text-base">{contestStats.totalSubmissions}</span>
-                    </div>
-                  </CardContent>
-                </Card>
+              <div className="space-y-4">
+                <Panel title="Summary">
+                  <StatRow label="Acceptance rate" value={contestAcceptance} />
+                  <StatRow label="Total attempts" value={contestStats.totalSubmissions} />
+                  <StatRow label="Problems solved" value={contestStats.uniqueProblemsSolved} />
+                </Panel>
 
-                <Card className="border">
-                  <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base text-foreground">Contests</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-3 md:p-6 pt-0">
-                    <Link
-                      href="/contest"
-                      className="flex items-center justify-between p-3 rounded-md border hover:bg-accent transition-colors group"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Trophy className="h-4 w-4" />
-                        <span className="text-sm font-medium">Contests</span>
-                      </div>
-                      <Zap className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
-                    </Link>
-                  </CardContent>
-                </Card>
+                <Panel title="Jump back in">
+                  <Link
+                    href="/contest"
+                    className="group flex items-center justify-between rounded-xl border px-4 py-3 transition-colors hover:border-primary/40 hover:bg-muted/40"
+                  >
+                    <span className="flex items-center gap-2.5 text-sm font-medium">
+                      <Trophy className="size-4 text-muted-foreground" strokeWidth={1.75} />
+                      Contests
+                    </span>
+                    <ArrowRight className="size-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                  </Link>
+                </Panel>
               </div>
             </div>
           </TabsContent>
 
-          {/* Aptitude Tab Content */}
-          <TabsContent value="aptitude" className="space-y-3 md:space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4">
-              <div className="lg:col-span-2 space-y-3 md:space-y-4">
-                <Card className="border">
-                  <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5 text-foreground">
-                      <Brain className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
-                      <span className="hidden sm:inline">Test Statistics</span>
-                      <span className="sm:hidden">Tests</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-3 md:p-6 pt-0">
-                    <div className="grid grid-cols-3 gap-1.5 md:gap-3 mb-3">
-                      <div className="text-center p-1.5 md:p-3 rounded-md bg-muted">
-                        <div className="text-base md:text-2xl font-bold">{aptitudeStats.totalTests}</div>
-                        <p className="text-[9px] md:text-xs text-muted-foreground mt-0.5">Tests</p>
-                      </div>
-                      <div className="text-center p-1.5 md:p-3 rounded-md bg-muted">
-                        <div className="text-base md:text-2xl font-bold">{aptitudeStats.averageScore}%</div>
-                        <p className="text-[9px] md:text-xs text-muted-foreground mt-0.5">Average</p>
-                      </div>
-                      <div className="text-center p-1.5 md:p-3 rounded-md bg-muted">
-                        <div className="text-base md:text-2xl font-bold">{aptitudeStats.bestScore}%</div>
-                        <p className="text-[9px] md:text-xs text-muted-foreground mt-0.5">Best</p>
-                      </div>
+          {/* ── Aptitude ─────────────────────────────────────── */}
+          <TabsContent value="aptitude" className="mt-5">
+            <div className="grid gap-4 lg:grid-cols-3">
+              <div className="space-y-4 lg:col-span-2">
+                <Panel title="Topic performance">
+                  {aptitudeStats.totalTests === 0 ? (
+                    <EmptyState
+                      icon={Brain}
+                      message="Take a test to find your strongest and weakest topics."
+                      href="/aptitude"
+                      cta="Take a test"
+                    />
+                  ) : (
+                    <div className="space-y-5">
+                      {aptitudeStats.topicStats.map((topic, index) => (
+                        <div key={index}>
+                          <div className="flex items-baseline justify-between gap-3">
+                            <span className="text-sm font-medium capitalize">{topic.topic}</span>
+                            <span className="text-sm tabular-nums text-muted-foreground">
+                              {topic.averageScore}%
+                              <span className="ml-2 text-xs">
+                                ({topic.testsCompleted} test
+                                {topic.testsCompleted === 1 ? '' : 's'})
+                              </span>
+                            </span>
+                          </div>
+                          <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+                            <div
+                              className="h-full rounded-full bg-primary"
+                              style={{ width: `${topic.averageScore}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
                     </div>
+                  )}
+                </Panel>
 
-                    {/* Topic-wise Performance */}
-                    {aptitudeStats.topicStats.length > 0 && (
-                      <div className="space-y-2">
-                        <h4 className="font-medium text-xs md:text-sm text-foreground">Topic Performance</h4>
-                        {aptitudeStats.topicStats.map((topic, index) => (
-                          <div key={index} className="p-2 md:p-2.5 rounded-md border">
-                            <div className="flex justify-between items-start mb-1.5">
-                              <span className="text-xs md:text-sm font-medium capitalize">{topic.topic}</span>
-                              <Badge variant="secondary" className="text-[10px] md:text-xs">{topic.testsCompleted}</Badge>
-                            </div>
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-[10px] md:text-xs">
-                                <span className="text-muted-foreground">Average</span>
-                                <span className="font-medium">{topic.averageScore}%</span>
-                              </div>
-                              <Progress value={topic.averageScore} className="h-1.5" />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Recent Tests */}
-                <Card className="border">
-                  <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                      Recent
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-3 md:p-6 pt-0">
-                    {aptitudeStats.recentTests.length === 0 ? (
-                      <div className="text-center py-8">
-                        <Brain className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
-                        <p className="text-xs md:text-sm text-muted-foreground">No tests yet</p>
-                        <Link href="/aptitude" className="text-xs text-primary hover:underline mt-1 inline-block">
-                          Take test →
-                        </Link>
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5 md:space-y-2">
-                        {aptitudeStats.recentTests.map((test) => (
-                          <div
-                            key={test.id}
-                            className="flex items-center justify-between p-2 md:p-2.5 rounded-md border hover:bg-accent/50 transition-colors"
-                          >
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <Target className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary flex-shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs md:text-sm font-medium capitalize truncate">{test.topic}</p>
-                                <p className="text-[10px] md:text-xs text-muted-foreground">
-                                  {test.correctAnswers}/{test.totalQuestions} • {new Date(test.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-sm md:text-base font-semibold">{test.score}%</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                <Panel title="Recent tests">
+                  {aptitudeStats.recentTests.length === 0 ? (
+                    <EmptyState
+                      icon={Brain}
+                      message="No tests completed yet."
+                      href="/aptitude"
+                      cta="Take your first test"
+                    />
+                  ) : (
+                    <div>
+                      {aptitudeStats.recentTests.map(test => (
+                        <ListRow
+                          key={test.id}
+                          title={test.topic}
+                          meta={`${test.correctAnswers}/${test.totalQuestions} correct · ${shortDate(test.completedAt)}`}
+                          trailing={
+                            <span className="shrink-0 text-sm font-semibold tabular-nums">
+                              {test.score}%
+                            </span>
+                          }
+                        />
+                      ))}
+                    </div>
+                  )}
+                </Panel>
               </div>
 
-              <div className="space-y-3 md:space-y-4">
-                <Card className="border">
-                  <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base flex items-center gap-1.5 text-foreground">
-                      <Award className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
-                      Best
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-3 md:p-6 pt-0 space-y-1.5">
-                    <div className="flex justify-between items-center py-1.5 border-b">
-                      <span className="text-xs md:text-sm text-muted-foreground">Best Score</span>
-                      <span className="font-semibold text-sm md:text-base">{aptitudeStats.bestScore}%</span>
-                    </div>
-                    <div className="flex justify-between items-center py-1.5 border-b">
-                      <span className="text-xs md:text-sm text-muted-foreground">Average</span>
-                      <span className="font-semibold text-sm md:text-base">{aptitudeStats.averageScore}%</span>
-                    </div>
-                    <div className="flex justify-between items-center py-1.5">
-                      <span className="text-xs md:text-sm text-muted-foreground">Tests Taken</span>
-                      <span className="font-semibold text-sm md:text-base">{aptitudeStats.totalTests}</span>
-                    </div>
-                  </CardContent>
-                </Card>
+              <div className="space-y-4">
+                <Panel title="Summary">
+                  <StatRow label="Tests taken" value={aptitudeStats.totalTests} />
+                  <StatRow
+                    label="Average score"
+                    value={
+                      aptitudeStats.totalTests > 0 ? `${aptitudeStats.averageScore}%` : '—'
+                    }
+                  />
+                  <StatRow
+                    label="Best score"
+                    value={aptitudeStats.totalTests > 0 ? `${aptitudeStats.bestScore}%` : '—'}
+                  />
+                  {aptitudeStats.topicStats.length > 0 && (
+                    <StatRow
+                      label="Weakest topic"
+                      value={
+                        aptitudeStats.topicStats[aptitudeStats.topicStats.length - 1].topic
+                      }
+                    />
+                  )}
+                </Panel>
 
-                <Card className="border">
-                  <CardHeader className="p-3 md:p-6 pb-2">
-                    <CardTitle className="text-xs md:text-base text-foreground">Tests</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-3 md:p-6 pt-0">
-                    <Link
-                      href="/aptitude"
-                      className="flex items-center justify-between p-3 rounded-md border hover:bg-accent transition-colors group"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Brain className="h-4 w-4" />
-                        <span className="text-sm font-medium">Aptitude</span>
-                      </div>
-                      <Zap className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
-                    </Link>
-                  </CardContent>
-                </Card>
+                <Panel title="Jump back in">
+                  <Link
+                    href="/aptitude"
+                    className="group flex items-center justify-between rounded-xl border px-4 py-3 transition-colors hover:border-primary/40 hover:bg-muted/40"
+                  >
+                    <span className="flex items-center gap-2.5 text-sm font-medium">
+                      <Brain className="size-4 text-muted-foreground" strokeWidth={1.75} />
+                      Aptitude tests
+                    </span>
+                    <ArrowRight className="size-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                  </Link>
+                </Panel>
               </div>
             </div>
           </TabsContent>

@@ -17,6 +17,7 @@ import {
   bigint,
   decimal,
   jsonb,
+  date,
   index 
 } from 'drizzle-orm/pg-core';
 
@@ -701,3 +702,34 @@ export type SubmissionVerdict = 'pending' | 'accepted' | 'wrong_answer' | 'runti
 export type InterviewType = 'dsa-coding' | 'system-design' | 'behavioral' | 'company-specific';
 export type InterviewStatus = 'in-progress' | 'completed' | 'abandoned';
 
+
+// ============================================
+// DAILY CHALLENGE TABLES
+// ============================================
+
+// One problem per calendar day (UTC). Rows are written lazily the first time a
+// day is asked for, which keeps the history stable without a scheduled job.
+export const dailyChallenges = pgTable('daily_challenges', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  challengeDate: date('challenge_date').notNull().unique(),
+  problemId: bigint('problem_id', { mode: 'number' }).notNull(),
+  difficulty: text('difficulty'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  dateIdx: index('idx_daily_challenges_date').on(table.challengeDate),
+}));
+
+export const dailyChallengeCompletions = pgTable('daily_challenge_completions', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  challengeDate: date('challenge_date').notNull(),
+  problemId: bigint('problem_id', { mode: 'number' }).notNull(),
+  completedAt: timestamp('completed_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  userDateIdx: index('idx_daily_completions_user_date').on(table.userId, table.challengeDate),
+}));
+
+export type DailyChallenge = typeof dailyChallenges.$inferSelect;
+export type DailyChallengeInsert = typeof dailyChallenges.$inferInsert;
+export type DailyChallengeCompletion = typeof dailyChallengeCompletions.$inferSelect;
+export type DailyChallengeCompletionInsert = typeof dailyChallengeCompletions.$inferInsert;

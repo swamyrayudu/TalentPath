@@ -1,10 +1,8 @@
 'use client';
 import React from 'react';
 import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Sheet,
   SheetContent,
@@ -13,15 +11,13 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { 
-  CheckCircle2, 
+import {
+  Check,
   ExternalLink,
+  Loader2,
   Lock,
-  LogIn,
   BookOpen,
-  Circle,
   ChevronRight,
-  MousePointerClick
 } from 'lucide-react';
 import { toggleStepCompletion } from '@/actions/roadmap';
 import { toast } from 'sonner';
@@ -44,7 +40,7 @@ export function RoadmapViewer({
 
   const handleToggleStep = async (stepId: string) => {
     if (!isLoggedIn) {
-      toast.error('Please sign in to track progress');
+      toast.error('Sign in to track your progress');
       signIn('google', { callbackUrl: window.location.href });
       return;
     }
@@ -52,16 +48,17 @@ export function RoadmapViewer({
     setLoading(stepId);
     try {
       await toggleStepCompletion(roadmapId, stepId);
-      
+
       if (localCompleted.includes(stepId)) {
         setLocalCompleted(localCompleted.filter(id => id !== stepId));
-        toast.success('Progress updated');
       } else {
         setLocalCompleted([...localCompleted, stepId]);
-        toast.success('Step completed! 🎉');
       }
+      toast.success('Progress updated');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error) || 'Failed to update progress');
+      toast.error(
+        error instanceof Error ? error.message : String(error) || 'Failed to update progress'
+      );
     } finally {
       setLoading(null);
     }
@@ -69,114 +66,79 @@ export function RoadmapViewer({
 
   if (steps.length === 0) {
     return (
-      <Card className="bg-card/50">
-        <CardContent className="p-6 text-center">
-          <p className="text-sm text-muted-foreground">No steps available yet.</p>
-        </CardContent>
-      </Card>
+      <div className="rounded-2xl border bg-card py-12 text-center">
+        <p className="text-sm text-muted-foreground">No steps available yet.</p>
+      </div>
     );
   }
 
   return (
-    <div className="relative w-full">
-      {/* Vertical Connection Line */}
-      <div className="absolute left-6 sm:left-7 top-6 bottom-6 w-0.5 bg-gradient-to-b from-primary/40 via-border to-border" />
-
-      <div className="space-y-4 relative">
+    <div>
+      <div className="space-y-2">
         {steps.map((step, index) => {
           const isCompleted = localCompleted.includes(step.id);
           const isLoading = loading === step.id;
 
           return (
-            <div key={step.id} className="relative flex items-start gap-4">
-              {/* Step Circle with Checkbox */}
-              <div className="relative z-10 flex flex-col items-center gap-2 flex-shrink-0">
-                {/* Circle */}
-                <div
-                  className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center font-bold text-sm border-2 transition-all duration-200 shadow-sm ${
-                    isCompleted
-                      ? 'bg-primary border-primary text-primary-foreground'
-                      : 'bg-card border-border hover:border-primary hover:shadow-md'
-                  }`}
-                >
-                  {isCompleted ? (
-                    <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6" />
-                  ) : (
-                    <span className="text-lg">{index + 1}</span>
-                  )}
-                </div>
+            <div
+              key={step.id}
+              className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3 transition-colors hover:border-primary/40"
+            >
+              <button
+                type="button"
+                onClick={() => handleToggleStep(step.id)}
+                disabled={isLoading}
+                aria-label={
+                  isLoggedIn
+                    ? isCompleted
+                      ? `Mark ${step.title} incomplete`
+                      : `Mark ${step.title} complete`
+                    : 'Sign in to track progress'
+                }
+                className={`flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                  isCompleted
+                    ? 'border-emerald-500 bg-emerald-500 text-white'
+                    : 'border-muted-foreground/30 text-transparent hover:border-muted-foreground/60'
+                }`}
+              >
+                {isLoading ? (
+                  <Loader2 className="size-3 animate-spin text-muted-foreground" />
+                ) : !isLoggedIn ? (
+                  <Lock className="size-2.5 text-muted-foreground/60" strokeWidth={2.5} />
+                ) : isCompleted ? (
+                  <Check className="size-3" strokeWidth={3} />
+                ) : null}
+              </button>
 
-                {/* Checkbox */}
-                {isLoggedIn ? (
-                  <Checkbox
-                    checked={isCompleted}
-                    onCheckedChange={() => handleToggleStep(step.id)}
-                    disabled={isLoading}
-                    className="h-4 w-4 cursor-pointer border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                  />
-                ) : (
-                  <div className="w-4 h-4 rounded border border-muted-foreground/30 flex items-center justify-center">
-                    <Lock className="h-2.5 w-2.5 text-muted-foreground" />
-                  </div>
-                )}
-              </div>
+              <span className="w-6 shrink-0 text-sm text-muted-foreground tabular-nums">
+                {index + 1}
+              </span>
 
-              {/* Content Card */}
               <Sheet>
                 <SheetTrigger asChild>
-                  <Card
-                    className={`flex-1 cursor-pointer transition-all duration-200 min-w-0 group ${
-                      isCompleted
-                        ? 'bg-primary/5 border-primary/30 hover:border-primary/50'
-                        : 'hover:border-primary hover:shadow-md hover:bg-accent/30'
-                    }`}
-                  >
-                    <CardContent className="p-3 sm:p-4">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <h3
-                            className={`text-sm sm:text-base font-semibold ${
-                              isCompleted
-                                ? 'text-primary line-through opacity-70'
-                                : 'text-foreground'
-                            }`}
-                          >
-                            {step.title}
-                          </h3>
-                          {/* Click hint */}
-                          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1 group-hover:text-primary transition-colors">
-                            <MousePointerClick className="h-3 w-3" />
-                            <span>Click to view details</span>
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {isCompleted && (
-                            <Badge variant="secondary" className="bg-primary/10 text-primary border-0 text-xs">
-                              Completed
-                            </Badge>
-                          )}
-                          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <button className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left">
+                    <span
+                      className={`truncate text-sm ${
+                        isCompleted ? 'text-muted-foreground' : 'font-medium'
+                      }`}
+                    >
+                      {step.title}
+                    </span>
+                    <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                  </button>
                 </SheetTrigger>
 
-                {/* Sheet Content */}
-                <SheetContent className="overflow-y-auto w-full max-w-full sm:max-w-md p-4 sm:p-6">
-                  <SheetHeader className="space-y-3 mb-6">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant="outline" className="text-xs border-primary/30 text-primary">
-                        Step {index + 1}
-                      </Badge>
+                <SheetContent className="w-full overflow-y-auto p-6 sm:max-w-md">
+                  <SheetHeader className="space-y-3 p-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline">Step {index + 1}</Badge>
                       {isCompleted && (
-                        <Badge className="bg-primary text-primary-foreground text-xs">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                        <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
                           Completed
                         </Badge>
                       )}
                     </div>
-                    <SheetTitle className="text-lg sm:text-xl leading-tight">
+                    <SheetTitle className="text-lg leading-snug tracking-tight">
                       {step.title}
                     </SheetTitle>
                     <SheetDescription className="text-sm leading-relaxed">
@@ -184,57 +146,40 @@ export function RoadmapViewer({
                     </SheetDescription>
                   </SheetHeader>
 
-                  <div className="space-y-3 sm:space-y-4">
-                    {/* Resources - Mobile Optimized */}
+                  <div className="mt-8 space-y-6">
                     {step.resources && (
-                      <div className="space-y-1.5 sm:space-y-2">
-                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                          <BookOpen className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <div>
+                        <h3 className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                          <BookOpen className="size-3.5" strokeWidth={1.75} />
                           Resources
-                        </h4>
+                        </h3>
                         <a
                           href={step.resources}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-2 p-2 sm:p-2 rounded-md border hover:bg-accent transition-colors text-xs sm:text-sm group break-all"
+                          className="mt-3 flex items-center gap-2 rounded-xl border p-3 text-sm transition-colors hover:border-primary/40"
                         >
-                          <span className="flex-1 line-clamp-2 break-words">
-                            {step.resources}
-                          </span>
-                          <ExternalLink className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-muted-foreground group-hover:text-primary flex-shrink-0" />
+                          <span className="min-w-0 flex-1 break-all">{step.resources}</span>
+                          <ExternalLink
+                            className="size-3.5 shrink-0 text-muted-foreground"
+                            strokeWidth={1.75}
+                          />
                         </a>
                       </div>
                     )}
 
-                    {/* Action Button - Mobile Optimized */}
-                    {isLoggedIn ? (
-                      <Button
-                        onClick={() => handleToggleStep(step.id)}
-                        disabled={isLoading}
-                        className="w-full h-8 sm:h-9 text-xs sm:text-sm"
-                        variant={isCompleted ? 'outline' : 'default'}
-                      >
-                        {isCompleted ? (
-                          <>
-                            <Circle className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />
-                            Mark Incomplete
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />
-                            Mark Complete
-                          </>
-                        )}
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() => signIn('google', { callbackUrl: window.location.href })}
-                        className="w-full h-8 sm:h-9 text-xs sm:text-sm"
-                      >
-                        <LogIn className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />
-                        Sign In
-                      </Button>
-                    )}
+                    <Button
+                      onClick={() => handleToggleStep(step.id)}
+                      disabled={isLoading}
+                      className="w-full"
+                      variant={isCompleted ? 'outline' : 'default'}
+                    >
+                      {!isLoggedIn
+                        ? 'Sign in to track progress'
+                        : isCompleted
+                          ? 'Mark incomplete'
+                          : 'Mark complete'}
+                    </Button>
                   </div>
                 </SheetContent>
               </Sheet>
@@ -243,28 +188,18 @@ export function RoadmapViewer({
         })}
       </div>
 
-      {/* Login Prompt - Mobile Optimized */}
       {!isLoggedIn && (
-        <Card className="mt-3 sm:mt-4 border-primary/20 bg-primary/5">
-          <CardContent className="p-2.5 sm:p-3 flex items-center justify-between gap-2 sm:gap-3">
-            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-              <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-              <div className="min-w-0">
-                <p className="text-[10px] sm:text-xs font-medium truncate">
-                  Sign in to track progress
-                </p>
-              </div>
-            </div>
-            <Button
-              onClick={() => signIn('google', { callbackUrl: window.location.href })}
-              size="sm"
-              className="flex-shrink-0 h-7 sm:h-8 text-[10px] sm:text-xs px-2 sm:px-3"
-            >
-              <LogIn className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-              Sign In
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3">
+          <p className="text-sm text-muted-foreground">
+            Sign in to tick steps off and keep your progress.
+          </p>
+          <Button
+            size="sm"
+            onClick={() => signIn('google', { callbackUrl: window.location.href })}
+          >
+            Sign in
+          </Button>
+        </div>
       )}
     </div>
   );

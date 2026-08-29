@@ -303,10 +303,10 @@ export default function VoiceControls({
 
           {voiceEnabled && (
             <>
-              <div className="rounded-lg border border-purple-500/30 bg-purple-500/5 p-4">
+              <div className="rounded-xl border p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 text-white flex items-center justify-center">
+                    <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <PhoneCall className="h-5 w-5" />
                     </div>
                     <div>
@@ -314,7 +314,7 @@ export default function VoiceControls({
                       <p className="text-xs text-muted-foreground">Always listening — no button presses required</p>
                     </div>
                   </div>
-                  <Badge className="bg-purple-600 text-white flex items-center gap-1">
+                  <Badge variant="outline" className="flex items-center gap-1.5">
                     <Waves className="h-3 w-3" />
                     {isListening ? 'Listening' : 'Reconnecting'}
                   </Badge>

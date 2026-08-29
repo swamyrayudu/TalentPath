@@ -3,23 +3,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Loader2, 
-  CheckCircle, 
-  Circle, 
-  ExternalLink,
-  ArrowLeft,
-  Target,
-  Clock,
-  Search,
-  Lock,
-  Code2,
-  Bookmark
-} from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { SheetBreadcrumb } from '@/components/dsa/sheet-breadcrumb';
+import { SheetProgressHeader } from '@/components/dsa/sheet-progress-header';
+import { ProblemRow } from '@/components/dsa/problem-row';
+import { Bookmark, Search, Target, X } from 'lucide-react';
 
 interface Problem {
   id: number;
@@ -196,19 +186,42 @@ export default function PatternProblemsPage() {
   }, [filteredProblems, visibleCount]);
 
   const solvedCount = problems.filter(p => userProgress[p.id]?.status === 'solved').length;
-  const attemptedCount = problems.filter(p => userProgress[p.id]?.status === 'attempted').length;
   const totalCount = problems.length;
-  const progressPercentage = totalCount > 0 ? (solvedCount / totalCount) * 100 : 0;
+
+  const splitFor = (level: string) => {
+    const inLevel = problems.filter(p => p.difficulty?.toUpperCase() === level);
+    return {
+      solved: inLevel.filter(p => userProgress[p.id]?.status === 'solved').length,
+      total: inLevel.length,
+    };
+  };
+
+  const splits = [
+    { label: 'Easy' as const, ...splitFor('EASY') },
+    { label: 'Medium' as const, ...splitFor('MEDIUM') },
+    { label: 'Hard' as const, ...splitFor('HARD') },
+  ];
+
+  const isSignedOut = !session?.user;
+
+  const handleSignIn = async () => {
+    setSigningIn(true);
+    await signIn('google', { callbackUrl: window.location.href });
+    setSigningIn(false);
+  };
 
   if (status === 'loading' || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="text-center space-y-4">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-full border-4 border-muted border-t-primary animate-spin mx-auto" />
-            <Code2 className="h-6 w-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary" />
+      <div className="min-h-screen bg-background">
+        <div className="mx-auto max-w-4xl px-4 py-8 md:px-6 md:py-10">
+          <Skeleton className="h-4 w-64" />
+          <Skeleton className="mt-6 h-44 rounded-2xl" />
+          <Skeleton className="mt-4 h-11 rounded-xl" />
+          <div className="mt-4 space-y-2">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 rounded-xl" />
+            ))}
           </div>
-          <p className="text-sm text-muted-foreground font-medium">Loading pattern problems...</p>
         </div>
       </div>
     );
@@ -216,9 +229,9 @@ export default function PatternProblemsPage() {
 
   if (!pattern) {
     return (
-      <div className="container mx-auto py-12 px-4 text-center">
-        <p className="text-lg text-muted-foreground">Pattern not found</p>
-        <Button onClick={() => router.push('/dsasheet')} className="mt-4">
+      <div className="mx-auto max-w-4xl px-4 py-20 text-center">
+        <p className="text-sm text-muted-foreground">Pattern not found.</p>
+        <Button variant="outline" onClick={() => router.push('/dsasheet')} className="mt-4">
           Back to DSA Sheet
         </Button>
       </div>
@@ -227,315 +240,92 @@ export default function PatternProblemsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-6 max-w-7xl">
-        {/* Back Button */}
-        <Button 
-          variant="ghost" 
-          onClick={() => router.push('/dsasheet')} 
-          className="mb-4 -ml-2 text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to DSA Sheet
-        </Button>
+      <div className="mx-auto max-w-4xl px-4 py-8 md:px-6 md:py-10">
+        <SheetBreadcrumb
+          items={[
+            { label: 'DSA Sheet', href: '/dsasheet' },
+            { label: 'Patterns', href: '/dsasheet' },
+            { label: pattern.name },
+          ]}
+        />
 
-        {/* Hero Header */}
-        <div className="mb-6 space-y-4 sm:space-y-6">
-          {/* Title Section */}
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="p-2 sm:p-2.5 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600">
-                  <Bookmark className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
-                    {pattern.name} Pattern
-                  </h1>
-                  <p className="text-sm text-muted-foreground mt-1 max-w-xl">
-                    {pattern.description || 'Practice curated problems focusing on this structural coding pattern.'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="flex gap-2 sm:gap-3 shrink-0">
-              <Card className="flex-1 sm:flex-none border bg-card/50 backdrop-blur-sm">
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="p-2 rounded-lg bg-emerald-500/10">
-                      <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500" />
-                    </div>
-                    <div>
-                      <div className="text-lg sm:text-xl font-bold">{solvedCount}</div>
-                      <div className="text-[10px] sm:text-xs text-muted-foreground">Solved</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="flex-1 sm:flex-none border bg-card/50 backdrop-blur-sm">
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="p-2 rounded-lg bg-amber-500/10">
-                      <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
-                    </div>
-                    <div>
-                      <div className="text-lg sm:text-xl font-bold">{attemptedCount}</div>
-                      <div className="text-[10px] sm:text-xs text-muted-foreground">Attempted</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Progress Section */}
-          <Card className="border bg-card/50 backdrop-blur-sm overflow-hidden">
-            <CardContent className="p-4 sm:p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                {/* Circular Progress */}
-                <div className="flex items-center gap-4">
-                  <div className="relative w-16 h-16 sm:w-20 sm:h-20">
-                    <svg className="w-full h-full transform -rotate-90">
-                      <circle
-                        cx="50%"
-                        cy="50%"
-                        r="40%"
-                        stroke="currentColor"
-                        strokeWidth="6"
-                        fill="none"
-                        className="text-muted/20"
-                      />
-                      <circle
-                        cx="50%"
-                        cy="50%"
-                        r="40%"
-                        stroke="currentColor"
-                        strokeWidth="6"
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeDasharray={`${progressPercentage * 2.51} 251`}
-                        className="text-indigo-600"
-                        style={{ transition: 'stroke-dasharray 0.5s ease' }}
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-sm sm:text-base font-bold">{progressPercentage.toFixed(0)}%</span>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Target className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-semibold">Progress</span>
-                    </div>
-                    <p className="text-lg sm:text-xl font-bold">
-                      {solvedCount}
-                      <span className="text-sm text-muted-foreground font-normal"> / {totalCount}</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {totalCount - solvedCount} remaining
-                    </p>
-                  </div>
-                </div>
-
-                {/* Linear Progress Bar */}
-                <div className="flex-1 space-y-2">
-                  <div className="h-2.5 sm:h-3 bg-muted/30 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-all duration-500"
-                      style={{ width: `${progressPercentage}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{solvedCount} solved</span>
-                    <span>{attemptedCount} in progress</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search pattern problems..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 sm:pl-11 h-10 sm:h-11 bg-card border rounded-xl"
-            />
-            {searchTerm && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-7 px-2 text-muted-foreground hover:text-foreground"
-              >
-                Clear
-              </Button>
-            )}
-          </div>
+        <div className="mt-6">
+          <SheetProgressHeader
+            icon={Bookmark}
+            title={`${pattern.name} Pattern`}
+            description={
+              pattern.description ||
+              'Curated problems that share one structural approach.'
+            }
+            solved={solvedCount}
+            total={totalCount}
+            splits={splits}
+          />
         </div>
 
-        {/* Problems List */}
+        {/* ── Search ───────────────────────────────────────────── */}
+        <div className="relative mt-4">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search problems"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="h-11 rounded-xl pl-10 pr-10"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              aria-label="Clear search"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <X className="size-4" />
+            </button>
+          )}
+        </div>
+
+        {isSignedOut && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3">
+            <p className="text-sm text-muted-foreground">
+              Sign in to tick problems off and keep your progress.
+            </p>
+            <Button size="sm" onClick={handleSignIn} disabled={signingIn}>
+              {signingIn ? 'Signing in…' : 'Sign in'}
+            </Button>
+          </div>
+        )}
+
+        {/* ── Problems ─────────────────────────────────────────── */}
         {filteredProblems.length === 0 ? (
-          <Card>
-            <CardContent className="py-16 text-center">
-              <Target className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
-              <p className="text-lg font-medium text-muted-foreground mb-2">
-                {searchTerm ? 'No matching problems found' : 'No problems linked to this pattern yet'}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {searchTerm ? 'Try a different search term' : 'Check back later for newly added pattern questions'}
-              </p>
-            </CardContent>
-          </Card>
+          <div className="mt-4 flex flex-col items-center rounded-2xl border bg-card py-16 text-center">
+            <Target className="size-6 text-muted-foreground/40" strokeWidth={1.5} />
+            <p className="mt-4 text-sm font-semibold tracking-tight">
+              {searchTerm ? 'No matching problems' : 'No problems yet'}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {searchTerm
+                ? 'Try a different search term.'
+                : 'Check back once questions are linked to this pattern.'}
+            </p>
+          </div>
         ) : (
-          <div className="space-y-3">
-            {displayedProblems.map((problem, index) => {
-              const progress = userProgress[problem.id];
-              const isSolved = progress?.status === 'solved';
-              const isAttempted = progress?.status === 'attempted';
-              const isUpdating = updating === problem.id;
-              const companyTags = Array.isArray(problem.companyTags) ? problem.companyTags : [];
-
-              return (
-                <Card 
-                  key={problem.id} 
-                  className={`transition-all duration-200 hover:shadow-md border-2 ${
-                    isSolved ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' :
-                    isAttempted ? 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800' :
-                    'hover:border-primary/50'
-                  }`}
-                >
-                  <CardContent className="p-4 md:p-5">
-                    <div className="flex items-center gap-3 md:gap-4">
-                      {/* Checkbox */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => session?.user && handleToggleStatus(problem.id)}
-                        disabled={isUpdating || !session?.user}
-                        className="p-0 h-9 w-9 hover:bg-transparent flex-shrink-0 relative"
-                        title={!session?.user ? "Sign in to mark problems" : ""}
-                      >
-                        {isUpdating ? (
-                          <Loader2 className="h-6 w-6 animate-spin" />
-                        ) : isSolved ? (
-                          <CheckCircle className="h-6 w-6 text-green-600 fill-green-100" />
-                        ) : isAttempted ? (
-                          <Circle className="h-6 w-6 text-yellow-600 fill-yellow-200" />
-                        ) : (
-                          <>
-                            <Circle className="h-6 w-6 text-gray-400 hover:text-gray-600 transition-colors" />
-                            {!session?.user && (
-                              <Lock className="h-3 w-3 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-red-600" />
-                            )}
-                          </>
-                        )}
-                      </Button>
-
-                      {/* Problem Number */}
-                      <div className="text-muted-foreground font-mono text-sm font-semibold w-10 flex-shrink-0">
-                        #{index + 1}
-                      </div>
-
-                      {/* Problem Details */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <h3 className="font-semibold text-base hover:text-primary transition-colors">
-                            {problem.title}
-                          </h3>
-                          <Badge variant="secondary" className="text-xs">
-                            {problem.platform}
-                          </Badge>
-                          <Badge variant="outline" className={`text-xs ${
-                            problem.difficulty === 'EASY' ? 'text-green-500 border-green-200 bg-green-50/50 dark:bg-green-950/20' :
-                            problem.difficulty === 'MEDIUM' ? 'text-yellow-500 border-yellow-200 bg-yellow-50/50 dark:bg-yellow-950/20' :
-                            'text-red-500 border-red-200 bg-red-50/50 dark:bg-red-950/20'
-                          }`}>
-                            {problem.difficulty}
-                          </Badge>
-                          {problem.isPremium && (
-                            <Badge variant="secondary" className="text-xs">
-                              Premium
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
-                          <span className="flex items-center gap-1">
-                            {problem.likes} likes
-                          </span>
-                          <span>•</span>
-                          <span className="flex items-center gap-1">
-                            {problem.acceptanceRate}% acceptance
-                          </span>
-                          {companyTags.length > 0 && (
-                            <>
-                              <span>•</span>
-                              <div className="flex gap-1 flex-wrap">
-                                {companyTags.slice(0, 3).map((company: string) => (
-                                  <Badge key={company} variant="outline" className="text-xs">
-                                    {company}
-                                  </Badge>
-                                ))}
-                                {companyTags.length > 3 && (
-                                  <span className="text-xs">+{companyTags.length - 3}</span>
-                                )}
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Status Badge & Action */}
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {isSolved && (
-                          <Badge className="bg-green-600 hover:bg-green-700 hidden md:flex">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Solved
-                          </Badge>
-                        )}
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={async () => {
-                            if (!session?.user) {
-                              setSigningIn(true);
-                              await signIn('google', { 
-                                callbackUrl: window.location.href
-                              });
-                              setSigningIn(false);
-                            } else {
-                              window.open(problem.url, '_blank');
-                            }
-                          }}
-                          disabled={signingIn}
-                          className="gap-1 cursor-pointer"
-                        >
-                          {signingIn ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : !session?.user ? (
-                            <Lock className="h-4 w-4" />
-                          ) : (
-                            <ExternalLink className="h-4 w-4" />
-                          )}
-                          <span className="hidden sm:inline">
-                            {signingIn ? 'Signing in...' : !session?.user ? 'Sign in' : 'Solve'}
-                          </span>
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+          <div className="mt-4 space-y-2">
+            {displayedProblems.map((problem) => (
+              <ProblemRow
+                key={problem.id}
+                title={problem.title}
+                url={problem.url}
+                difficulty={problem.difficulty}
+                status={userProgress[problem.id]?.status}
+                isUpdating={updating === problem.id}
+                isLocked={isSignedOut}
+                onToggle={() => handleToggleStatus(problem.id)}
+                onLockedClick={handleSignIn}
+              />
+            ))}
 
             {visibleCount < filteredProblems.length && (
-              <div ref={loaderRef} className="flex justify-center py-6">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <span className="ml-2 text-sm text-muted-foreground">Loading more problems...</span>
+              <div ref={loaderRef} className="py-6 text-center">
+                <span className="text-sm text-muted-foreground">Loading more…</span>
               </div>
             )}
           </div>

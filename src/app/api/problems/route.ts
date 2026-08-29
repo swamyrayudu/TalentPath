@@ -80,15 +80,20 @@ export async function GET(request: NextRequest) {
     if (topic && topic !== 'all' && topic !== 'undefined') {
       const topicSlug = topic.toLowerCase().replace(/\s+/g, '-');
       console.log(`🏷️  Topic filter: "${topic}" → slug: "${topicSlug}"`);
+      // Each set-returning function gets an explicit `alias(column)` so the
+      // comparison binds to the unnested value. A bare `AS slug` instead binds
+      // to whatever `slug` resolves to in the enclosing query — and once
+      // dsa_patterns is joined in (it also has a `slug` column) Postgres fails
+      // the whole query with "column reference slug is ambiguous".
       conditions.push(
         sql`(
           EXISTS (
-            SELECT 1 FROM ${topicTagsExpr} AS tag 
-            WHERE LOWER(tag) = LOWER(${topic})
+            SELECT 1 FROM ${topicTagsExpr} AS topic_tag_values(value)
+            WHERE LOWER(topic_tag_values.value) = LOWER(${topic})
           )
           OR EXISTS (
-            SELECT 1 FROM ${topicSlugsExpr} AS slug
-            WHERE LOWER(slug) = LOWER(${topicSlug})
+            SELECT 1 FROM ${topicSlugsExpr} AS topic_slug_values(value)
+            WHERE LOWER(topic_slug_values.value) = LOWER(${topicSlug})
           )
         )`
       );
@@ -98,8 +103,8 @@ export async function GET(request: NextRequest) {
       const companyName = decodeURIComponent(company).replace(/-/g, ' ');
       conditions.push(
         sql`EXISTS (
-          SELECT 1 FROM ${companyTagsExpr} AS tag 
-          WHERE LOWER(tag) = LOWER(${companyName})
+          SELECT 1 FROM ${companyTagsExpr} AS company_tag_values(value)
+          WHERE LOWER(company_tag_values.value) = LOWER(${companyName})
         )`
       );
     }

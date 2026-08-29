@@ -5,135 +5,286 @@ import { jobs } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { auth } from '@/lib/auth';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { 
-  Briefcase, 
-  MapPin, 
-  IndianRupee, 
+import {
+  MapPin,
+  IndianRupee,
   ExternalLink,
   Building2,
   ArrowLeft,
-  CheckCircle2,
   Lock,
+  Globe,
+  CalendarClock,
+  Clock,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SignInButton } from '../../../components/auth/sign-in-button';
+import { MarkdownProse } from '@/components/markdown-prose';
+import {
+  getGeeksforgeeksJob,
+  isExternalJobId,
+  type ExternalJob,
+} from '@/lib/jobs/geeksforgeeks';
+
+/**
+ * One shape for both sources so the page body is written once. Internal jobs
+ * come from the `jobs` table; external ones from the cached GeeksforGeeks feed.
+ */
+interface JobView {
+  title: string;
+  company: string;
+  companyLogo: string | null;
+  location: string;
+  locationType: string;
+  jobType: string;
+  /** Rendered as-is; internal salaries get the " LPA" suffix at build time. */
+  salaryLabel: string | null;
+  experience: string | null;
+  category: string | null;
+  postedOn: string | null;
+  lastApplyDate: string | null;
+  skills: string[];
+  /** Markdown. */
+  description: string;
+  /** Markdown. Empty when the source gives no separate requirements block. */
+  requirements: string;
+  companyAbout: string;
+  companyWebsite: string | null;
+  applyUrl: string;
+  sourceLabel: string | null;
+}
+
+function fromExternal(job: ExternalJob): JobView {
+  return {
+    title: job.title,
+    company: job.company,
+    companyLogo: job.companyLogo,
+    location: job.location,
+    locationType: job.locationType,
+    jobType: job.jobType,
+    salaryLabel: job.salary,
+    experience: job.experience,
+    category: job.category,
+    postedOn: job.postedOn,
+    lastApplyDate: job.lastApplyDate,
+    skills: job.skills,
+    description: job.description,
+    requirements: '',
+    companyAbout: job.companyAbout,
+    companyWebsite: job.companyWebsite,
+    applyUrl: job.applyUrl,
+    sourceLabel: 'GeeksforGeeks',
+  };
+}
+
+function formatDate(value: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="border-t pt-6">
+      <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
 
 export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   const isLoggedIn = !!session?.user;
   const { id } = await params;
 
-  const job = await db.query.jobs.findFirst({
-    where: eq(jobs.id, id),
-  });
+  let view: JobView;
 
-  if (!job || !job.isActive) {
-    notFound();
+  if (isExternalJobId(id)) {
+    // External listings are not in the database — they live in the cached feed,
+    // and drop out of it once the source archives them.
+    const external = await getGeeksforgeeksJob(id);
+    if (!external) notFound();
+    view = fromExternal(external);
+  } else {
+    const job = await db.query.jobs.findFirst({ where: eq(jobs.id, id) });
+    if (!job || !job.isActive) notFound();
+
+    view = {
+      title: job.title,
+      company: job.company,
+      companyLogo: job.companyLogo,
+      location: job.location,
+      locationType: job.locationType,
+      jobType: job.jobType,
+      salaryLabel: job.salary ? `${job.salary} LPA` : null,
+      experience: null,
+      category: null,
+      postedOn: null,
+      lastApplyDate: null,
+      skills: [],
+      description: job.description,
+      requirements: job.requirements,
+      companyAbout: '',
+      companyWebsite: null,
+      applyUrl: job.applyUrl,
+      sourceLabel: null,
+    };
   }
+
+  const applyBy = formatDate(view.lastApplyDate);
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-12 max-w-4xl">
-        <Link href="/jobs">
-          <Button variant="ghost" className="mb-6 gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Jobs
-          </Button>
+      <div className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-10">
+        <Link
+          href="/jobs"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" />
+          All jobs
         </Link>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-start gap-4 mb-4">
-              {job.companyLogo ? (
-                <img 
-                  src={job.companyLogo} 
-                  alt={job.company}
-                  className="w-20 h-20 rounded-lg object-cover"
-                />
-              ) : (
-                <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-                  <Building2 className="h-10 w-10 text-white" />
-                </div>
+        {/* ── Header ─────────────────────────────────────────────── */}
+        <div className="mt-6 flex items-start gap-4">
+          {view.companyLogo ? (
+            <img
+              src={view.companyLogo}
+              alt=""
+              className="size-14 shrink-0 rounded-2xl border bg-white object-contain p-1"
+            />
+          ) : (
+            <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl border bg-muted text-muted-foreground">
+              <Building2 className="size-6" strokeWidth={1.75} />
+            </span>
+          )}
+
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{view.title}</h1>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <Building2 className="size-4" strokeWidth={1.75} />
+                {view.company}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <MapPin className="size-4" strokeWidth={1.75} />
+                {view.location}
+              </span>
+              {view.postedOn && (
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock className="size-4" strokeWidth={1.75} />
+                  {view.postedOn}
+                </span>
               )}
-              <div className="flex-1">
-                <CardTitle className="text-3xl mb-2">{job.title}</CardTitle>
-                <CardDescription className="text-lg">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Building2 className="h-5 w-5" />
-                    <span>{job.company}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5" />
-                    <span>{job.location}</span>
-                  </div>
-                </CardDescription>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-2">
+          <Badge variant="secondary" className="capitalize">
+            {view.locationType}
+          </Badge>
+          <Badge variant="outline" className="capitalize">
+            {view.jobType.replace('-', ' ')}
+          </Badge>
+          {view.experience && <Badge variant="outline">{view.experience}</Badge>}
+          {view.category && <Badge variant="outline">{view.category}</Badge>}
+          {view.salaryLabel && (
+            <Badge variant="outline" className="gap-1">
+              <IndianRupee className="size-3" />
+              {view.salaryLabel}
+            </Badge>
+          )}
+        </div>
+
+        {applyBy && (
+          <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            <CalendarClock className="size-3.5" strokeWidth={1.75} />
+            Apply by {applyBy}
+          </p>
+        )}
+
+        {/* ── Body ───────────────────────────────────────────────── */}
+        <div className="mt-8 space-y-6">
+          {view.skills.length > 0 && (
+            <Section title="Skills">
+              <div className="flex flex-wrap gap-1.5">
+                {view.skills.map((skill) => (
+                  <Badge key={skill} variant="secondary" className="font-normal">
+                    {skill}
+                  </Badge>
+                ))}
               </div>
-            </div>
+            </Section>
+          )}
 
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="default">{job.locationType}</Badge>
-              <Badge variant="secondary">{job.jobType}</Badge>
-              {job.salary && (
-                <Badge variant="outline" className="gap-1">
-                  <IndianRupee className="h-3 w-3" />
-                  {job.salary} LPA
-                </Badge>
-              )}
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-6">
-            <div>
-              <h3 className="text-xl font-semibold mb-3 flex items-center gap-2">
-                <Briefcase className="h-5 w-5 text-amber-600" />
-                Job Description
-              </h3>
-              <p className="text-muted-foreground whitespace-pre-line">
-                {job.description}
+          <Section title="About the role">
+            {view.description ? (
+              <MarkdownProse content={view.description} />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No description was provided for this role.
               </p>
-            </div>
+            )}
+          </Section>
 
-            <div>
-              <h3 className="text-xl font-semibold mb-3 flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-amber-600" />
-                Requirements
-              </h3>
-              <p className="text-muted-foreground whitespace-pre-line">
-                {job.requirements}
-              </p>
-            </div>
+          {view.requirements && (
+            <Section title="Requirements">
+              <MarkdownProse content={view.requirements} />
+            </Section>
+          )}
 
-            <div className="pt-6 border-t">
-              {isLoggedIn ? (
-                // Show Apply button for logged-in users
-                <a href={job.applyUrl} target="_blank" rel="noopener noreferrer">
-                  <Button size="lg" className="w-full gap-2 bg-amber-600 hover:bg-amber-700">
-                    Apply Now
-                    <ExternalLink className="h-5 w-5" />
-                  </Button>
+          {view.companyAbout && (
+            <Section title={`About ${view.company}`}>
+              <MarkdownProse content={view.companyAbout} />
+              {view.companyWebsite && (
+                <a
+                  href={view.companyWebsite}
+                  target="_blank"
+                  rel="noopener noreferrer nofollow"
+                  className="mt-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
+                >
+                  <Globe className="size-3.5" strokeWidth={1.75} />
+                  Company website
                 </a>
-              ) : (
-                // Show login prompt for guests
-                <div className="space-y-4">
-                  <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950">
-                    <Lock className="h-4 w-4 text-amber-600" />
-                    <AlertTitle className="text-amber-900 dark:text-amber-100">
-                      Sign in to apply
-                    </AlertTitle>
-                    <AlertDescription className="text-amber-800 dark:text-amber-200">
-                      You need to be signed in to apply for this job. Sign in with your Google account to continue.
-                    </AlertDescription>
-                  </Alert>
-                  <SignInButton />
-                </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
+            </Section>
+          )}
+        </div>
+
+        {/* ── Apply ──────────────────────────────────────────────── */}
+        <div className="mt-8 rounded-2xl border bg-card p-6">
+          {isLoggedIn ? (
+            <>
+              <h2 className="text-sm font-semibold tracking-tight">Ready to apply?</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {view.sourceLabel
+                  ? `This role is listed on ${view.sourceLabel}. You'll be taken there to apply.`
+                  : `You'll be taken to ${view.company}'s application page.`}
+              </p>
+              <Button size="lg" className="mt-5 w-full gap-2" asChild>
+                <a href={view.applyUrl} target="_blank" rel="noopener noreferrer">
+                  Apply now
+                  <ExternalLink className="size-4" />
+                </a>
+              </Button>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <Lock className="size-4 text-muted-foreground" strokeWidth={1.75} />
+                <h2 className="text-sm font-semibold tracking-tight">Sign in to apply</h2>
+              </div>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                Applications are tied to your account so you can track them later.
+              </p>
+              <div className="mt-5">
+                <SignInButton />
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

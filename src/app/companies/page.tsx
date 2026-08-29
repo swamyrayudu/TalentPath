@@ -5,9 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { Loader2, Building2, Search, TrendingUp, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Building2, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 type CompanyData = {
   name: string;
@@ -21,9 +21,9 @@ const CompanyLogo = memo(({ companyName, size = 'md' }: { companyName: string; s
   const [currentSourceIndex, setCurrentSourceIndex] = useState(0);
   
   const sizeClasses = {
-    sm: 'w-10 h-10',
-    md: 'w-12 h-12',
-    lg: 'w-16 h-16',
+    sm: 'size-9',
+    md: 'size-11',
+    lg: 'size-14',
   };
   
   const logoSources = useMemo(() => {
@@ -47,12 +47,12 @@ const CompanyLogo = memo(({ companyName, size = 'md' }: { companyName: string; s
     return (
       <div className={cn(
         sizeClasses[size],
-        "flex items-center justify-center bg-gradient-to-br from-primary/10 to-primary/20 rounded-lg flex-shrink-0 border border-border"
+        'flex shrink-0 items-center justify-center rounded-xl border bg-muted text-muted-foreground'
       )}>
-        <Building2 className={cn(
-          "text-primary",
-          size === 'sm' ? 'w-5 h-5' : size === 'md' ? 'w-6 h-6' : 'w-8 h-8'
-        )} />
+        <Building2
+          className={size === 'sm' ? 'size-4' : size === 'md' ? 'size-5' : 'size-6'}
+          strokeWidth={1.75}
+        />
       </div>
     );
   }
@@ -60,7 +60,7 @@ const CompanyLogo = memo(({ companyName, size = 'md' }: { companyName: string; s
   return (
     <div className={cn(
       sizeClasses[size],
-      "relative overflow-hidden rounded-lg bg-card border border-border shadow-sm flex-shrink-0"
+      'relative shrink-0 overflow-hidden rounded-xl border bg-card'
     )}>
       <img
         src={logoSources[currentSourceIndex]}
@@ -147,181 +147,149 @@ function CompaniesContent() {
     router.push(`/companies?page=1`, { scroll: false });
   };
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-          <p className="text-muted-foreground text-lg">Loading companies...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen w-full bg-background">
-      {/* Header */}
-      <div className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
-        <div className="container mx-auto py-8 md:py-12 px-4 md:px-6 max-w-7xl">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-primary via-primary/90 to-primary/70 bg-clip-text text-transparent mb-3">
-            Company Interview Questions
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+            Company questions
           </h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Browse interview questions from top tech companies
+          <p className="mt-1 text-sm text-muted-foreground">
+            {loading
+              ? 'Loading companies…'
+              : `Interview problems asked at ${totalCount.toLocaleString()} companies.`}
           </p>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 md:px-6 max-w-7xl py-6 md:py-8">
-        {/* Search Bar */}
-        <div className="mb-6 md:mb-8">
-          <div className="flex gap-2 max-w-2xl">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <Input
-                type="text"
-                placeholder="Search companies..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSearch();
-                  }
-                }}
-                className="pl-10 pr-10 h-10 md:h-11 text-sm bg-background border-input"
-              />
-              {searchQuery && (
-                <button
-                  onClick={handleClearSearch}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label="Clear search"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-            <Button
-              onClick={handleSearch}
-              size="default"
-              className="gap-2 h-10 md:h-11 px-4 md:px-6"
-            >
-              <Search className="h-4 w-4" />
-              <span className="hidden sm:inline">Search</span>
-            </Button>
+        {/* Search */}
+        <div className="mt-6 flex max-w-xl gap-2">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search companies"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch();
+                }
+              }}
+              className="h-11 rounded-xl pl-10 pr-10"
+            />
+            {searchQuery && (
+              <button
+                onClick={handleClearSearch}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                aria-label="Clear search"
+              >
+                <X className="size-4" />
+              </button>
+            )}
           </div>
+          <Button onClick={handleSearch} className="h-11 px-5">
+            Search
+          </Button>
         </div>
 
-        {/* Companies Grid */}
-        {companies.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-16 md:py-20">
-              <div className="rounded-full bg-muted p-6 mb-4">
-                <Building2 className="h-12 w-12 md:h-16 md:w-16 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg md:text-xl font-semibold mb-2">No companies found</h3>
-              <p className="text-sm md:text-base text-muted-foreground text-center max-w-sm">
-                {searchQuery ? 'Try adjusting your search criteria' : 'No company data available at the moment'}
-              </p>
-            </CardContent>
-          </Card>
+        {/* Companies */}
+        {loading ? (
+          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <Skeleton key={i} className="h-[86px] rounded-2xl" />
+            ))}
+          </div>
+        ) : companies.length === 0 ? (
+          <div className="mt-8 flex flex-col items-center rounded-2xl border bg-card py-16 text-center">
+            <Building2 className="size-6 text-muted-foreground/40" strokeWidth={1.5} />
+            <h2 className="mt-4 text-sm font-semibold tracking-tight">
+              No companies found
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {searchQuery
+                ? 'Try a different search term.'
+                : 'No company data available right now.'}
+            </p>
+          </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {companies.map((company) => (
-                <Card
+                <button
                   key={company.name}
-                  className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-primary/50 hover:bg-accent/50"
                   onClick={() => handleCompanyClick(company.name)}
+                  className="flex items-center gap-3 rounded-2xl border bg-card p-4 text-left transition-colors hover:border-primary/40"
                 >
-                  <CardContent className="p-4 md:p-5">
-                    <div className="flex items-start gap-3 md:gap-4">
-                      <CompanyLogo companyName={company.name || ''} size="md" />
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-sm md:text-base leading-tight mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-                          {company.name}
-                        </h3>
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <TrendingUp className="h-3.5 w-3.5 flex-shrink-0" />
-                          <span className="text-xs md:text-sm font-medium">
-                            {company.count} {company.count === 1 ? 'problem' : 'problems'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  <CompanyLogo companyName={company.name || ''} size="md" />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate text-sm font-medium">{company.name}</h3>
+                    <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
+                      {company.count} {company.count === 1 ? 'problem' : 'problems'}
+                    </p>
+                  </div>
+                </button>
               ))}
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
-              <div className="mt-8 md:mt-10">
-                <Card>
-                  <CardContent className="p-4 md:p-6">
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                      <p className="text-sm text-muted-foreground order-2 sm:order-1">
-                        Showing <span className="font-medium text-foreground">{((currentPage - 1) * COMPANIES_PER_PAGE) + 1}</span> to <span className="font-medium text-foreground">{Math.min(currentPage * COMPANIES_PER_PAGE, totalCount)}</span> of <span className="font-medium text-foreground">{totalCount}</span> companies
-                      </p>
-                      
-                      <div className="flex items-center gap-1.5 order-1 sm:order-2">
+              <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t pt-6 sm:flex-row">
+                <p className="text-sm text-muted-foreground tabular-nums">
+                  {(currentPage - 1) * COMPANIES_PER_PAGE + 1}–
+                  {Math.min(currentPage * COMPANIES_PER_PAGE, totalCount)} of {totalCount}
+                </p>
+
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={!hasPrevPage}
+                  >
+                    <ChevronLeft className="size-4" />
+                    <span className="hidden sm:inline">Previous</span>
+                  </Button>
+
+                  <div className="hidden items-center gap-1 md:flex">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      return (
                         <Button
-                          variant="outline"
+                          key={pageNum}
+                          variant={currentPage === pageNum ? 'default' : 'ghost'}
                           size="sm"
-                          onClick={() => handlePageChange(currentPage - 1)}
-                          disabled={!hasPrevPage}
-                          className="gap-1.5 h-9 px-3"
+                          onClick={() => handlePageChange(pageNum)}
+                          className="w-9 tabular-nums"
                         >
-                          <ChevronLeft className="h-4 w-4" />
-                          <span className="hidden sm:inline">Previous</span>
+                          {pageNum}
                         </Button>
-                        
-                        <div className="hidden md:flex items-center gap-1">
-                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                            let pageNum;
-                            if (totalPages <= 5) {
-                              pageNum = i + 1;
-                            } else if (currentPage <= 3) {
-                              pageNum = i + 1;
-                            } else if (currentPage >= totalPages - 2) {
-                              pageNum = totalPages - 4 + i;
-                            } else {
-                              pageNum = currentPage - 2 + i;
-                            }
-                            return (
-                              <Button
-                                key={pageNum}
-                                variant={currentPage === pageNum ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => handlePageChange(pageNum)}
-                                className="w-9 h-9"
-                              >
-                                {pageNum}
-                              </Button>
-                            );
-                          })}
-                        </div>
-                        
-                        <div className="md:hidden flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-md bg-muted/50">
-                          <span className="text-sm font-medium">{currentPage}</span>
-                          <span className="text-sm text-muted-foreground">/</span>
-                          <span className="text-sm font-medium">{totalPages}</span>
-                        </div>
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePageChange(currentPage + 1)}
-                          disabled={!hasNextPage}
-                          className="gap-1.5 h-9 px-3"
-                        >
-                          <span className="hidden sm:inline">Next</span>
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                      );
+                    })}
+                  </div>
+
+                  <span className="px-2 text-sm text-muted-foreground tabular-nums md:hidden">
+                    {currentPage} / {totalPages}
+                  </span>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={!hasNextPage}
+                  >
+                    <span className="hidden sm:inline">Next</span>
+                    <ChevronRight className="size-4" />
+                  </Button>
+                </div>
               </div>
             )}
           </>
@@ -333,11 +301,19 @@ function CompaniesContent() {
 
 export default function CompaniesPage() {
   return (
-    <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10">
+          <Skeleton className="h-8 w-56" />
+          <Skeleton className="mt-6 h-11 max-w-xl rounded-xl" />
+          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <Skeleton key={i} className="h-[86px] rounded-2xl" />
+            ))}
+          </div>
+        </div>
+      }
+    >
       <CompaniesContent />
     </Suspense>
   );

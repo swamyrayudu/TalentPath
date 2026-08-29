@@ -1,11 +1,10 @@
 'use client';
 import React from 'react';
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Accordion,
   AccordionContent,
@@ -14,17 +13,12 @@ import {
 } from '@/components/ui/accordion';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { 
-  Briefcase, 
-  MapPin, 
-  Calendar,
-  IndianRupee, 
-  Building2,
+import {
+  Briefcase,
   ChevronLeft,
   ChevronRight,
   Search,
   X,
-  Loader2
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -44,83 +38,358 @@ type Job = {
   createdAt: Date;
 };
 
+type ExternalJob = {
+  id: string;
+  title: string;
+  company: string;
+  companyLogo: string | null;
+  location: string;
+  locationType: 'remote' | 'onsite' | 'hybrid';
+  jobType: 'full-time' | 'part-time' | 'contract' | 'internship';
+  salary: string | null;
+  experience: string | null;
+  experienceLevel: string | null;
+  category: string | null;
+  skills: string[];
+  postedOn: string | null;
+  lastApplyDate: string | null;
+  applyUrl: string;
+  source: 'geeksforgeeks';
+};
+
+type Source = 'talentpath' | 'geeksforgeeks';
+
+/** One shape for the list, whichever board a role came from. */
+type Listing = {
+  id: string;
+  title: string;
+  company: string;
+  companyLogo: string | null;
+  location: string;
+  locationType: 'remote' | 'onsite' | 'hybrid';
+  jobType: 'full-time' | 'part-time' | 'contract' | 'internship';
+  salaryLabel: string | null;
+  /** Only set where the source states a comparable number, so the LPA filter can use it. */
+  salaryLpa: number | null;
+  postedLabel: string | null;
+  experience: string | null;
+  href: string;
+  external: boolean;
+  source: Source;
+};
+
+const JOBS_PER_PAGE = 12;
+
+const SALARY_RANGES = [
+  { value: '0-5', label: '0 – 5 LPA' },
+  { value: '5-10', label: '5 – 10 LPA' },
+  { value: '10-15', label: '10 – 15 LPA' },
+  { value: '15+', label: '15+ LPA' },
+];
+
+const SOURCES: { value: Source; label: string }[] = [
+  { value: 'talentpath', label: 'TalentPath' },
+  { value: 'geeksforgeeks', label: 'GeeksforGeeks' },
+];
+
+/* ── Presentational building blocks ─────────────────────────────── */
+
+function FilterGroup({
+  value,
+  label,
+  options,
+  selected,
+  onToggle,
+  note,
+}: {
+  value: string;
+  label: string;
+  options: { value: string; label: string }[];
+  selected: string[];
+  onToggle: (v: string) => void;
+  note?: string;
+}) {
+  return (
+    <AccordionItem value={value} className="border-b last:border-b-0">
+      <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
+        {label}
+      </AccordionTrigger>
+      <AccordionContent className="pb-3">
+        <div className="space-y-2.5">
+          {options.map((option) => (
+            <div key={option.value} className="flex items-center gap-2.5">
+              <Checkbox
+                id={`${value}-${option.value}`}
+                checked={selected.includes(option.value)}
+                onCheckedChange={() => onToggle(option.value)}
+              />
+              <Label
+                htmlFor={`${value}-${option.value}`}
+                className="cursor-pointer text-sm font-normal text-muted-foreground"
+              >
+                {option.label}
+              </Label>
+            </div>
+          ))}
+        </div>
+        {note && <p className="mt-3 text-xs text-muted-foreground/70">{note}</p>}
+      </AccordionContent>
+    </AccordionItem>
+  );
+}
+
+/**
+ * Company mark: the real logo where there is one, the initial otherwise. Broken
+ * URLs fall back too — plenty of listings point at images that no longer load,
+ * and an empty grey box down the whole column looks like a bug.
+ */
+function CompanyMark({ name, logo }: { name: string; logo: string | null }) {
+  const [failed, setFailed] = useState(false);
+
+  if (logo && !failed) {
+    return (
+      <img
+        src={logo}
+        alt=""
+        loading="lazy"
+        onError={() => setFailed(true)}
+        // contain + a light plate: these logos are wide banners, often transparent.
+        className="size-10 shrink-0 rounded-lg border bg-white object-contain p-1"
+      />
+    );
+  }
+
+  return (
+    <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border bg-muted text-sm font-medium text-muted-foreground">
+      {name.charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
+const DOT = <span className="px-1.5 text-muted-foreground/40">·</span>;
+
+/** Joins facts with middots, dropping anything empty. */
+function joinFacts(items: (string | null | undefined)[]) {
+  const shown = items.filter(Boolean) as string[];
+
+  return shown.map((item, i) => (
+    <React.Fragment key={item + i}>
+      {i > 0 && DOT}
+      {item}
+    </React.Fragment>
+  ));
+}
+
+function jobTypeLabel(jobType: Listing['jobType']) {
+  return jobType.charAt(0).toUpperCase() + jobType.slice(1);
+}
+
+/**
+ * One line of the board. Facts sit right-aligned so salary and location line up
+ * down the column, which is what makes a long list scannable.
+ */
+function JobRow({ job }: { job: Listing }) {
+  const placement =
+    job.locationType.charAt(0).toUpperCase() + job.locationType.slice(1);
+
+  const inner = (
+    <div className="flex items-center gap-4 px-5 py-4">
+      <CompanyMark name={job.company} logo={job.companyLogo} />
+
+      <div className="min-w-0 flex-1">
+        <h3 className="truncate text-sm font-medium">
+          {job.title}
+
+        </h3>
+        <p className="mt-1 truncate text-xs text-muted-foreground">
+          {joinFacts([
+            job.company,
+            job.location,
+            jobTypeLabel(job.jobType),
+            job.experience,
+          ])}
+        </p>
+
+        {/* Below sm the right-hand column is gone, so carry its facts here. */}
+        <p className="mt-1 truncate text-xs text-muted-foreground sm:hidden">
+          {joinFacts([job.salaryLabel, placement, job.postedLabel])}
+        </p>
+      </div>
+
+      <div className="hidden shrink-0 text-right sm:block">
+        {job.salaryLabel && (
+          <p className="max-w-[190px] truncate text-sm font-medium">{job.salaryLabel}</p>
+        )}
+        <p className="mt-1 text-xs text-muted-foreground">
+          {joinFacts([placement, job.postedLabel])}
+        </p>
+      </div>
+    </div>
+  );
+
+  return (
+    <Link href={job.href} className="block transition-colors hover:bg-muted/40">
+      {inner}
+    </Link>
+  );
+}
+
 export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
+  const [externalJobs, setExternalJobs] = useState<ExternalJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'jobs' | 'internships'>('jobs');
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedJobTypes, setSelectedJobTypes] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedSalaryRanges, setSelectedSalaryRanges] = useState<string[]>([]);
-  
+  const [selectedSources, setSelectedSources] = useState<string[]>([]);
+
   const [currentPage, setCurrentPage] = useState(1);
-  const jobsPerPage = 5;
 
   useEffect(() => {
     fetchJobs();
+    fetchExternalJobs();
   }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [jobs, activeTab, searchQuery, selectedJobTypes, selectedLocations, selectedSalaryRanges]);
 
   const fetchJobs = async () => {
     try {
       const response = await fetch('/api/jobs');
       const data = await response.json();
-      setJobs(data);
-      setLoading(false);
+      setJobs(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching jobs:', error);
+    } finally {
       setLoading(false);
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...jobs];
-
-    if (activeTab === 'jobs') {
-      filtered = filtered.filter(job => job.jobType !== 'internship');
-    } else {
-      filtered = filtered.filter(job => job.jobType === 'internship');
+  const fetchExternalJobs = async () => {
+    try {
+      const response = await fetch('/api/jobs/external');
+      const result = await response.json();
+      if (result.success && Array.isArray(result.data)) {
+        setExternalJobs(result.data);
+      }
+    } catch (error) {
+      console.error('Error fetching external jobs:', error);
     }
+  };
 
-    if (searchQuery) {
-      filtered = filtered.filter(job =>
-        job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        job.company.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
+  /** Both boards mapped onto one shape before any filtering happens. */
+  const listings = useMemo<Listing[]>(() => {
+    const internal: Listing[] = jobs.map((job) => {
+      const lpa = job.salary ? parseInt(job.salary.split('-')[0]) : NaN;
 
-    if (selectedJobTypes.length > 0) {
-      filtered = filtered.filter(job => selectedJobTypes.includes(job.jobType));
-    }
+      return {
+        id: job.id,
+        title: job.title,
+        company: job.company,
+        companyLogo: job.companyLogo,
+        location: job.location,
+        locationType: job.locationType,
+        jobType: job.jobType,
+        salaryLabel: job.salary ? `${job.salary} LPA` : null,
+        salaryLpa: Number.isNaN(lpa) ? null : lpa,
+        postedLabel: new Date(job.createdAt).toLocaleDateString('en-IN', {
+          month: 'short',
+          day: 'numeric',
+        }),
+        experience: null,
+        href: `/jobs/${job.id}`,
+        external: false,
+        source: 'talentpath',
+      };
+    });
 
-    if (selectedLocations.length > 0) {
-      filtered = filtered.filter(job => selectedLocations.includes(job.locationType));
-    }
+    const external: Listing[] = externalJobs.map((job) => ({
+      id: job.id,
+      title: job.title,
+      company: job.company,
+      companyLogo: job.companyLogo,
+      location: job.location,
+      locationType: job.locationType,
+      jobType: job.jobType,
+      salaryLabel: job.salary,
+      salaryLpa: null,
+      postedLabel: job.postedOn,
+      experience: job.experience,
+      // The in-app detail page, not the source — it renders the full description,
+      // skills and company profile, and links out to apply from there.
+      href: `/jobs/${job.id}`,
+      external: true,
+      source: 'geeksforgeeks',
+    }));
 
-    if (selectedSalaryRanges.length > 0) {
-      filtered = filtered.filter(job => {
-        if (!job.salary) return false;
-        const salary = parseInt(job.salary.split('-')[0]);
-        return selectedSalaryRanges.some(range => {
+    return [...internal, ...external];
+  }, [jobs, externalJobs]);
+
+  const filteredJobs = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    return listings.filter((job) => {
+      if (activeTab === 'internships' ? job.jobType !== 'internship' : job.jobType === 'internship') {
+        return false;
+      }
+
+      if (
+        query &&
+        !job.title.toLowerCase().includes(query) &&
+        !job.company.toLowerCase().includes(query)
+      ) {
+        return false;
+      }
+
+      if (selectedSources.length > 0 && !selectedSources.includes(job.source)) {
+        return false;
+      }
+
+      if (selectedJobTypes.length > 0 && !selectedJobTypes.includes(job.jobType)) {
+        return false;
+      }
+
+      if (selectedLocations.length > 0 && !selectedLocations.includes(job.locationType)) {
+        return false;
+      }
+
+      if (selectedSalaryRanges.length > 0) {
+        // Only listings that state a comparable number can match a range.
+        if (job.salaryLpa === null) return false;
+        const salary = job.salaryLpa;
+
+        const matches = selectedSalaryRanges.some((range) => {
           if (range === '0-5') return salary >= 0 && salary <= 5;
           if (range === '5-10') return salary >= 5 && salary <= 10;
           if (range === '10-15') return salary >= 10 && salary <= 15;
           if (range === '15+') return salary >= 15;
           return false;
         });
-      });
-    }
 
-    setFilteredJobs(filtered);
+        if (!matches) return false;
+      }
+
+      return true;
+    });
+  }, [
+    listings,
+    activeTab,
+    searchQuery,
+    selectedSources,
+    selectedJobTypes,
+    selectedLocations,
+    selectedSalaryRanges,
+  ]);
+
+  useEffect(() => {
     setCurrentPage(1);
-  };
+  }, [activeTab, searchQuery, selectedSources, selectedJobTypes, selectedLocations, selectedSalaryRanges]);
 
-  const toggleFilter = (filter: string, setFilter: (filters: string[]) => void, currentFilters: string[]) => {
+  const toggleFilter = (
+    filter: string,
+    setFilter: (filters: string[]) => void,
+    currentFilters: string[]
+  ) => {
     if (currentFilters.includes(filter)) {
       setFilter(currentFilters.filter((f: string) => f !== filter));
     } else {
@@ -133,299 +402,188 @@ export default function JobsPage() {
     setSelectedJobTypes([]);
     setSelectedLocations([]);
     setSelectedSalaryRanges([]);
+    setSelectedSources([]);
   };
 
-  const indexOfLastJob = currentPage * jobsPerPage;
-  const indexOfFirstJob = indexOfLastJob - jobsPerPage;
-  const currentJobs = filteredJobs.slice(indexOfFirstJob, indexOfLastJob);
-  const totalPages = Math.ceil(filteredJobs.length / jobsPerPage);
+  const indexOfLastJob = currentPage * JOBS_PER_PAGE;
+  const currentJobs = filteredJobs.slice(indexOfLastJob - JOBS_PER_PAGE, indexOfLastJob);
+  const totalPages = Math.ceil(filteredJobs.length / JOBS_PER_PAGE);
 
-      if (loading) {
-        return (
-          <div className="flex min-h-screen items-center justify-center bg-background">
-            <div className="text-center space-y-4">
-              <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-              <p className="text-muted-foreground text-lg">Loading jobs...</p>
-            </div>
-          </div>
-        );
-      }
+  const hasFilters =
+    !!searchQuery ||
+    selectedJobTypes.length > 0 ||
+    selectedLocations.length > 0 ||
+    selectedSalaryRanges.length > 0 ||
+    selectedSources.length > 0;
+
+  const jobTypeOptions =
+    activeTab === 'jobs'
+      ? [
+          { value: 'full-time', label: 'Full-time' },
+          { value: 'part-time', label: 'Part-time' },
+          { value: 'contract', label: 'Contract' },
+        ]
+      : [{ value: 'internship', label: 'Internship' }];
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-6 max-w-7xl">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-1">Jobs & Internships</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Explore {filteredJobs.length} opportunities to enhance your career
+      <div className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10">
+        {/* ── Header ─────────────────────────────────────────────── */}
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+            Jobs &amp; internships
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {loading
+              ? 'Loading openings…'
+              : `${filteredJobs.length} ${
+                  filteredJobs.length === 1 ? 'opening' : 'openings'
+                } from TalentPath and GeeksforGeeks.`}
           </p>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6">
-          <Button
-            variant={activeTab === 'jobs' ? 'default' : 'outline'}
-            onClick={() => setActiveTab('jobs')}
-            className="px-4 sm:px-6 text-xs sm:text-sm transition-all duration-200"
-            size="sm"
-          >
-            Jobs
-          </Button>
-          <Button
-            variant={activeTab === 'internships' ? 'default' : 'outline'}
-            onClick={() => setActiveTab('internships')}
-            className="px-4 sm:px-6 text-xs sm:text-sm transition-all duration-200"
-            size="sm"
-          >
-            Internships
-          </Button>
+        {/* ── Segmented switch ───────────────────────────────────── */}
+        <div className="mt-6 inline-flex rounded-full border bg-card p-1">
+          {(['jobs', 'internships'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`rounded-full px-4 py-1.5 text-sm capitalize transition-colors ${
+                activeTab === tab
+                  ? 'bg-muted font-medium text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Compact Sidebar */}
-          <aside className="lg:w-64 space-y-3">
-            {/* Search */}
+        <div className="mt-6 flex flex-col gap-6 lg:flex-row">
+          {/* ── Filters ──────────────────────────────────────────── */}
+          <aside className="space-y-3 lg:sticky lg:top-24 lg:w-64 lg:shrink-0 lg:self-start">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search..."
+                placeholder="Search roles or companies"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9 text-sm"
+                className="h-10 rounded-xl pl-9 pr-9"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                  aria-label="Clear search"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                  <X className="size-4" />
                 </button>
               )}
             </div>
 
-            {/* Filters Card */}
-            <Card className="border shadow-sm">
-              <CardContent className="p-3">
-                <Accordion type="multiple" className="w-full">
-                  {/* Job Type */}
-                  <AccordionItem value="job-type" className="border-0">
-                    <AccordionTrigger className="py-2 text-xs sm:text-sm font-medium hover:no-underline">
-                      Job Type
-                    </AccordionTrigger>
-                    <AccordionContent className="pb-2">
-                      <div className="space-y-2">
-                        {activeTab === 'jobs' ? (
-                          <>
-                            {['full-time', 'part-time', 'contract'].map((type) => (
-                              <div key={type} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={type}
-                                  checked={selectedJobTypes.includes(type)}
-                                  onCheckedChange={() =>
-                                    toggleFilter(type, setSelectedJobTypes, selectedJobTypes)
-                                  }
-                                  className="h-4 w-4"
-                                />
-                                <Label htmlFor={type} className="text-xs sm:text-sm capitalize cursor-pointer font-normal">
-                                  {type}
-                                </Label>
-                              </div>
-                            ))}
-                          </>
-                        ) : (
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="internship"
-                              checked={selectedJobTypes.includes('internship')}
-                              onCheckedChange={() =>
-                                toggleFilter('internship', setSelectedJobTypes, selectedJobTypes)
-                              }
-                              className="h-4 w-4"
-                            />
-                            <Label htmlFor="internship" className="text-xs sm:text-sm cursor-pointer font-normal">
-                              Internship
-                            </Label>
-                          </div>
-                        )}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
+            <div className="rounded-2xl border bg-card px-4">
+              <Accordion type="multiple" defaultValue={['source']} className="w-full">
+                <FilterGroup
+                  value="source"
+                  label="Source"
+                  options={SOURCES}
+                  selected={selectedSources}
+                  onToggle={(v) => toggleFilter(v, setSelectedSources, selectedSources)}
+                />
+                <FilterGroup
+                  value="job-type"
+                  label="Job type"
+                  options={jobTypeOptions}
+                  selected={selectedJobTypes}
+                  onToggle={(v) => toggleFilter(v, setSelectedJobTypes, selectedJobTypes)}
+                />
+                <FilterGroup
+                  value="location"
+                  label="Location"
+                  options={[
+                    { value: 'remote', label: 'Remote' },
+                    { value: 'onsite', label: 'Onsite' },
+                    { value: 'hybrid', label: 'Hybrid' },
+                  ]}
+                  selected={selectedLocations}
+                  onToggle={(v) => toggleFilter(v, setSelectedLocations, selectedLocations)}
+                />
+                <FilterGroup
+                  value="salary"
+                  label="Salary"
+                  options={SALARY_RANGES}
+                  selected={selectedSalaryRanges}
+                  onToggle={(v) =>
+                    toggleFilter(v, setSelectedSalaryRanges, selectedSalaryRanges)
+                  }
+                  note="Applies to TalentPath listings — GeeksforGeeks quotes salary as free text."
+                />
+              </Accordion>
+            </div>
 
-                  {/* Location */}
-                  <AccordionItem value="location" className="border-0">
-                    <AccordionTrigger className="py-2 text-xs sm:text-sm font-medium hover:no-underline">
-                      Location
-                    </AccordionTrigger>
-                    <AccordionContent className="pb-2">
-                      <div className="space-y-2">
-                        {['remote', 'onsite', 'hybrid'].map((location) => (
-                          <div key={location} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={location}
-                              checked={selectedLocations.includes(location)}
-                              onCheckedChange={() =>
-                                toggleFilter(location, setSelectedLocations, selectedLocations)
-                              }
-                              className="h-4 w-4"
-                            />
-                            <Label htmlFor={location} className="text-xs sm:text-sm capitalize cursor-pointer font-normal">
-                              {location}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  {/* Salary */}
-                  <AccordionItem value="salary" className="border-0">
-                    <AccordionTrigger className="py-2 text-xs sm:text-sm font-medium hover:no-underline">
-                      Salary
-                    </AccordionTrigger>
-                    <AccordionContent className="pb-2">
-                      <div className="space-y-2">
-                        {[
-                          { value: '0-5', label: '0-5 LPA' },
-                          { value: '5-10', label: '5-10 LPA' },
-                          { value: '10-15', label: '10-15 LPA' },
-                          { value: '15+', label: '15+ LPA' },
-                        ].map((range) => (
-                          <div key={range.value} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={range.value}
-                              checked={selectedSalaryRanges.includes(range.value)}
-                              onCheckedChange={() =>
-                                toggleFilter(range.value, setSelectedSalaryRanges, selectedSalaryRanges)
-                              }
-                              className="h-4 w-4"
-                            />
-                            <Label htmlFor={range.value} className="text-xs sm:text-sm cursor-pointer font-normal">
-                              {range.label}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-
-                {(searchQuery || selectedJobTypes.length > 0 || selectedLocations.length > 0 || selectedSalaryRanges.length > 0) && (
-                  <Button
-                    variant="ghost"
-                    onClick={clearAllFilters}
-                    className="w-full mt-2 h-8 text-xs"
-                    size="sm"
-                  >
-                    Clear Filters
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
+            {hasFilters && (
+              <Button
+                variant="ghost"
+                onClick={clearAllFilters}
+                size="sm"
+                className="w-full text-muted-foreground"
+              >
+                Clear all filters
+              </Button>
+            )}
           </aside>
 
-          {/* Main Content - Compact Cards */}
-          <main className="flex-1">
-            {currentJobs.length === 0 ? (
-              <Card className="text-center py-12">
-                <CardContent>
-                  <Briefcase className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                  <h3 className="text-lg font-semibold mb-1">No {activeTab} Found</h3>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Try adjusting your filters
-                  </p>
-                  <Button onClick={clearAllFilters} size="sm">Clear Filters</Button>
-                </CardContent>
-              </Card>
+          {/* ── Listings ─────────────────────────────────────────── */}
+          <main className="min-w-0 flex-1">
+            {loading ? (
+              <div className="divide-y overflow-hidden rounded-2xl border bg-card">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-4 px-5 py-4">
+                    <Skeleton className="size-10 shrink-0 rounded-lg" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-3.5 w-1/3" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                    <div className="hidden w-28 space-y-2 sm:block">
+                      <Skeleton className="ml-auto h-3.5 w-20" />
+                      <Skeleton className="ml-auto h-3 w-24" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : currentJobs.length === 0 ? (
+              <div className="flex flex-col items-center rounded-2xl border bg-card py-16 text-center">
+                <Briefcase className="size-6 text-muted-foreground/40" strokeWidth={1.5} />
+                <h3 className="mt-4 text-sm font-semibold tracking-tight">
+                  No {activeTab} found
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {hasFilters
+                    ? 'Try loosening your filters.'
+                    : 'Check back soon — new roles are added regularly.'}
+                </p>
+                {hasFilters && (
+                  <Button
+                    onClick={clearAllFilters}
+                    variant="outline"
+                    size="sm"
+                    className="mt-4"
+                  >
+                    Clear filters
+                  </Button>
+                )}
+              </div>
             ) : (
               <>
-                <div className="space-y-3 mb-6">
-                  {currentJobs.map((job, index) => (
-                    <Card 
-                      key={job.id} 
-                      className="group hover:shadow-md hover:border-amber-200 transition-all duration-200 animate-in fade-in slide-in-from-bottom-4"
-                      style={{ animationDelay: `${index * 50}ms` }}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-3">
-                          {/* Logo */}
-                          <div className="flex-shrink-0">
-                            {job.companyLogo ? (
-                              <img 
-                                src={job.companyLogo} 
-                                alt={job.company}
-                                className="w-12 h-12 rounded-md object-cover"
-                              />
-                            ) : (
-                              <div className="w-12 h-12 rounded-md bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-                                <Building2 className="h-6 w-6 text-white" />
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Content */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <div className="flex-1 min-w-0">
-                                <h3 className="text-sm sm:text-base font-semibold mb-0.5 truncate group-hover:text-primary transition-colors">
-                                  {job.title}
-                                </h3>
-                                <p className="text-xs sm:text-sm text-muted-foreground">{job.company}</p>
-                              </div>
-                              <Link href={`/jobs/${job.id}`}>
-                                <Button size="sm" className="h-7 sm:h-8 text-xs">
-                                  Details
-                                </Button>
-                              </Link>
-                            </div>
-
-                            {/* Info Row */}
-                            <div className="flex flex-wrap gap-x-3 sm:gap-x-4 gap-y-1 text-[10px] sm:text-xs text-muted-foreground mb-2">
-                              <div className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                <span>{job.location}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Briefcase className="h-3 w-3" />
-                                <span className="capitalize">{job.jobType}</span>
-                              </div>
-                              {job.salary && (
-                                <div className="flex items-center gap-1 font-medium text-primary">
-                                  <IndianRupee className="h-3 w-3" />
-                                  <span>{job.salary} LPA</span>
-                                </div>
-                              )}
-                              <div className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                <span>
-                                  {new Date(job.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Badges */}
-                            <div className="flex gap-1.5">
-                              <Badge 
-                                variant={job.locationType === 'remote' ? 'default' : 'secondary'}
-                                className="text-[10px] sm:text-xs h-5 px-1.5 sm:px-2"
-                              >
-                                {job.locationType}
-                              </Badge>
-                              <Badge variant="outline" className="text-[10px] sm:text-xs h-5 px-1.5 sm:px-2">
-                                {job.jobType}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                <div className="divide-y overflow-hidden rounded-2xl border bg-card">
+                  {currentJobs.map((job) => (
+                    <JobRow key={job.id} job={job} />
                   ))}
                 </div>
 
-                {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="mt-6 flex items-center justify-between gap-4 border-t pt-6">
                     <Button
                       variant="outline"
                       size="sm"
@@ -434,13 +592,12 @@ export default function JobsPage() {
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}
                       disabled={currentPage === 1}
-                      className="h-8"
                     >
-                      <ChevronLeft className="h-4 w-4" />
+                      <ChevronLeft className="size-4" />
                       Previous
                     </Button>
 
-                    <span className="text-xs text-muted-foreground px-2">
+                    <span className="text-sm text-muted-foreground tabular-nums">
                       Page {currentPage} of {totalPages}
                     </span>
 
@@ -452,10 +609,9 @@ export default function JobsPage() {
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}
                       disabled={currentPage === totalPages}
-                      className="h-8"
                     >
                       Next
-                      <ChevronRight className="h-4 w-4" />
+                      <ChevronRight className="size-4" />
                     </Button>
                   </div>
                 )}

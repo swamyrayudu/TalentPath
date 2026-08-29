@@ -4,7 +4,6 @@ import React from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -14,72 +13,73 @@ import {
   MessageSquare,
   Building2,
   Clock,
-  Target,
-  TrendingUp,
-  History,
+  ArrowRight,
   Award,
-  ChevronRight,
 } from 'lucide-react';
 
 interface InterviewType {
   id: string;
   title: string;
   description: string;
-  icon: React.ReactNode;
+  icon: React.ElementType;
   duration: string;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   topics: string[];
-  color: string;
 }
 
 const interviewTypes: InterviewType[] = [
   {
     id: 'dsa-coding',
-    title: 'DSA & Coding Interview',
-    description: 'Practice data structures and algorithms with AI interviewer',
-    icon: <Code2 className="h-6 w-6" />,
-    duration: '30-45 mins',
+    title: 'DSA & coding',
+    description: 'Work through data structures and algorithms with an AI interviewer.',
+    icon: Code2,
+    duration: '30–45 min',
     difficulty: 'intermediate',
-    topics: ['Arrays', 'Trees', 'Graphs', 'Dynamic Programming', 'System Design Basics'],
-    color: 'from-blue-500 to-cyan-500',
+    topics: ['Arrays', 'Trees', 'Graphs', 'Dynamic Programming'],
   },
   {
     id: 'system-design',
-    title: 'System Design Interview',
-    description: 'Design scalable systems with AI guidance and feedback',
-    icon: <Network className="h-6 w-6" />,
-    duration: '45-60 mins',
+    title: 'System design',
+    description: 'Design a scalable system and defend your trade-offs.',
+    icon: Network,
+    duration: '45–60 min',
     difficulty: 'advanced',
-    topics: ['Scalability', 'Load Balancing', 'Databases', 'Caching', 'Microservices'],
-    color: 'from-purple-500 to-pink-500',
+    topics: ['Scalability', 'Load balancing', 'Databases', 'Caching'],
   },
   {
     id: 'behavioral',
-    title: 'Behavioral Interview',
-    description: 'Practice behavioral questions and get instant feedback',
-    icon: <MessageSquare className="h-6 w-6" />,
-    duration: '20-30 mins',
+    title: 'Behavioral',
+    description: 'Practise the story questions and get feedback on your answers.',
+    icon: MessageSquare,
+    duration: '20–30 min',
     difficulty: 'beginner',
-    topics: ['Leadership', 'Teamwork', 'Conflict Resolution', 'Problem Solving'],
-    color: 'from-green-500 to-emerald-500',
+    topics: ['Leadership', 'Teamwork', 'Conflict', 'Problem solving'],
   },
   {
     id: 'company-specific',
-    title: 'Company-Specific Mock',
-    description: 'Tailored interviews for FAANG and top tech companies',
-    icon: <Building2 className="h-6 w-6" />,
-    duration: '60+ mins',
+    title: 'Company-specific',
+    description: 'Mock rounds shaped around a particular company’s loop.',
+    icon: Building2,
+    duration: '60+ min',
     difficulty: 'advanced',
     topics: ['Google', 'Amazon', 'Microsoft', 'Meta', 'Apple'],
-    color: 'from-orange-500 to-red-500',
   },
 ];
 
-const difficultyColors: Record<InterviewType['difficulty'], string> = {
-  beginner: 'bg-green-500/10 text-green-200',
-  intermediate: 'bg-yellow-500/10 text-yellow-200',
-  advanced: 'bg-red-500/10 text-red-200',
+const difficultyTone: Record<InterviewType['difficulty'], string> = {
+  beginner: 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400',
+  intermediate: 'border-amber-500/40 text-amber-600 dark:text-amber-400',
+  advanced: 'border-rose-500/40 text-rose-600 dark:text-rose-400',
 };
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border bg-card p-5">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="mt-3 text-2xl font-semibold tracking-tight tabular-nums">{value}</p>
+    </div>
+  );
+}
 
 export default function InterviewPage() {
   const { data: session, status } = useSession();
@@ -87,23 +87,27 @@ export default function InterviewPage() {
 
   if (status === 'loading') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
-        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-white"></div>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="size-6 animate-spin rounded-full border-2 border-muted border-t-foreground" />
       </div>
     );
   }
 
   if (!session?.user) {
     return (
-      <div className="container mx-auto max-w-4xl px-4 py-12">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Brain className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-            <h2 className="mb-2 text-2xl font-bold">Sign In Required</h2>
-            <p className="mb-6 text-muted-foreground">Please sign in to access AI Mock Interviews</p>
-            <Button onClick={() => router.push('/auth/signin')}>Sign In</Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-background">
+        <div className="mx-auto max-w-md px-4 py-20 md:px-6">
+          <div className="flex flex-col items-center rounded-2xl border bg-card py-16 text-center">
+            <Brain className="size-6 text-muted-foreground/40" strokeWidth={1.5} />
+            <h1 className="mt-4 text-sm font-semibold tracking-tight">Sign in required</h1>
+            <p className="mt-1 max-w-xs text-sm text-muted-foreground">
+              Mock interviews are tied to your account so feedback carries over.
+            </p>
+            <Button className="mt-5" onClick={() => router.push('/auth/signin')}>
+              Sign in
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -112,120 +116,103 @@ export default function InterviewPage() {
     router.push(`/interview/${typeId}/configure`);
   };
 
-  const stats = [
-    { label: 'Interviews Done', value: '0', icon: <History className="h-5 w-5" /> },
-    { label: 'Avg Score', value: '--', icon: <Target className="h-5 w-5" /> },
-    { label: 'Total Time', value: '0h', icon: <Clock className="h-5 w-5" /> },
-    { label: 'Improvement', value: '--', icon: <TrendingUp className="h-5 w-5" /> },
-  ];
-
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
-      <div className="mx-auto max-w-7xl space-y-8 px-4 py-8">
-        <section className="rounded-3xl border border-white/5 bg-gradient-to-br from-[#1a0f17] via-[#120b11] to-[#060406] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.35)] md:p-10">
-          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-            <div className="space-y-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-200">
-                <Brain className="h-3 w-3" />
-                AI Mock Suite
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold md:text-4xl">AI Mock Interviews</h1>
-                <p className="mt-2 text-sm text-white/70">
-                  Compete with yourself, stay sharp, and get instant feedback with real-time AI interviewers.
-                </p>
-              </div>
-            </div>
-            <Button
-              className="h-11 w-full rounded-full bg-gradient-to-r from-[#ff4d4f] to-[#ff7a45] text-white shadow-amber-500/20 transition hover:brightness-110 md:w-auto"
-              onClick={() => handleStartInterview('dsa-coding')}
-            >
-              + Start New Interview
-            </Button>
-          </div>
-
-          <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {stats.map((stat, index) => (
-              <div
-                key={stat.label}
-                className={`rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur ${index === 0 ? 'ring-1 ring-red-500/30' : ''}`}
-              >
-                <div className="flex items-center justify-between text-sm text-white/70">
-                  <span>{stat.label}</span>
-                  <span className="text-white/60">{stat.icon}</span>
-                </div>
-                <p className="mt-3 text-3xl font-semibold text-white">{stat.value}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="space-y-4">
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10">
+        {/* ── Header ─────────────────────────────────────────────── */}
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-sm text-white/60">Choose your next challenge</p>
-            <h2 className="text-2xl font-semibold text-white">Interview Modes</h2>
-          </div>
-          <div className="grid gap-5 md:grid-cols-2">
-            {interviewTypes.map((type) => (
-              <div
-                key={type.id}
-                className="relative overflow-hidden rounded-3xl border border-white/5 bg-[#0d0d0f] p-6 shadow-lg shadow-black/30 transition hover:-translate-y-1 hover:border-red-500/40"
-              >
-                <div className="flex items-start justify-between">
-                  <div className={`rounded-2xl p-3 text-white bg-gradient-to-br ${type.color}`}>
-                    {type.icon}
-                  </div>
-                  <Badge className={`rounded-full px-3 py-1 text-xs capitalize ${difficultyColors[type.difficulty]}`}>
-                    {type.difficulty}
-                  </Badge>
-                </div>
-                <h3 className="mt-4 text-xl font-semibold text-white">{type.title}</h3>
-                <p className="text-sm text-white/60">{type.description}</p>
-                <div className="mt-4 flex items-center gap-2 text-xs text-white/50">
-                  <Clock className="h-4 w-4" />
-                  {type.duration}
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {type.topics.map((topic) => (
-                    <span key={topic} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-white/70">
-                      {topic}
-                    </span>
-                  ))}
-                </div>
-                <Button
-                  className="mt-6 w-full rounded-2xl bg-gradient-to-r from-[#ff4d4f] to-[#ff7a45] text-sm font-semibold shadow-lg shadow-red-500/30 hover:brightness-110"
-                  onClick={() => handleStartInterview(type.id)}
-                >
-                  Start Interview
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold text-white">Recent Interviews</h2>
-            <Button
-              variant="outline"
-              className="border-white/20 bg-transparent text-white hover:bg-white/10"
-              asChild
-            >
-              <Link href="/interview/history" className="flex items-center gap-2">
-                View All
-                <ChevronRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-          <div className="rounded-3xl border border-dashed border-white/10 bg-[#0b0b0d] p-10 text-center text-white/60">
-            <Award className="mx-auto mb-4 h-12 w-12 text-white/30" />
-            <p className="text-base font-medium text-white">No interviews yet</p>
-            <p className="mt-1 text-sm text-white/60">
-              Start your first mock session to see progress here.
+            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+              AI mock interviews
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Practise under interview conditions and get feedback while it&apos;s fresh.
             </p>
           </div>
-        </section>
+          <Button className="gap-2" onClick={() => handleStartInterview('dsa-coding')}>
+            Start an interview
+            <ArrowRight className="size-4" />
+          </Button>
+        </div>
+
+        {/* ── Stats ──────────────────────────────────────────────── */}
+        <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4">
+          <Stat label="Interviews" value="0" />
+          <Stat label="Average score" value="—" />
+          <Stat label="Total time" value="0h" />
+          <Stat label="Improvement" value="—" />
+        </div>
+
+        {/* ── Modes ──────────────────────────────────────────────── */}
+        <h2 className="mt-10 text-sm font-semibold tracking-tight">Interview modes</h2>
+        <div className="mt-3 grid gap-4 md:grid-cols-2">
+          {interviewTypes.map((type) => (
+            <button
+              key={type.id}
+              onClick={() => handleStartInterview(type.id)}
+              className="group flex flex-col rounded-2xl border bg-card p-5 text-left transition-colors hover:border-primary/40"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                    <type.icon className="size-[18px]" strokeWidth={1.75} />
+                  </span>
+                  <h3 className="truncate text-base font-semibold tracking-tight">
+                    {type.title}
+                  </h3>
+                </div>
+                <Badge
+                  variant="outline"
+                  className={`shrink-0 capitalize ${difficultyTone[type.difficulty]}`}
+                >
+                  {type.difficulty}
+                </Badge>
+              </div>
+
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                {type.description}
+              </p>
+
+              <div className="mt-4 flex flex-wrap gap-1.5">
+                {type.topics.map((topic) => (
+                  <Badge key={topic} variant="secondary" className="font-normal">
+                    {topic}
+                  </Badge>
+                ))}
+              </div>
+
+              <div className="mt-5 flex items-center justify-between border-t pt-4">
+                <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Clock className="size-3.5" strokeWidth={1.75} />
+                  {type.duration}
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary">
+                  Start
+                  <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* ── History ────────────────────────────────────────────── */}
+        <div className="mt-10 flex items-center justify-between">
+          <h2 className="text-sm font-semibold tracking-tight">Recent interviews</h2>
+          <Button variant="ghost" size="sm" className="gap-1.5" asChild>
+            <Link href="/interview/history">
+              View all
+              <ArrowRight className="size-3.5" />
+            </Link>
+          </Button>
+        </div>
+
+        <div className="mt-3 flex flex-col items-center rounded-2xl border bg-card py-16 text-center">
+          <Award className="size-6 text-muted-foreground/40" strokeWidth={1.5} />
+          <p className="mt-4 text-sm font-semibold tracking-tight">No interviews yet</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Your first session will show up here.
+          </p>
+        </div>
       </div>
     </div>
   );

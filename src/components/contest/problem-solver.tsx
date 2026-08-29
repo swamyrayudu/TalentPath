@@ -21,6 +21,7 @@ import { Play, Loader2, Send, CheckCircle2, XCircle, Clock, Trophy, Award, Arrow
 import { submitSolution, runTestCases } from '@/actions/contest.actions';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { ProblemStatement } from './problem-statement';
 // import { useRouter } from 'next/navigation'; // Unused
 
 const LANGUAGES = [
@@ -442,11 +443,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: {
               <TabsContent value="description" className="space-y-6 mt-0">
                 <div>
                   <h3 className="text-lg font-semibold mb-3">Problem Statement</h3>
-                  <div className="prose dark:prose-invert max-w-none">
-                    <pre className="whitespace-pre-wrap text-sm bg-muted/50 p-4 rounded-lg border">
-                      {question.description}
-                    </pre>
-                  </div>
+                  <ProblemStatement content={question.description} />
                 </div>
 
                 <div>
@@ -456,14 +453,15 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: {
                       <p className="text-sm text-muted-foreground">No sample test cases available</p>
                     ) : (
                       <>
-                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-                          <p className="text-xs text-blue-700 dark:text-blue-300">
-                            <strong>Automatic Input Processing:</strong> Arrays like <code className="bg-blue-500/20 px-1 rounded">[1,2,3]</code> are automatically converted to space-separated format <code className="bg-blue-500/20 px-1 rounded">1 2 3</code>. 
-                            Just use <code className="bg-blue-500/20 px-1 rounded">input().split()</code> in Python or <code className="bg-blue-500/20 px-1 rounded">Scanner</code> in Java. No manual parsing needed!
+                        <div className="rounded-lg border p-3">
+                          <p className="text-xs text-muted-foreground">
+                            Your program is run once per test case. Read the input exactly as shown below from{' '}
+                            <strong className="text-foreground">standard input</strong> and write the answer to{' '}
+                            <strong className="text-foreground">standard output</strong>. Trailing whitespace is ignored.
                           </p>
                         </div>
                         {sampleTestCases.map((testCase: TestCase, index: number) => (
-                          <Card key={testCase.id} className="border-2">
+                          <Card key={testCase.id}>
                             <CardHeader className="pb-3">
                               <CardTitle className="text-sm flex items-center justify-between">
                                 <span>Example {index + 1}</span>
@@ -524,8 +522,8 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: {
                           key={submission.id}
                           className={`${
                             submission.verdict === 'accepted' 
-                              ? 'border-green-500 border-2' 
-                              : 'border-red-500 border-2'
+                              ? 'border-emerald-500/50' 
+                              : 'border-rose-500/50'
                           } ${isLatest ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
                         >
                           <CardHeader>
@@ -650,11 +648,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: {
                 <TabsContent value="description" className="space-y-4 mt-0">
                   <div>
                     <h3 className="text-base font-semibold mb-2">Problem Statement</h3>
-                    <div className="prose dark:prose-invert max-w-none">
-                      <pre className="whitespace-pre-wrap text-xs bg-muted/50 p-3 rounded-lg border">
-                        {question.description}
-                      </pre>
-                    </div>
+                    <ProblemStatement content={question.description} compact />
                   </div>
 
                   <div>
@@ -664,13 +658,13 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: {
                         <p className="text-xs text-muted-foreground">No sample test cases available</p>
                       ) : (
                         <>
-                          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-2">
-                            <p className="text-[10px] text-blue-700 dark:text-blue-300">
-                              Arrays are auto-converted to space-separated format
+                          <div className="rounded-lg border p-2">
+                            <p className="text-[10px] text-muted-foreground">
+                              Read the input below from standard input; write the answer to standard output.
                             </p>
                           </div>
                           {sampleTestCases.map((testCase: TestCase, index: number) => (
-                            <Card key={testCase.id} className="border-2">
+                            <Card key={testCase.id}>
                               <CardHeader className="pb-2 p-3">
                                 <CardTitle className="text-xs flex items-center justify-between">
                                   <span>Example {index + 1}</span>
@@ -726,8 +720,8 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: {
                             key={submission.id}
                             className={`${
                               submission.verdict === 'accepted' 
-                                ? 'border-green-500 border-2' 
-                                : 'border-red-500 border-2'
+                                ? 'border-emerald-500/50' 
+                                : 'border-rose-500/50'
                             } ${isLatest ? 'ring-1 ring-blue-500' : ''}`}
                           >
                             <CardHeader className="p-3 pb-2">
@@ -848,7 +842,7 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: {
                 {testResults.map((result: TestResult, index: number) => (
                   <Card 
                     key={index} 
-                    className={`border-2 ${result.passed ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 'border-red-500 bg-red-50 dark:bg-red-950/20'}`}
+                    className={result.passed ? 'border-emerald-500/50' : 'border-rose-500/50'}
                   >
                     <CardContent className="p-2 lg:p-3">
                       <div className="flex items-center justify-between mb-2">
@@ -857,14 +851,14 @@ export function ProblemSolver({ contest, question, sampleTestCases, userId }: {
                           {result.passed ? (
                             <>
                               <CheckCircle2 className="h-3 w-3 lg:h-4 lg:w-4 text-green-500" />
-                              <Badge variant="outline" className="text-[10px] lg:text-xs text-green-700 border-green-500 bg-green-100 dark:bg-green-900 px-1 lg:px-2">
+                              <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
                                 Passed
                               </Badge>
                             </>
                           ) : (
                             <>
                               <XCircle className="h-3 w-3 lg:h-4 lg:w-4 text-red-500" />
-                              <Badge variant="outline" className="text-[10px] lg:text-xs text-red-700 border-red-500 bg-red-100 dark:bg-red-900 px-1 lg:px-2">
+                              <Badge variant="outline" className="border-rose-500/40 text-rose-600 dark:text-rose-400">
                                 Failed
                               </Badge>
                             </>

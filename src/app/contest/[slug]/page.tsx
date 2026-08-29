@@ -80,94 +80,95 @@ export default async function ContestDetailPage({
   }
 
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
-      {/* Back to Contest Button */}
-      <div className="mb-4 sm:mb-6">
-        <Link href="/contest">
-          <Button variant="ghost" size="sm" className="text-sm">
-            <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
-            Back to Contests
-          </Button>
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10">
+        <Link
+          href="/contest"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" />
+          All contests
         </Link>
-      </div>
 
-      <ContestHeader contest={{
-        ...contest,
-        creatorName: contest.creatorName || undefined
-      }} />
-      
-      {/* Manage Contest Button - Only for Creator */}
-      {isCreator && (
-        <div className="mt-3 sm:mt-4">
-          <Link href={`/contest/${slug}/manage`}>
-            <Button size="sm" className="w-full md:w-auto text-sm bg-primary hover:bg-primary/90 text-primary-foreground font-medium">
-              <Settings className="h-3.5 w-3.5 mr-1.5" />
-              Manage Contest
+        <div className="mt-6">
+          <ContestHeader
+            contest={{
+              ...contest,
+              creatorName: contest.creatorName || undefined,
+            }}
+          />
+        </div>
+
+        {isCreator && (
+          <div className="mt-5">
+            <Button size="sm" variant="outline" className="gap-2" asChild>
+              <Link href={`/contest/${slug}/manage`}>
+                <Settings className="size-4" />
+                Manage contest
+              </Link>
             </Button>
-          </Link>
-        </div>
-      )}
-      
-      <div className="mt-4 sm:mt-6 md:mt-8 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        <div className="lg:col-span-2">
-          <ContestTimer contest={contest} />
-          
-          {!isParticipant && session?.user && (
-            <div className="mb-6">
+          </div>
+        )}
+
+        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="space-y-4 lg:col-span-2">
+            <ContestTimer contest={contest} />
+
+            {!isParticipant && session?.user && (
               <JoinContestButton contestId={contest.id} visibility={contest.visibility} />
-            </div>
-          )}
+            )}
 
-          {isParticipant && session?.user && (
-            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-primary/10 border border-primary/20 rounded-md">
-              <p className="text-sm sm:text-base text-primary font-medium flex items-center gap-2">
-                <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                You are registered for this contest
-              </p>
-            </div>
-          )}
+            {isParticipant && session?.user && (
+              <div className="flex items-center gap-2 rounded-2xl border bg-card px-5 py-3.5">
+                <CheckCircle className="size-4 text-primary" strokeWidth={1.75} />
+                <p className="text-sm">You are registered for this contest</p>
+              </div>
+            )}
 
-          <Tabs defaultValue="problems" className="w-full">
-            <TabsList className="w-full grid grid-cols-3 h-9 sm:h-10 p-0.5 sm:p-1">
-              <TabsTrigger value="problems" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Problems</TabsTrigger>
-              <TabsTrigger value="leaderboard" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Leaderboard</TabsTrigger>
-              <TabsTrigger value="submissions" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">Submissions</TabsTrigger>
-            </TabsList>
+            <Tabs defaultValue="problems" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="problems">Problems</TabsTrigger>
+                <TabsTrigger value="leaderboard" className="lg:hidden">
+                  Leaderboard
+                </TabsTrigger>
+                <TabsTrigger value="submissions">Submissions</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="problems" className="mt-3 sm:mt-4">
-              <QuestionsList 
-                questions={questions} 
-                contestId={contest.id}
-                contestSlug={slug}
-                isParticipant={isParticipant}
-                completedQuestionIds={completedQuestionIds}
-                contestStatus={contest.status}
-                contestEndTime={contest.endTime}
-              />
-            </TabsContent>
+              <TabsContent value="problems" className="mt-4">
+                <QuestionsList
+                  questions={questions}
+                  contestId={contest.id}
+                  contestSlug={slug}
+                  isParticipant={isParticipant}
+                  completedQuestionIds={completedQuestionIds}
+                  contestStatus={contest.status}
+                  contestEndTime={contest.endTime}
+                />
+              </TabsContent>
 
-            <TabsContent value="leaderboard" className="mt-3 sm:mt-4">
-              <ContestLeaderboard leaderboard={leaderboard} />
-            </TabsContent>
+              <TabsContent value="leaderboard" className="mt-4 lg:hidden">
+                <ContestLeaderboard leaderboard={leaderboard} />
+              </TabsContent>
 
-            <TabsContent value="submissions" className="mt-3 sm:mt-4">
-              {isParticipant && session?.user ? (
-                <MySubmissionsList submissions={userSubmissions} />
-              ) : (
-                <div className="text-center py-12 sm:py-16">
-                  <p className="text-sm text-muted-foreground">
-                    {!session?.user 
-                      ? 'Please sign in to view your submissions' 
-                      : 'Join the contest to see your submissions'}
-                  </p>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        </div>
+              <TabsContent value="submissions" className="mt-4">
+                {isParticipant && session?.user ? (
+                  <MySubmissionsList submissions={userSubmissions} />
+                ) : (
+                  <div className="rounded-2xl border bg-card py-16 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      {!session?.user
+                        ? 'Sign in to view your submissions.'
+                        : 'Join the contest to see your submissions.'}
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
 
-        <div className="lg:col-span-1">
-          <ContestLeaderboard leaderboard={leaderboard} compact />
+          <div className="hidden lg:col-span-1 lg:block">
+            <ContestLeaderboard leaderboard={leaderboard} compact />
+          </div>
         </div>
       </div>
     </div>

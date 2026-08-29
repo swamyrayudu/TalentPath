@@ -1,6 +1,5 @@
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Calendar, Clock, Users, Lock, Globe, PlayCircle, CheckCircle, FileEdit } from 'lucide-react';
+import { Lock, Globe } from 'lucide-react';
 import { format } from 'date-fns';
 import React from 'react';
 
@@ -17,152 +16,80 @@ interface ContestHeaderProps {
   };
 }
 
-export function ContestHeader({ contest }: ContestHeaderProps) {
-  const getStatusBadge = () => {
-    switch (contest.status) {
-      case 'live':
-        return (
-          <Badge className="bg-primary hover:bg-primary/90 text-primary-foreground animate-pulse gap-1">
-            <PlayCircle className="h-3 w-3" />
-            Live
-          </Badge>
-        );
-      case 'upcoming':
-        return (
-          <Badge className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1">
-            <Clock className="h-3 w-3" />
-            Upcoming
-          </Badge>
-        );
-      case 'ended':
-        return (
-          <Badge variant="secondary" className="gap-1">
-            <CheckCircle className="h-3 w-3" />
-            Ended
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="gap-1">
-            <FileEdit className="h-3 w-3" />
-            Draft
-          </Badge>
-        );
-    }
-  };
+function StatusBadge({ status }: { status: ContestHeaderProps['contest']['status'] }) {
+  if (status === 'live') {
+    return (
+      <Badge className="gap-1.5">
+        <span className="size-1.5 rounded-full bg-current" />
+        Live
+      </Badge>
+    );
+  }
+  if (status === 'upcoming') return <Badge variant="secondary">Upcoming</Badge>;
+  if (status === 'ended') return <Badge variant="outline">Ended</Badge>;
+  return <Badge variant="outline">Draft</Badge>;
+}
 
-  const formatDuration = (minutes: number) => {
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-  };
-
+function Fact({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <Card className="border shadow-sm">
-      <CardContent className="p-3 sm:p-4 md:p-6">
-        {/* Header Section */}
-        <div className="space-y-3 sm:space-y-4">
-          {/* Title Row */}
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3">
-            <div className="flex-1 space-y-1.5 sm:space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-foreground leading-tight">
-                  {contest.title}
-                </h1>
-                {getStatusBadge()}
-              </div>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                {contest.description}
-              </p>
-            </div>
-            
-            {/* Visibility Badge */}
-            <div className="flex items-start">
-              {contest.visibility === 'private' ? (
-                <Badge variant="secondary" className="gap-1.5">
-                  <Lock className="h-3 w-3" />
-                  <span className="text-xs">Private</span>
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="gap-1.5">
-                  <Globe className="h-3 w-3" />
-                  <span className="text-xs">Public</span>
-                </Badge>
-              )}
-            </div>
-          </div>
+    <div className="border-b py-3 last:border-b-0 sm:border-b-0 sm:border-r sm:px-5 sm:py-0 sm:first:pl-0 sm:last:border-r-0 sm:last:pr-0">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-medium">{value}</p>
+      {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
 
-          {/* Divider */}
-          <div className="border-t"></div>
+const formatDuration = (minutes: number) => {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+};
 
-          {/* Info Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-            {/* Start Time */}
-            <div className="flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 border rounded-md bg-card hover:bg-accent/50 transition-colors">
-              <div className="flex-shrink-0 p-1.5 sm:p-2 rounded bg-primary/10">
-                <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Start Time</p>
-                <p className="text-xs sm:text-sm font-medium text-foreground">
-                  {format(new Date(contest.startTime), 'MMM dd, yyyy')}
-                </p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">
-                  {format(new Date(contest.startTime), 'hh:mm a')}
-                </p>
-              </div>
-            </div>
+export function ContestHeader({ contest }: ContestHeaderProps) {
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+          {contest.title}
+        </h1>
+        <StatusBadge status={contest.status} />
+        {contest.visibility === 'private' ? (
+          <Badge variant="outline" className="gap-1.5">
+            <Lock className="size-3" />
+            Private
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="gap-1.5">
+            <Globe className="size-3" />
+            Public
+          </Badge>
+        )}
+      </div>
 
-            {/* Duration */}
-            <div className="flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 border rounded-md bg-card hover:bg-accent/50 transition-colors">
-              <div className="flex-shrink-0 p-1.5 sm:p-2 rounded bg-primary/10">
-                <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Duration</p>
-                <p className="text-xs sm:text-sm font-medium text-foreground">
-                  {formatDuration(contest.durationMinutes)}
-                </p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">
-                  {contest.durationMinutes} minutes
-                </p>
-              </div>
-            </div>
+      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+        {contest.description}
+      </p>
 
-            {/* End Time */}
-            <div className="flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 border rounded-md bg-card hover:bg-accent/50 transition-colors">
-              <div className="flex-shrink-0 p-1.5 sm:p-2 rounded bg-primary/10">
-                <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">End Time</p>
-                <p className="text-xs sm:text-sm font-medium text-foreground">
-                  {format(new Date(contest.endTime), 'MMM dd, yyyy')}
-                </p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">
-                  {format(new Date(contest.endTime), 'hh:mm a')}
-                </p>
-              </div>
-            </div>
-
-            {/* Creator */}
-            {contest.creatorName && (
-              <div className="flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 border rounded-md bg-card hover:bg-accent/50 transition-colors">
-                <div className="flex-shrink-0 p-1.5 sm:p-2 rounded bg-primary/10">
-                  <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Created By</p>
-                  <p className="text-xs sm:text-sm font-medium text-foreground truncate">
-                    {contest.creatorName}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      <div className="mt-6 rounded-2xl border bg-card px-5 py-4 sm:flex sm:items-center sm:py-5">
+        <Fact
+          label="Starts"
+          value={format(new Date(contest.startTime), 'MMM d, yyyy')}
+          sub={format(new Date(contest.startTime), 'h:mm a')}
+        />
+        <Fact
+          label="Ends"
+          value={format(new Date(contest.endTime), 'MMM d, yyyy')}
+          sub={format(new Date(contest.endTime), 'h:mm a')}
+        />
+        <Fact
+          label="Duration"
+          value={formatDuration(contest.durationMinutes)}
+          sub={`${contest.durationMinutes} minutes`}
+        />
+        {contest.creatorName && <Fact label="Created by" value={contest.creatorName} />}
+      </div>
+    </div>
   );
 }

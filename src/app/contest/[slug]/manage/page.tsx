@@ -8,7 +8,6 @@ import { auth } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 import { ContestManagementTabs } from '@/components/contest/contest-management-tabs';
-import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
@@ -41,23 +40,26 @@ export default async function ManageContestPage({
   const questions = questionsResult.success && questionsResult.data ? questionsResult.data : [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-muted/20 to-background">
-      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
-        <div className="mb-6 sm:mb-8 space-y-4">
-          <Link href={`/contest/${slug}`}>
-            <Button variant="ghost" size="sm" className="gap-1.5">
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to Contest
-            </Button>
-          </Link>
-          
-          <div className="rounded-lg bg-card border p-4 sm:p-6 shadow-sm">
-            <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Manage Contest</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">{contest.title}</p>
-          </div>
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10">
+        <Link
+          href={`/contest/${slug}`}
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" />
+          Back to contest
+        </Link>
+
+        <div className="mt-6">
+          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+            Manage contest
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">{contest.title}</p>
         </div>
 
-        <ContestManagementTabs contest={contest} questions={questions} contestSlug={slug} />
+        <div className="mt-8">
+          <ContestManagementTabs contest={contest} questions={questions} contestSlug={slug} />
+        </div>
       </div>
     </div>
   );

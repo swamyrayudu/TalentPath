@@ -63,13 +63,13 @@ export function QuestionManagementList({ questions, contestSlug }: QuestionManag
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'EASY':
-        return 'bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0';
+        return 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400';
       case 'MEDIUM':
-        return 'bg-gradient-to-r from-yellow-500 to-orange-600 text-white border-0';
+        return 'border-amber-500/40 text-amber-600 dark:text-amber-400';
       case 'HARD':
-        return 'bg-gradient-to-r from-red-500 to-pink-600 text-white border-0';
+        return 'border-rose-500/40 text-rose-600 dark:text-rose-400';
       default:
-        return 'bg-gradient-to-r from-gray-500 to-slate-600 text-white border-0';
+        return '';
     }
   };
 
@@ -88,16 +88,13 @@ export function QuestionManagementList({ questions, contestSlug }: QuestionManag
 
   if (questions.length === 0) {
     return (
-      <Card className="border-2 border-dashed border-muted-foreground/25 bg-muted/10">
-        <CardContent className="flex flex-col items-center justify-center py-12 sm:py-16">
-          <div className="relative mb-4">
-            <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl" />
-            <Code2 className="relative h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground" />
-          </div>
-          <h3 className="text-lg sm:text-xl font-semibold mb-2">No Questions Yet</h3>
-          <p className="text-sm text-muted-foreground text-center">Add your first question to get started</p>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col items-center rounded-2xl border bg-card py-16 text-center">
+        <Code2 className="size-6 text-muted-foreground/40" strokeWidth={1.5} />
+        <h3 className="mt-4 text-sm font-semibold tracking-tight">No questions yet</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Add your first question to get started.
+        </p>
+      </div>
     );
   }
 
@@ -106,7 +103,7 @@ export function QuestionManagementList({ questions, contestSlug }: QuestionManag
       {questions.map((question, index) => (
         <Card 
           key={question.id} 
-          className="group border-2 hover:border-primary/50 transition-all duration-200 hover:shadow-lg overflow-hidden"
+          className="group overflow-hidden transition-colors hover:border-primary/40"
         >
           <CardContent className="p-4 sm:p-6">
             {/* Mobile & Desktop Layout */}
@@ -114,7 +111,7 @@ export function QuestionManagementList({ questions, contestSlug }: QuestionManag
               {/* Header Row */}
               <div className="flex items-start gap-3 sm:gap-4">
                 {/* Number Badge */}
-                <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-bold text-base sm:text-lg border-2 border-primary/20">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-sm font-medium text-muted-foreground tabular-nums">
                   {index + 1}
                 </div>
                 
@@ -128,7 +125,7 @@ export function QuestionManagementList({ questions, contestSlug }: QuestionManag
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                     {/* Difficulty Badge */}
                     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                      <Badge className={`${getDifficultyColor(question.difficulty)} shadow-sm flex items-center gap-1.5 text-xs sm:text-sm px-3 py-1`}>
+                      <Badge variant="outline" className={`${getDifficultyColor(question.difficulty)} flex items-center gap-1.5`}>
                         {getDifficultyIcon(question.difficulty)}
                         <span className="font-semibold">{question.difficulty}</span>
                       </Badge>

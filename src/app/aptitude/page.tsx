@@ -1,12 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, CheckCircle2, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  XCircle,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  ChevronDown,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Question {
@@ -22,24 +28,61 @@ interface Question {
   [key: string]: string | number | undefined;
 }
 
-const PLATFORMS = [
-  { value: 'TOPICS', label: 'Topics', color: 'text-primary border-primary', gradient: 'from-primary to-purple-600' },
-];
+interface AptitudeResultRow {
+  id: string;
+  topic: string;
+  score: number;
+  totalQuestions: number;
+  correctAnswers: number;
+  completedAt: string;
+}
+
+type TopicProgress = { attempts: number; best: number };
 
 const QUESTIONS_PER_PAGE = 5;
+
+/**
+ * A few topic tables are misspelled in the database (the slug is the table
+ * name, so it can't be renamed here). Override the display label only.
+ */
+const LABEL_OVERRIDES: Record<string, string> = {
+  calender: 'Calendar',
+  'boats-and-steams': 'Boats and Streams',
+  probobility: 'Probability',
+  'problems-on-hcf-and-lcm': 'Problems on HCF and LCM',
+  'bankers-discount': "Banker's Discount",
+};
+
+const SMALL_WORDS = new Set(['and', 'or', 'on', 'of', 'the']);
+
+function topicLabel(slug: string) {
+  if (LABEL_OVERRIDES[slug]) return LABEL_OVERRIDES[slug];
+  return slug
+    .split('-')
+    .map((word, i) =>
+      i > 0 && SMALL_WORDS.has(word) ? word : word.charAt(0).toUpperCase() + word.slice(1)
+    )
+    .join(' ');
+}
+
+function scoreTone(score: number) {
+  if (score >= 80) return 'text-emerald-600 dark:text-emerald-400';
+  if (score >= 50) return 'text-amber-600 dark:text-amber-400';
+  return 'text-rose-600 dark:text-rose-400';
+}
 
 export default function AptitudePage() {
   const [topics, setTopics] = useState<string[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedPlatform, setSelectedPlatform] = useState(PLATFORMS[0].value);
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-
   const [topicsLoading, setTopicsLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [progress, setProgress] = useState<Record<string, TopicProgress>>({});
 
   useEffect(() => {
     setTopicsLoading(true);
@@ -48,8 +91,29 @@ export default function AptitudePage() {
       .then(data => {
         if (data.success) setTopics(data.topics);
         setTopicsLoading(false);
-      });
+      })
+      .catch(() => setTopicsLoading(false));
   }, []);
+
+  // Past results power the per-topic badges. Returns 401 when signed out —
+  // in that case we simply show no progress.
+  useEffect(() => {
+    fetch('/api/aptitude/results')
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => {
+        if (!data?.success || !Array.isArray(data.results)) return;
+        const map: Record<string, TopicProgress> = {};
+        (data.results as AptitudeResultRow[]).forEach(r => {
+          const existing = map[r.topic];
+          map[r.topic] = {
+            attempts: (existing?.attempts ?? 0) + 1,
+            best: Math.max(existing?.best ?? 0, r.score),
+          };
+        });
+        setProgress(map);
+      })
+      .catch(() => {});
+  }, [submitted]);
 
   useEffect(() => {
     if (!selectedTopic) return;
@@ -63,45 +127,76 @@ export default function AptitudePage() {
       .then(data => {
         if (data.success) setQuestions(data.questions);
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, [selectedTopic]);
+
+  const resetToTopics = () => {
+    setSelectedTopic(null);
+    setQuestions([]);
+    setUserAnswers({});
+    setSubmitted(false);
+    setScore(0);
+    setCurrentPage(1);
+  };
+
+  // Re-setting the same topic wouldn't re-run the fetch effect, so clear the
+  // answer state directly and keep the already-loaded questions.
+  const retryTopic = () => {
+    setUserAnswers({});
+    setSubmitted(false);
+    setScore(0);
+    setCurrentPage(1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleOptionSelect = (questionIndex: number, optionValue: string) => {
     if (submitted) return;
-    setUserAnswers(prev => ({
-      ...prev,
-      [questionIndex]: optionValue
-    }));
+    setUserAnswers(prev => ({ ...prev, [questionIndex]: optionValue }));
   };
 
+  const answeredCount = Object.keys(userAnswers).length;
+
+  const firstUnansweredIndex = useMemo(() => {
+    for (let i = 0; i < questions.length; i++) {
+      if (userAnswers[i] === undefined) return i;
+    }
+    return -1;
+  }, [questions.length, userAnswers]);
+
   const handleSubmit = async () => {
-    if (Object.keys(userAnswers).length !== questions.length) {
-      toast.error('Please answer all questions before submitting!');
+    if (answeredCount !== questions.length) {
+      const target = firstUnansweredIndex;
+      toast.error(
+        `${questions.length - answeredCount} question${
+          questions.length - answeredCount === 1 ? '' : 's'
+        } still unanswered.`
+      );
+      if (target >= 0) {
+        setCurrentPage(Math.floor(target / QUESTIONS_PER_PAGE) + 1);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
       return;
     }
 
     let correctCount = 0;
     questions.forEach((q, idx) => {
-      if (userAnswers[idx] === q.answer) {
-        correctCount++;
-      }
+      if (userAnswers[idx] === q.answer) correctCount++;
     });
 
     const scorePercentage = Math.round((correctCount / questions.length) * 100);
 
     setScore(correctCount);
     setSubmitted(true);
-    setCurrentPage(1); // Reset to first page on submission
-    
-    toast.success(`Quiz submitted! You scored ${correctCount} out of ${questions.length}`);
+    setCurrentPage(1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Save result to database
+    toast.success(`Scored ${correctCount} out of ${questions.length}`);
+
     try {
-      const response = await fetch('/api/aptitude/results', {
+      await fetch('/api/aptitude/results', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           topic: selectedTopic,
           totalQuestions: questions.length,
@@ -110,346 +205,395 @@ export default function AptitudePage() {
           answers: userAnswers,
         }),
       });
-
-      const data = await response.json();
-      if (data.success) {
-        console.log('Result saved successfully');
-      }
     } catch (error) {
       console.error('Error saving result:', error);
     }
   };
 
-  const isCorrect = (questionIndex: number) => {
-    if (!submitted) return null;
-    return userAnswers[questionIndex] === questions[questionIndex].answer;
-  };
+  const isCorrect = (questionIndex: number) =>
+    submitted ? userAnswers[questionIndex] === questions[questionIndex].answer : null;
 
-  // Pagination logic
   const totalPages = Math.ceil(questions.length / QUESTIONS_PER_PAGE);
   const startIndex = (currentPage - 1) * QUESTIONS_PER_PAGE;
-  const endIndex = startIndex + QUESTIONS_PER_PAGE;
-  const currentQuestions = questions.slice(startIndex, endIndex);
-  const isLastPage = currentPage === totalPages;
-  const isFirstPage = currentPage === 1;
+  const currentQuestions = questions.slice(startIndex, startIndex + QUESTIONS_PER_PAGE);
 
-  const goToNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const goToPreviousPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+  const pageHasUnanswered = (page: number) => {
+    if (submitted) return false;
+    const from = (page - 1) * QUESTIONS_PER_PAGE;
+    const to = Math.min(from + QUESTIONS_PER_PAGE, questions.length);
+    for (let i = from; i < to; i++) {
+      if (userAnswers[i] === undefined) return true;
     }
+    return false;
   };
+
+  const filteredTopics = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return topics;
+    return topics.filter(
+      t => t.replace(/-/g, ' ').includes(q) || topicLabel(t).toLowerCase().includes(q)
+    );
+  }, [topics, search]);
+
+  /* ── Topic picker ─────────────────────────────────────────────── */
+  if (!selectedTopic) {
+    const attemptedCount = topics.filter(t => progress[t]).length;
+
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-10 md:px-6">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">Aptitude</h1>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              {topicsLoading
+                ? 'Loading topics…'
+                : `${topics.length} topics${
+                    attemptedCount > 0 ? ` · ${attemptedCount} attempted` : ''
+                  }`}
+            </p>
+          </div>
+
+          <div className="relative w-full sm:w-72">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="search"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search topics"
+              aria-label="Search topics"
+              className="h-10 w-full rounded-full border bg-card pl-10 pr-4 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+            />
+          </div>
+        </div>
+
+        <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {topicsLoading ? (
+            Array.from({ length: 9 }).map((_, idx) => (
+              <div key={idx} className="rounded-2xl border bg-card p-5">
+                <Skeleton className="h-5 w-2/3" />
+                <Skeleton className="mt-3 h-4 w-1/3" />
+              </div>
+            ))
+          ) : filteredTopics.length === 0 ? (
+            <div className="col-span-full rounded-2xl border bg-card px-6 py-16 text-center">
+              <p className="text-sm text-muted-foreground">
+                {topics.length === 0
+                  ? 'No topics available right now.'
+                  : `No topics match “${search}”.`}
+              </p>
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="mt-3 text-sm font-medium text-primary hover:underline"
+                >
+                  Clear search
+                </button>
+              )}
+            </div>
+          ) : (
+            filteredTopics.map(topic => {
+              const p = progress[topic];
+              return (
+                <button
+                  key={topic}
+                  onClick={() => setSelectedTopic(topic)}
+                  className="group rounded-2xl border bg-card p-5 text-left transition-colors hover:border-primary/40 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <h2 className="text-[15px] font-semibold leading-snug">
+                      {topicLabel(topic)}
+                    </h2>
+                    {p && (
+                      <span
+                        className={`shrink-0 text-sm font-semibold tabular-nums ${scoreTone(p.best)}`}
+                      >
+                        {p.best}%
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {p
+                      ? `Best of ${p.attempts} attempt${p.attempts === 1 ? '' : 's'}`
+                      : 'Not attempted yet'}
+                  </p>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Quiz ─────────────────────────────────────────────────────── */
+  const percentage = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
-      {/* Top nav - only show on questions page */}
-      {selectedTopic && (
-        <div className="flex items-center gap-4 mb-6 flex-wrap">
-          <Button
-            variant="ghost"
-            className="flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-            onClick={() => {
-              setSelectedTopic(null);
-              setQuestions([]);
-              setUserAnswers({});
-              setSubmitted(false);
-              setScore(0);
-              setCurrentPage(1);
-            }}
-          >
-            <ArrowLeft className="h-4 w-4" /> Back to Topics
-          </Button>
+    <div className="mx-auto max-w-3xl px-4 py-10 md:px-6">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={resetToTopics}
+        className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="size-4" />
+        All topics
+      </Button>
+
+      <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+            {topicLabel(selectedTopic)}
+          </h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            {loading
+              ? 'Loading questions…'
+              : submitted
+                ? `${questions.length} questions · reviewed`
+                : `${answeredCount} of ${questions.length} answered`}
+          </p>
         </div>
-      )}
 
-      {/* Title with gradient and stats/description */}
-      <div className="flex items-center gap-4 mb-2">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent capitalize">
-          Aptitude - {selectedTopic ? selectedTopic : 'Topics'}
-        </h1>
-      </div>
-      {selectedTopic && (
-        <div className="flex items-center justify-between mb-6">
-          <p className="text-muted-foreground">{questions.length} problems found</p>
-          {submitted && (
-            <Badge variant="default" className="text-lg px-4 py-2">
-              Score: {score}/{questions.length}
-            </Badge>
-          )}
-        </div>
-      )}
-
-      {/* Platform Tabs */}
-      <div className="mb-6">
-        <div className="border-b border-border">
-          <div className="flex gap-1">
-            {PLATFORMS.map(platform => (
-              <button
-                key={platform.value}
-                onClick={() => setSelectedPlatform(platform.value)}
-                className={`relative px-6 py-3 font-semibold transition-all duration-200 border-b-2 ${
-                  selectedPlatform === platform.value
-                    ? `${platform.color} border-b-2`
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                }`}
-              >
-                <span>{platform.label}</span>
-                {selectedPlatform === platform.value && (
-                  <div className={`absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r ${platform.gradient}`} />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Topics list */}
-      {!selectedTopic && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {topicsLoading ? (
-            // Skeleton loader for topics
-            Array.from({ length: 9 }).map((_, idx) => (
-              <Card key={idx}>
-                <CardHeader>
-                  <Skeleton className="h-6 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-full" />
-                </CardHeader>
-              </Card>
-            ))
-          ) : topics.length === 0 ? (
-            <Card className="col-span-full text-center">
-              <CardContent>No topics available</CardContent>
-            </Card>
-          ) : (
-            topics.map(topic => (
-              <Card
-                key={topic}
-                className="cursor-pointer hover:shadow-lg hover:border-primary transition-all"
-                onClick={() => setSelectedTopic(topic)}
-              >
-                <CardHeader>
-                  <CardTitle className="text-lg">{topic}</CardTitle>
-                  <CardDescription>Practice questions for this topic</CardDescription>
-                </CardHeader>
-              </Card>
-            ))
-          )}
-        </div>
-      )}
-
-      {/* Skeleton Loader */}
-      {loading && (
-        <div className="space-y-6">
-          {Array.from({ length: QUESTIONS_PER_PAGE }).map((_, idx) => (
-            <Card key={idx} className="overflow-hidden">
-              <CardContent className="p-6">
-                {/* Question Title Skeleton */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-5 w-16 mb-2" />
-                    <Skeleton className="h-6 w-full" />
-                    <Skeleton className="h-6 w-3/4" />
-                  </div>
-                </div>
-
-                <Separator className="mb-4" />
-
-                {/* Options Skeleton */}
-                <div className="space-y-3">
-                  {Array.from({ length: 4 }).map((_, optIdx) => (
-                    <div key={optIdx} className="flex items-center gap-3 p-3 rounded-md border border-muted">
-                      <Skeleton className="h-6 w-8 rounded" />
-                      <Skeleton className="h-5 flex-1" />
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-
-          {/* Pagination Skeleton */}
-          <div className="flex justify-between items-center">
-            <Skeleton className="h-10 w-24" />
-            <div className="flex gap-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-10" />
-              ))}
+        {!loading && !submitted && questions.length > 0 && (
+          <div className="w-full sm:w-48">
+            <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-300"
+                style={{ width: `${(answeredCount / questions.length) * 100}%` }}
+              />
             </div>
-            <Skeleton className="h-10 w-24" />
           </div>
+        )}
+      </div>
+
+      {/* Result summary */}
+      {submitted && (
+        <div className="mt-6 rounded-2xl border bg-card p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                Your score
+              </p>
+              <p className="mt-2 text-3xl font-semibold tabular-nums">
+                <span className={scoreTone(percentage)}>{percentage}%</span>
+                <span className="ml-2 text-base font-normal text-muted-foreground">
+                  {score} of {questions.length} correct
+                </span>
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={retryTopic}>
+                Retry
+              </Button>
+              <Button onClick={resetToTopics}>Another topic</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading */}
+      {loading && (
+        <div className="mt-6 space-y-4">
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <div key={idx} className="rounded-2xl border bg-card p-6">
+              <Skeleton className="h-5 w-3/4" />
+              <div className="mt-5 space-y-2.5">
+                {Array.from({ length: 4 }).map((_, o) => (
+                  <Skeleton key={o} className="h-11 w-full rounded-xl" />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
       {/* Questions */}
-      {selectedTopic && !loading && (
-        <div className="space-y-6">
+      {!loading && (
+        <div className="mt-6 space-y-4">
           {questions.length === 0 ? (
-            <Card>
-              <CardContent className="text-center text-muted-foreground">
+            <div className="rounded-2xl border bg-card px-6 py-16 text-center">
+              <p className="text-sm text-muted-foreground">
                 No questions found for this topic.
-              </CardContent>
-            </Card>
+              </p>
+              <button
+                onClick={resetToTopics}
+                className="mt-3 text-sm font-medium text-primary hover:underline"
+              >
+                Pick another topic
+              </button>
+            </div>
           ) : (
             <>
-              {/* Pagination Info */}
-              <div className="flex justify-between items-center mb-4">
-
-              </div>
-
               {currentQuestions.map((q, qi) => {
                 const actualIndex = startIndex + qi;
+                const correct = isCorrect(actualIndex);
+                const unanswered = !submitted && userAnswers[actualIndex] === undefined;
+
                 return (
-                  <Card key={q.s_no ?? q.id ?? actualIndex} className={submitted ? (isCorrect(actualIndex) ? 'border-green-500' : 'border-red-500') : ''}>
-                    <CardContent>
-                      <div className="flex items-start justify-between">
-                        <CardTitle className="mb-3 text-lg">
-                          {actualIndex + 1}. {q.question}
-                        </CardTitle>
-                        {submitted && (
-                          isCorrect(actualIndex) ? (
-                            <CheckCircle2 className="h-6 w-6 text-green-500" />
-                          ) : (
-                            <XCircle className="h-6 w-6 text-red-500" />
-                          )
-                        )}
-                      </div>
-                      <Separator className="mb-4" />
-                      {['option_a', 'option_b', 'option_c', 'option_d'].map((optKey, idx) => {
-                        const optValue = q[optKey] as string | undefined;
-                        if (!optValue) return null;
+                  <fieldset
+                    key={q.s_no ?? q.id ?? actualIndex}
+                    className={`rounded-2xl border bg-card p-6 ${
+                      submitted
+                        ? correct
+                          ? 'border-emerald-500/40'
+                          : 'border-rose-500/40'
+                        : ''
+                    }`}
+                  >
+                    <legend className="sr-only">Question {actualIndex + 1}</legend>
 
-                        const isSelected = userAnswers[actualIndex] === optValue;
-                        const isCorrectOption = submitted && optValue === q.answer;
-                        const isWrongSelection = submitted && isSelected && !isCorrectOption;
-
-                        return (
-                          <div
-                            key={optKey}
-                            onClick={() => handleOptionSelect(actualIndex, optValue)}
-                            className={`mb-2 rounded-md border p-2 cursor-pointer transition-colors ${
-                              isSelected && !submitted
-                                ? 'bg-primary/10 border-primary'
-                                : isCorrectOption
-                                ? 'bg-green-100 border-green-500 dark:bg-green-950'
-                                : isWrongSelection
-                                ? 'bg-red-100 border-red-500 dark:bg-red-950'
-                                : 'border-muted hover:bg-accent/50'
-                            }`}
-                          >
-                            <Badge className="mr-2">{String.fromCharCode(65 + idx)}</Badge>
-                            {optValue}
-                            {isCorrectOption && <Badge className="ml-2 bg-green-600">Correct</Badge>}
-                          </div>
-                        );
-                      })}
-                      {submitted && (
-                        <details className="mt-3">
-                          <summary className="cursor-pointer font-semibold text-primary hover:underline">
-                            View Explanation
-                          </summary>
-                          <p className="mt-2 text-muted-foreground">{q.explanation}</p>
-                        </details>
+                    <div className="flex items-start justify-between gap-4">
+                      <p className="text-[15px] font-medium leading-relaxed">
+                        <span className="mr-2 text-muted-foreground tabular-nums">
+                          {actualIndex + 1}.
+                        </span>
+                        {q.question}
+                      </p>
+                      {submitted &&
+                        (correct ? (
+                          <CheckCircle2 className="size-5 shrink-0 text-emerald-500" />
+                        ) : (
+                          <XCircle className="size-5 shrink-0 text-rose-500" />
+                        ))}
+                      {unanswered && (
+                        <Badge
+                          variant="outline"
+                          className="shrink-0 text-xs font-normal text-muted-foreground"
+                        >
+                          Unanswered
+                        </Badge>
                       )}
-                    </CardContent>
-                  </Card>
+                    </div>
+
+                    <div className="mt-5 space-y-2.5">
+                      {(['option_a', 'option_b', 'option_c', 'option_d'] as const).map(
+                        (optKey, idx) => {
+                          const optValue = q[optKey] as string | undefined;
+                          if (!optValue) return null;
+
+                          const isSelected = userAnswers[actualIndex] === optValue;
+                          const isCorrectOption = submitted && optValue === q.answer;
+                          const isWrongSelection = submitted && isSelected && !isCorrectOption;
+
+                          const tone = isCorrectOption
+                            ? 'border-emerald-500/50 bg-emerald-500/10'
+                            : isWrongSelection
+                              ? 'border-rose-500/50 bg-rose-500/10'
+                              : isSelected
+                                ? 'border-primary bg-primary/5'
+                                : 'hover:border-primary/40 hover:bg-muted/50';
+
+                          return (
+                            <label
+                              key={optKey}
+                              className={`flex items-start gap-3 rounded-xl border p-3 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring/50 ${
+                                submitted ? 'cursor-default' : 'cursor-pointer'
+                              } ${tone}`}
+                            >
+                              <input
+                                type="radio"
+                                name={`question-${actualIndex}`}
+                                value={optValue}
+                                checked={isSelected}
+                                disabled={submitted}
+                                onChange={() => handleOptionSelect(actualIndex, optValue)}
+                                className="sr-only"
+                              />
+                              <span
+                                className={`flex size-6 shrink-0 items-center justify-center rounded-md border text-xs font-semibold ${
+                                  isSelected || isCorrectOption
+                                    ? 'border-transparent bg-foreground text-background'
+                                    : 'text-muted-foreground'
+                                }`}
+                              >
+                                {String.fromCharCode(65 + idx)}
+                              </span>
+                              <span className="text-sm leading-relaxed">{optValue}</span>
+                            </label>
+                          );
+                        }
+                      )}
+                    </div>
+
+                    {submitted && q.explanation && (
+                      <details className="group mt-4 border-t pt-4">
+                        <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+                          <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+                          Explanation
+                        </summary>
+                        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                          {q.explanation}
+                        </p>
+                      </details>
+                    )}
+                  </fieldset>
                 );
               })}
 
-              {/* Pagination Controls */}
-              <div className="flex justify-between items-center mt-6">
-                {/* Previous Button - Hidden on first page */}
-                {!isFirstPage && (
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between gap-3 pt-2">
                   <Button
                     variant="outline"
-                    onClick={goToPreviousPage}
-                    className="flex items-center gap-2"
+                    size="sm"
+                    onClick={() => goToPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="gap-1"
                   >
-                    <ChevronLeft className="h-4 w-4" />
-                    Previous
+                    <ChevronLeft className="size-4" />
+                    Prev
                   </Button>
-                )}
 
-                {/* Spacer if first page */}
-                {isFirstPage && <div></div>}
+                  <div className="flex flex-wrap justify-center gap-1.5">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        onClick={() => goToPage(page)}
+                        aria-current={currentPage === page ? 'page' : undefined}
+                        className={`relative size-8 rounded-md border text-sm tabular-nums transition-colors ${
+                          currentPage === page
+                            ? 'border-transparent bg-foreground font-medium text-background'
+                            : 'text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                        }`}
+                      >
+                        {page}
+                        {pageHasUnanswered(page) && currentPage !== page && (
+                          <span className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-primary" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
 
-                <div className="flex gap-2">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        setCurrentPage(page);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                    >
-                      {page}
-                    </Button>
-                  ))}
-                </div>
-
-                {/* Next Button - Hidden on last page */}
-                {!isLastPage && (
                   <Button
                     variant="outline"
-                    onClick={goToNextPage}
-                    className="flex items-center gap-2"
+                    size="sm"
+                    onClick={() => goToPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="gap-1"
                   >
                     Next
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                )}
-
-                {/* Spacer if last page */}
-                {isLastPage && <div></div>}
-              </div>
-
-              {/* Submit Button - Only show on last page and when not submitted */}
-              {!submitted && isLastPage && (
-                <div className="mt-8 flex justify-end">
-                  <Button
-                    onClick={handleSubmit}
-                    className="mt-4"
-                    size="lg"
-                    disabled={Object.keys(userAnswers).length !== questions.length}
-                  >
-                    Submit Quiz ({Object.keys(userAnswers).length}/{questions.length} answered)
+                    <ChevronRight className="size-4" />
                   </Button>
                 </div>
               )}
 
-              {submitted && (
-                <Card className="border-2 border-primary mt-6">
-                  <CardContent className="text-center py-6">
-                    <h2 className="text-2xl font-bold mb-2">Quiz Completed!</h2>
-                    <p className="text-lg">
-                      Your Score: <span className="font-bold text-primary">{score}/{questions.length}</span>
+              {/* Submit */}
+              {!submitted && (
+                <div className="sticky bottom-4 mt-6 rounded-2xl border bg-card/95 p-4 backdrop-blur">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm text-muted-foreground">
+                      {answeredCount === questions.length
+                        ? 'All questions answered.'
+                        : `${questions.length - answeredCount} left to answer.`}
                     </p>
-                    <p className="text-muted-foreground mt-2">
-                      Percentage: {((score / questions.length) * 100).toFixed(1)}%
-                    </p>
-                    <Button
-                      onClick={() => {
-                        setSelectedTopic(null);
-                        setQuestions([]);
-                        setUserAnswers({});
-                        setSubmitted(false);
-                        setScore(0);
-                        setCurrentPage(1);
-                      }}
-                      className="mt-4"
-                    >
-                      Try Another Topic
-                    </Button>
-                  </CardContent>
-                </Card>
+                    <Button onClick={handleSubmit}>Submit answers</Button>
+                  </div>
+                </div>
               )}
             </>
           )}

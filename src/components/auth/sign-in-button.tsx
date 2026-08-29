@@ -10,13 +10,9 @@ export function SignInButton() {
   };
 
   return (
-    <Button 
-      size="lg" 
-      onClick={handleGoogleSignIn}
-      className="w-full gap-2 bg-amber-600 hover:bg-amber-700"
-    >
-      <LogIn className="h-5 w-5" />
-      Sign In to Apply
+    <Button size="lg" onClick={handleGoogleSignIn} className="w-full gap-2">
+      <LogIn className="size-4" />
+      Sign in with Google
     </Button>
   );
 }

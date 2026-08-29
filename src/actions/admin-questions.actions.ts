@@ -151,16 +151,19 @@ export async function getAllTopics(): Promise<string[]> {
       throw new Error("Unauthorized");
     }
 
-    const result = await db
-      .select({ topics: adminQuestions.topics })
-      .from(adminQuestions)
-      .where(eq(adminQuestions.isActive, true));
+    // Unnest in the database rather than loading every question row just to
+    // flatten its topics array in JS — this returns a few dozen short strings
+    // instead of the whole table.
+    const rows = await db.execute<{ topic: string }>(sql`
+      SELECT DISTINCT unnest(topics) AS topic
+      FROM admin_questions
+      WHERE is_active = true
+      ORDER BY topic
+    `);
 
-    // Flatten and deduplicate topics
-    const allTopics = result.flatMap((r) => r.topics || []);
-    const uniqueTopics = [...new Set(allTopics)].filter(Boolean).sort();
-
-    return uniqueTopics;
+    return (rows as unknown as { topic: string }[])
+      .map((r) => r.topic)
+      .filter(Boolean);
   } catch {
     // Error fetching topics
     return [];

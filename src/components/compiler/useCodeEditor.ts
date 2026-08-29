@@ -44,7 +44,7 @@ const LANGUAGES = [
   },
 ];
 
-const DEFAULT_CODE: Record<string, string> = {
+export const DEFAULT_CODE: Record<string, string> = {
   python: `print("TalentPath")
 print("Developed by: RVV Swamy & durga prasad")`,
   

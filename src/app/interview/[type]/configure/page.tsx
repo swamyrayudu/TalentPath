@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -15,15 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  ArrowLeft,
-  Clock,
-  Briefcase,
-  Target,
-  Play,
-  Settings,
-  Sparkles,
-} from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import ResumeUploader from '@/components/interview/resume-uploader';
 
 const jobRoles = [
@@ -76,8 +67,8 @@ export default function ConfigureInterviewPage() {
 
   if (status === 'loading') {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="size-6 animate-spin rounded-full border-2 border-muted border-t-foreground" />
       </div>
     );
   }
@@ -105,7 +96,6 @@ export default function ConfigureInterviewPage() {
   };
 
   const selectedExperience = experienceLevels.find(e => e.value === experienceLevel);
-  const selectedDuration = durations.find(d => d.value === duration);
 
   const getInterviewTitle = () => {
     switch (interviewType) {
@@ -119,44 +109,37 @@ export default function ConfigureInterviewPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-8 px-4 max-w-4xl">
-        {/* Header */}
-        <div className="mb-6">
-          <Button variant="ghost" size="sm" onClick={() => router.push('/interview')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Interviews
-          </Button>
+      <div className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-10">
+        <button
+          onClick={() => router.push('/interview')}
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" />
+          All interviews
+        </button>
+
+        <div className="mt-6">
+          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+            Configure your interview
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">{getInterviewTitle()}</p>
         </div>
 
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
-              <Settings className="h-6 w-6 text-white" />
+        <div className="mt-8 space-y-4">
+          {/* Target role */}
+          <section className="rounded-2xl border bg-card">
+            <div className="border-b px-5 py-4">
+              <h2 className="text-sm font-semibold tracking-tight">Target role</h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                What are you interviewing for?
+              </p>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold">Configure Your Interview</h1>
-              <p className="text-muted-foreground">{getInterviewTitle()}</p>
-            </div>
-          </div>
-        </div>
 
-        <div className="grid gap-6">
-          {/* Job Role */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Briefcase className="h-5 w-5" />
-                Target Role
-              </CardTitle>
-              <CardDescription>
-                What role are you interviewing for?
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            <div className="space-y-5 p-5">
               <div className="space-y-2">
-                <Label htmlFor="job-role">Job Role *</Label>
+                <Label htmlFor="job-role">Job role</Label>
                 <Select value={jobRole} onValueChange={setJobRole}>
-                  <SelectTrigger id="job-role">
+                  <SelectTrigger id="job-role" className="w-full">
                     <SelectValue placeholder="Select your target role" />
                   </SelectTrigger>
                   <SelectContent>
@@ -171,10 +154,10 @@ export default function ConfigureInterviewPage() {
 
               {jobRole === 'Other' && (
                 <div className="space-y-2">
-                  <Label htmlFor="custom-role">Custom Role</Label>
+                  <Label htmlFor="custom-role">Custom role</Label>
                   <Input
                     id="custom-role"
-                    placeholder="e.g., Blockchain Developer"
+                    placeholder="e.g. Blockchain Developer"
                     value={customRole}
                     onChange={(e) => setCustomRole(e.target.value)}
                   />
@@ -182,9 +165,9 @@ export default function ConfigureInterviewPage() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="experience">Experience Level *</Label>
+                <Label htmlFor="experience">Experience level</Label>
                 <Select value={experienceLevel} onValueChange={setExperienceLevel}>
-                  <SelectTrigger id="experience">
+                  <SelectTrigger id="experience" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -196,119 +179,112 @@ export default function ConfigureInterviewPage() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Will ask ~{selectedExperience?.questions} questions
+                  Around {selectedExperience?.questions} questions.
                 </p>
               </div>
 
               {interviewType === 'company-specific' && (
                 <div className="space-y-2">
-                  <Label htmlFor="company">Company Name</Label>
+                  <Label htmlFor="company">Company</Label>
                   <Input
                     id="company"
-                    placeholder="e.g., Google, Amazon, Microsoft"
+                    placeholder="e.g. Google, Amazon, Microsoft"
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Leave empty for general interview
+                    Leave empty for a general interview.
                   </p>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </section>
 
           {/* Duration */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Interview Duration
-              </CardTitle>
-              <CardDescription>
-                How long do you want to practice?
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {durations.map((dur) => (
-                  <Button
-                    key={dur.value}
-                    variant={duration === dur.value ? 'default' : 'outline'}
-                    className="flex flex-col h-auto py-4"
-                    onClick={() => setDuration(dur.value)}
-                  >
-                    <span className="text-lg font-bold">{dur.label}</span>
-                    <span className="text-xs text-muted-foreground mt-1">
-                      {dur.description}
-                    </span>
-                  </Button>
-                ))}
-              </div>
-              <p className="text-sm text-muted-foreground mt-3">
-                Selected: <strong>{selectedDuration?.label}</strong> - {selectedDuration?.description}
+          <section className="rounded-2xl border bg-card">
+            <div className="border-b px-5 py-4">
+              <h2 className="text-sm font-semibold tracking-tight">Duration</h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                How long do you want to practise?
               </p>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Resume Upload */}
-          <ResumeUploader
-            onResumeExtracted={(text) => setResumeText(text)}
-          />
+            <div className="grid grid-cols-2 gap-3 p-5 md:grid-cols-4">
+              {durations.map((dur) => (
+                <button
+                  key={dur.value}
+                  onClick={() => setDuration(dur.value)}
+                  className={`rounded-xl border p-4 text-left transition-colors ${
+                    duration === dur.value
+                      ? 'border-primary/50 bg-primary/5'
+                      : 'hover:border-primary/40'
+                  }`}
+                >
+                  <span className="block text-sm font-medium">{dur.label}</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {dur.description}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
 
-          {/* Specific Topics */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Focus Areas (Optional)
-              </CardTitle>
-              <CardDescription>
-                Mention specific topics you want to focus on
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          {/* Resume */}
+          <ResumeUploader onResumeExtracted={(text) => setResumeText(text)} />
+
+          {/* Focus areas */}
+          <section className="rounded-2xl border bg-card">
+            <div className="border-b px-5 py-4">
+              <h2 className="text-sm font-semibold tracking-tight">Focus areas</h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                Optional — topics the interviewer should prioritise.
+              </p>
+            </div>
+
+            <div className="p-5">
               <Textarea
-                placeholder="e.g., Dynamic Programming, System Design Scalability, Leadership Situations, React Performance"
+                placeholder="e.g. Dynamic programming, caching strategies, leadership situations"
                 value={specificTopics}
                 onChange={(e) => setSpecificTopics(e.target.value)}
                 className="min-h-[100px]"
               />
-              <p className="text-xs text-muted-foreground mt-2">
-                AI will prioritize these topics during the interview
-              </p>
-            </CardContent>
-          </Card>
+            </div>
+          </section>
 
-          {/* Summary Card */}
-          <Card className="border-primary/50">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-3">
-                <Sparkles className="h-5 w-5 text-primary mt-0.5" />
-                <div className="flex-1">
-                  <h3 className="font-semibold mb-2">Interview Configuration</h3>
-                  <div className="space-y-1 text-sm text-muted-foreground">
-                    <p>• Role: <strong>{jobRole === 'Other' ? customRole : jobRole || 'Not selected'}</strong></p>
-                    <p>• Experience: <strong>{selectedExperience?.label}</strong></p>
-                    <p>• Duration: <strong>{duration} minutes</strong></p>
-                    <p>• Questions: <strong>~{selectedExperience?.questions}</strong></p>
-                    {companyName && <p>• Company: <strong>{companyName}</strong></p>}
-                    {resumeText && <p>• Resume: <strong>✓ Uploaded ({resumeText.length} chars)</strong></p>}
-                    {specificTopics && <p>• Focus Areas: <strong>✓ Specified</strong></p>}
-                  </div>
+          {/* Summary */}
+          <section className="rounded-2xl border bg-card">
+            <div className="border-b px-5 py-4">
+              <h2 className="text-sm font-semibold tracking-tight">Summary</h2>
+            </div>
+
+            <dl className="divide-y px-5">
+              {[
+                {
+                  label: 'Role',
+                  value: (jobRole === 'Other' ? customRole : jobRole) || 'Not selected',
+                },
+                { label: 'Experience', value: selectedExperience?.label ?? '—' },
+                { label: 'Duration', value: `${duration} minutes` },
+                { label: 'Questions', value: `~${selectedExperience?.questions ?? '—'}` },
+                ...(companyName ? [{ label: 'Company', value: companyName }] : []),
+                ...(resumeText ? [{ label: 'Resume', value: 'Uploaded' }] : []),
+                ...(specificTopics ? [{ label: 'Focus areas', value: 'Specified' }] : []),
+              ].map((row) => (
+                <div key={row.label} className="flex items-center justify-between py-3">
+                  <dt className="text-sm text-muted-foreground">{row.label}</dt>
+                  <dd className="text-sm font-medium">{row.value}</dd>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              ))}
+            </dl>
+          </section>
 
-          {/* Start Button */}
           <Button
             size="lg"
             className="w-full"
             onClick={handleStartInterview}
             disabled={!jobRole || (jobRole === 'Other' && !customRole)}
           >
-            <Play className="h-5 w-5 mr-2" />
-            Start AI Interview
+            Start interview
           </Button>
         </div>
       </div>

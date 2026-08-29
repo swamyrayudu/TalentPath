@@ -1,6 +1,6 @@
 import React from 'react'
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono, Space_Grotesk, Inter } from 'next/font/google';
+import { Poppins, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '../components/layouts/theme-provider';
 import ConditionalNavbar from '../components/layouts/conditional-navbar';
@@ -12,31 +12,23 @@ import AIChatbot from '@/components/ai-chatbot';
 import NotesPad from '@/components/notes-pad';
 import { ActivityTracker } from '@/components/providers/activity-tracker';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
-
-const spaceGrotesk = Space_Grotesk({
-  variable: '--font-space-grotesk',
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-});
-
-const inter = Inter({
-  variable: '--font-inter',
+const poppins = Poppins({
+  variable: '--font-poppins',
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
+  display: 'swap',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: '--font-jetbrains-mono',
+  subsets: ['latin'],
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: 'TalentPath - Your Career Journey',
-  description: 'Authentication and career management platform',
+  title: 'TalentPath — Practice. Compete. Get Hired.',
+  description:
+    'Structured DSA practice, aptitude prep, live contests, AI mock interviews, and curated jobs — everything you need to build a tech career.',
   icons: {
     icon: '/talentpath-logo.svg',
     shortcut: '/talentpath-logo.svg',
@@ -84,7 +76,7 @@ export default function RootLayout({
         <meta name="google-site-verification" content="lxkb-K7mRGEDZvcd8QIBFZVzYJODUAv3LVFtvne2BWI" />
         <script dangerouslySetInnerHTML={{ __html: colorThemeScript }} />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${inter.variable} antialiased`} suppressHydrationWarning>
+      <body className={`${poppins.variable} ${jetbrainsMono.variable} antialiased`} suppressHydrationWarning>
         <AuthProvider>
           <DsaProblemsCacheProvider>
             <ThemeProvider

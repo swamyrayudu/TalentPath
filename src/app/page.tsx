@@ -2,609 +2,542 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ContainerTextFlip } from '@/components/ui/container-text-flip';
-import { 
-  Code, 
-  Brain, 
-  Trophy, 
-  Briefcase, 
-  FileSpreadsheet, 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Code,
+  Brain,
+  Trophy,
+  Briefcase,
+  FileSpreadsheet,
   Map,
   ArrowRight,
+  ArrowUpRight,
   Mail,
   Github,
   Linkedin,
-  User,
-  Heart,
   Instagram,
   MessageCircle,
-  
 } from 'lucide-react';
 import { useSession, signIn } from 'next-auth/react';
 
+type UserStats = {
+  totalUsers: number;
+  recentUsers: {
+    id: string;
+    name: string;
+    designation: string;
+    image: string;
+    fallbackLetter?: string;
+  }[];
+};
+
+const features = [
+  {
+    icon: FileSpreadsheet,
+    title: 'DSA Sheet',
+    description:
+      'A structured curriculum covering every pattern in data structures and algorithms.',
+    href: '/dsasheet',
+  },
+  {
+    icon: Code,
+    title: 'Online Compiler',
+    description:
+      'Write and run code in multiple languages with instant feedback, right in the browser.',
+    href: '/compiler',
+  },
+  {
+    icon: Trophy,
+    title: 'Coding Contests',
+    description:
+      'Timed challenges against real opponents. Climb the leaderboard, sharpen your instincts.',
+    href: '/contest',
+  },
+  {
+    icon: Brain,
+    title: 'Aptitude Tests',
+    description:
+      'Quantitative, logical, and verbal reasoning drills built for placement season.',
+    href: '/aptitude',
+  },
+  {
+    icon: Briefcase,
+    title: 'Job Portal',
+    description:
+      'Curated openings at product companies and startups, matched to your progress.',
+    href: '/jobs',
+  },
+  {
+    icon: Map,
+    title: 'Career Roadmap',
+    description:
+      'A personalized path from where you are to the role you want — step by step.',
+    href: '/roadmap',
+  },
+];
+
+const steps = [
+  {
+    step: '01',
+    title: 'Learn the pattern',
+    description:
+      'Work through the DSA sheet pattern by pattern instead of grinding random problems.',
+  },
+  {
+    step: '02',
+    title: 'Prove it under pressure',
+    description:
+      'Enter timed contests and mock interviews where the clock is part of the problem.',
+  },
+  {
+    step: '03',
+    title: 'Apply with evidence',
+    description:
+      'Your progress feeds a roadmap and a job feed matched to what you can actually do.',
+  },
+];
+
+const developers = [
+  {
+    name: 'R.V.V. Swamy',
+    role: 'Full Stack Developer',
+    socials: {
+      github: 'https://github.com/swamyrayudu',
+      linkedin: 'https://www.linkedin.com/in/rayudu-veera-venkata-swamy/',
+      instagram: 'https://www.instagram.com/swamy__rayudu/',
+      whatsapp: 'https://wa.me/917288819391',
+    },
+  },
+  {
+    name: 'Durga Prasad',
+    role: 'Full Stack Developer',
+    socials: {
+      github: 'https://github.com/Durga62823',
+      linkedin: 'https://www.linkedin.com/in/durga-prasad-peddapalli-1616a8297/',
+      instagram: 'https://www.instagram.com/the_addicted__person_78/',
+      whatsapp: 'https://wa.me/919030512334',
+    },
+  },
+];
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+      {children}
+    </p>
+  );
+}
+
+function SocialLink({
+  href,
+  label,
+  children,
+}: {
+  href: string;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={label}
+      className="text-muted-foreground transition-colors hover:text-foreground"
+    >
+      {children}
+    </a>
+  );
+}
+
 export default function Home() {
   const { data: session, status } = useSession();
-  const [userStats, setUserStats] = useState<{
-    totalUsers: number;
-    recentUsers: { id: string; name: string; designation: string; image: string }[];
-  } | null>(null);
-console.log(userStats)
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+
   useEffect(() => {
     fetch('/api/users/stats')
-      .then(res => res.json())
-      .then(data => setUserStats(data))
-      .catch(err => console.error('Failed to fetch user stats:', err));
+      .then((res) => res.json())
+      .then((data) => setUserStats(data))
+      .catch(() => {});
   }, []);
 
   const handleGoogleSignIn = async () => {
     await signIn('google', { callbackUrl: '/dashboard' });
   };
 
-  // Show loading state while checking authentication
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="size-6 animate-spin rounded-full border-2 border-muted border-t-foreground" />
       </div>
     );
   }
 
-  const features = [
-    {
-      icon: Brain,
-      title: 'Aptitude Tests',
-      description: 'Master quantitative, logical, and verbal reasoning with practice tests',
-      href: '/aptitude',
-    },
-    {
-      icon: Code,
-      title: 'Online Compiler',
-      description: 'Write and execute code in multiple languages with real-time feedback',
-      href: '/compiler',
-    },
-    {
-      icon: Trophy,
-      title: 'Coding Contests',
-      description: 'Compete with developers worldwide and sharpen your skills',
-      href: '/contest',
-    },
-    {
-      icon: FileSpreadsheet,
-      title: 'DSA Sheet',
-      description: 'Structured curriculum covering data structures and algorithms',
-      href: '/dsasheet',
-    },
-    {
-      icon: Briefcase,
-      title: 'Job Portal',
-      description: 'Discover opportunities at top tech companies and startups',
-      href: '/jobs',
-    },
-    {
-      icon: Map,
-      title: 'Career Roadmap',
-      description: 'Personalized learning paths tailored to your career goals',
-      href: '/roadmap',
-    },
-  ];
-
-  const developers = [
-    {
-      name: 'R.V.V.Swamy',
-      role: 'Full Stack Developer',
-      socials: {
-        github: 'https://github.com/swamyrayudu',
-        linkedin: 'https://www.linkedin.com/in/rayudu-veera-venkata-swamy/',
-        instagram: 'https://www.instagram.com/swamy__rayudu/',
-        whatsapp: 'https://wa.me/917288819391',
-      }
-    },
-    //   {
-    //   name: 'Vamsi kotamsetti',
-    //   role: 'Full Stack Developer',
-    //   socials: {
-    //     github: 'https://github.com/vamsi-lpu18',
-    //     linkedin: 'https://www.linkedin.com/in/vamsi-kotamsetti-47b302260/',
-    //     instagram: 'https://www.instagram.com/',
-    //     whatsapp: 'https://wa.me/919182683257',
-    //   }
-    // },
-    {
-      name: 'Durga Prasad',
-      role: 'Full Stack Developer',
-      socials: {
-        github: 'https://github.com/Durga62823',
-        linkedin: 'https://www.linkedin.com/in/durga-prasad-peddapalli-1616a8297/',
-        instagram: 'https://www.instagram.com/',
-        whatsapp: 'https://wa.me/919030512334',
-      }
-    },
-
-  ];
+  const proofAvatars = userStats?.recentUsers?.filter((u) => u.image)?.slice(0, 5) ?? [];
 
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden border-b bg-background h-screen flex items-center">
-        {/* Subtle background pattern */}
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]" />
-        
-        <div className="container relative mx-auto px-4 py-8">
-          <div className="max-w-4xl mx-auto text-center space-y-4 md:space-y-6">
-            {/* Badge with animated text */}
-            <div className="flex justify-center">
-              <ContainerTextFlip 
-                words={[
-                  'Coder',
-                  "Your Complete Career Platform",
-                  "Master DSA & Algorithms",
-                  "Ace Your Interviews",
-                  "Compete in Coding Contests",
-                  "Land Your Dream Job"
-                ]}
-                interval={3000}
-                className="text-xs sm:text-sm md:text-base font-semibold border-2 shadow-md hover:shadow-lg transition-shadow"
-                textClassName=""
-              />
-            </div>
-            
-            {/* Main Heading */}
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight">
-              Master Your Tech Career
-              <br />
-              <span className="text-muted-foreground">One Step at a Time</span>
-            </h1>
-            
-            {/* Description */}
-            <p className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-              Practice problems, compete in contests, prepare for interviews, and land your dream job with our comprehensive platform.
-            </p>
-            
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2 px-4">
-              {session?.user ? (
-                <Link href="/dashboard" className="w-full sm:w-auto">
-                  <Button size="default" className="gap-2 w-full h-10 text-sm">
-                    Go to Dashboard
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-              ) : (
-                <>
-                  <Button 
-                    size="default" 
-                    onClick={handleGoogleSignIn}
-                    className="gap-2 w-full sm:w-auto h-10 text-sm"
-                  >
-                    Get Started Free
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                  <Link href="#features" className="w-full sm:w-auto">
-                    <Button 
-                      size="default" 
-                      variant="outline"
-                      className="gap-2 w-full h-10 text-sm"
-                    >
-                      Explore Features
-                    </Button>
-                  </Link>
-                </>
-              )}
-            </div>
-            
-            {/* User Stats with Animated Tooltips */}
-
+    <div className="min-h-screen bg-background">
+      {/* ── Hero ─────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden">
+        <div className="relative mx-auto max-w-5xl px-6 pb-20 pt-20 text-center md:pb-28 md:pt-28">
+          <div className="flex justify-center">
+            <SectionLabel>Practice · Compete · Get hired</SectionLabel>
           </div>
-        </div>
-      </section>
 
-      {/* Features Section */}
-      <section id="features" className="container mx-auto px-4 py-16 md:py-24">
-        <div className="text-center mb-12 md:mb-16 space-y-4">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
-            Everything You Need
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Comprehensive tools designed to accelerate your tech career
+          <h1 className="mx-auto mt-8 max-w-3xl text-[2.5rem] font-bold leading-[1.05] tracking-[-0.04em] sm:text-6xl md:text-[4.5rem]">
+            Master the craft.
+            <br />
+            <span className="text-muted-foreground">Land the career.</span>
+          </h1>
+
+          <p className="mx-auto mt-7 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
+            Structured DSA practice, aptitude prep, live contests, and curated jobs —
+            the whole path from first problem to first offer, in one place.
           </p>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          {features.map((feature, index) => (
-            <Link key={index} href={feature.href} className="block group">
-              <Card className="relative h-full overflow-hidden transition-all duration-500 hover:shadow-2xl border hover:border-primary/50 hover:-translate-y-2">
-                {/* Animated gradient background on hover */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/0 via-primary/0 to-primary/0 group-hover:from-primary/5 group-hover:via-primary/10 group-hover:to-primary/5 transition-all duration-500" />
-                
-                {/* Shine effect */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
-                </div>
-                
-                <CardHeader className="relative p-6 space-y-3">
-                  {/* Number badge */}
-                  <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
-                    {index + 1}
-                  </div>
-                  
-                  <CardTitle className="text-xl font-bold group-hover:text-primary transition-colors duration-300">
-                    {feature.title}
-                  </CardTitle>
-                  
-                  <CardDescription className="text-base leading-relaxed">
-                    {feature.description}
-                  </CardDescription>
-                  
-                  {/* Arrow indicator */}
-                  <div className="pt-2 flex items-center gap-2 text-sm font-medium text-muted-foreground group-hover:text-primary transition-colors duration-300">
-                    <span>Explore</span>
-                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
-                  </div>
-                </CardHeader>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      </section>
 
-      {/* Developers Section */}
-      <section className="border-t bg-muted/30">
-        <div className="container mx-auto px-4 py-16 md:py-24">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-12 md:mb-16 space-y-4">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border bg-card shadow-sm">
-                <Heart className="h-4 w-4 text-primary fill-primary" />
-                <span className="text-sm font-medium">Built with passion</span>
-              </div>
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
-                Meet the Team
-              </h2>
-              <p className="text-lg text-muted-foreground">
-                Crafted by dedicated developers committed to your success
+          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            {session?.user ? (
+              <Button size="lg" className="h-12 gap-2 rounded-full px-7 text-sm" asChild>
+                <Link href="/dashboard">
+                  Go to dashboard
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+            ) : (
+              <>
+                <Button
+                  size="lg"
+                  className="h-12 gap-2 rounded-full px-7 text-sm"
+                  onClick={handleGoogleSignIn}
+                >
+                  Start practicing free
+                  <ArrowRight className="size-4" />
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-12 rounded-full px-7 text-sm"
+                  asChild
+                >
+                  <Link href="#features">Explore the platform</Link>
+                </Button>
+              </>
+            )}
+          </div>
+
+          {userStats && userStats.totalUsers > 0 && (
+            <div className="mt-12 flex items-center justify-center gap-3.5">
+              {proofAvatars.length > 0 && (
+                <div className="flex -space-x-2.5">
+                  {proofAvatars.map((user) => (
+                    <Avatar
+                      key={user.id}
+                      className="size-8 border-2 border-background"
+                      title={user.name}
+                    >
+                      <AvatarImage src={user.image} alt="" className="object-cover" />
+                      <AvatarFallback className="bg-muted text-xs font-medium">
+                        {user.fallbackLetter || user.name.charAt(0).toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                  ))}
+                </div>
+              )}
+              <p className="text-sm text-muted-foreground">
+                Joined by{' '}
+                <span className="font-semibold text-foreground">
+                  {userStats.totalUsers.toLocaleString()}
+                </span>{' '}
+                developers
               </p>
             </div>
+          )}
+        </div>
+      </section>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-              {developers.map((dev, index) => (
-                <Card
-                  key={index}
-                  className="group hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/20"
+      {/* ── How it works ─────────────────────────────────────── */}
+      <section className="bg-surface/60 py-20 md:py-28">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="grid gap-12 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)] lg:gap-20">
+            <div className="lg:sticky lg:top-28 lg:self-start">
+              <SectionLabel>How it works</SectionLabel>
+              <h2 className="mt-5 text-4xl font-bold leading-[1.08] tracking-[-0.035em] md:text-5xl">
+                Preparation that
+                <br />
+                <span className="text-muted-foreground">compounds.</span>
+              </h2>
+              <p className="mt-6 max-w-md leading-relaxed text-muted-foreground">
+                Scattered practice is why most preparation stalls. TalentPath connects
+                every stage, so the work you do today is the evidence you carry into
+                your interview tomorrow.
+              </p>
+              <Button
+                size="lg"
+                className="mt-8 h-12 gap-2 rounded-full px-7 text-sm"
+                onClick={session?.user ? undefined : handleGoogleSignIn}
+                asChild={!!session?.user}
+              >
+                {session?.user ? (
+                  <Link href="/dsasheet">
+                    Open the DSA sheet
+                    <ArrowRight className="size-4" />
+                  </Link>
+                ) : (
+                  <>
+                    Get started
+                    <ArrowRight className="size-4" />
+                  </>
+                )}
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              {steps.map((item) => (
+                <div
+                  key={item.step}
+                  className="rounded-3xl border bg-card p-8 transition-colors hover:border-primary/40"
                 >
-                  <CardHeader className="p-8 text-center">
-                    <div className="mb-4">
-                      <div className="inline-flex p-4 rounded-2xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
-                        <User className="h-8 w-8" />
-                      </div>
-                    </div>
-                    <div className="space-y-2 mb-4">
-                      <h3 className="text-xl font-bold">
-                        {dev.name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground font-medium">
-                        {dev.role}
-                      </p>
-                    </div>
-                    
-                    {/* Social Links */}
-                    <div className="flex justify-center gap-2 pt-2">
-                      <a
-                        href={dev.socials.github}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2.5 rounded-lg bg-secondary hover:bg-foreground hover:text-background transition-all duration-200"
-                        aria-label="GitHub"
-                      >
-                        <Github className="h-5 w-5" />
-                      </a>
-                      <a
-                        href={dev.socials.linkedin}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2.5 rounded-lg bg-secondary hover:bg-blue-600 hover:text-white transition-all duration-200"
-                        aria-label="LinkedIn"
-                      >
-                        <Linkedin className="h-5 w-5" />
-                      </a>
-                      <a
-                        href={dev.socials.instagram}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2.5 rounded-lg bg-secondary hover:bg-gradient-to-br hover:from-purple-600 hover:to-pink-600 hover:text-white transition-all duration-200"
-                        aria-label="Instagram"
-                      >
-                        <Instagram className="h-5 w-5" />
-                      </a>
-                      <a
-                        href={dev.socials.whatsapp}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2.5 rounded-lg bg-secondary hover:bg-green-600 hover:text-white transition-all duration-200"
-                        aria-label="WhatsApp"
-                      >
-                        <MessageCircle className="h-5 w-5" />
-                      </a>
-                    </div>
-                  </CardHeader>
-                </Card>
+                  <span className="font-mono text-xs font-medium text-primary">
+                    {item.step}
+                  </span>
+                  <h3 className="mt-4 text-xl font-semibold tracking-tight">
+                    {item.title}
+                  </h3>
+                  <p className="mt-3 leading-relaxed text-muted-foreground">
+                    {item.description}
+                  </p>
+                </div>
               ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      {!session?.user && (
-        <section className="container mx-auto px-4 py-16 md:py-24">
-          <Card className="max-w-4xl mx-auto border-2 shadow-xl overflow-hidden">
-            <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-background p-8 md:p-16 text-center space-y-6">
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
-                Ready to Get Started?
+      {/* ── Features ─────────────────────────────────────────── */}
+      <section id="features" className="scroll-mt-24 py-20 md:py-28">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="grid gap-8 md:grid-cols-2 md:items-end">
+            <div>
+              <SectionLabel>The platform</SectionLabel>
+              <h2 className="mt-5 text-4xl font-bold leading-[1.08] tracking-[-0.035em] md:text-5xl">
+                Six tools.
+                <br />
+                <span className="text-muted-foreground">One path.</span>
               </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Join thousands of developers advancing their skills with TalentPath
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-                <Button 
-                  size="lg" 
-                  onClick={handleGoogleSignIn}
-                  className="gap-2 h-12 text-base px-8"
-                >
-                  Start Your Journey
-                  <ArrowRight className="h-5 w-5" />
-                </Button>
-                <Link href="#features">
-                  <Button 
-                    size="lg" 
-                    variant="outline"
-                    className="gap-2 h-12 text-base px-8 w-full sm:w-auto"
-                  >
-                    Learn More
-                  </Button>
-                </Link>
-              </div>
             </div>
-          </Card>
+            <p className="max-w-md leading-relaxed text-muted-foreground md:justify-self-end">
+              Every stage of interview preparation, connected — so what you practice
+              today lines up with the role you interview for tomorrow.
+            </p>
+          </div>
+
+          <div className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {features.map((feature) => (
+              <Link
+                key={feature.href}
+                href={feature.href}
+                className="group relative rounded-3xl border bg-surface/60 p-8 transition-colors hover:border-primary/40 hover:bg-surface"
+              >
+                <span className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <feature.icon className="size-[18px]" strokeWidth={1.9} />
+                </span>
+                <h3 className="mt-8 text-lg font-semibold tracking-tight">
+                  {feature.title}
+                </h3>
+                <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
+                  {feature.description}
+                </p>
+                <ArrowUpRight className="absolute right-8 top-8 size-4 text-muted-foreground opacity-0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:opacity-100" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Team ─────────────────────────────────────────────── */}
+      <section className="bg-surface/60 py-20 md:py-28">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <div className="flex justify-center">
+              <SectionLabel>The team</SectionLabel>
+            </div>
+            <h2 className="mt-5 text-4xl font-bold leading-[1.08] tracking-[-0.035em] md:text-5xl">
+              Built by developers,
+              <br />
+              for developers
+            </h2>
+          </div>
+
+          <div className="mx-auto mt-14 grid max-w-2xl gap-4 sm:grid-cols-2">
+            {developers.map((dev) => (
+              <div key={dev.name} className="rounded-3xl border bg-card p-7">
+                <p className="text-base font-semibold tracking-tight">{dev.name}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{dev.role}</p>
+                <div className="mt-6 flex items-center gap-4 border-t pt-5">
+                  <SocialLink href={dev.socials.github} label={`GitHub — ${dev.name}`}>
+                    <Github className="size-4" />
+                  </SocialLink>
+                  <SocialLink href={dev.socials.linkedin} label={`LinkedIn — ${dev.name}`}>
+                    <Linkedin className="size-4" />
+                  </SocialLink>
+                  <SocialLink href={dev.socials.instagram} label={`Instagram — ${dev.name}`}>
+                    <Instagram className="size-4" />
+                  </SocialLink>
+                  <SocialLink href={dev.socials.whatsapp} label={`WhatsApp — ${dev.name}`}>
+                    <MessageCircle className="size-4" />
+                  </SocialLink>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA ──────────────────────────────────────────────── */}
+      {!session?.user && (
+        <section className="py-20 md:py-28">
+          <div className="mx-auto max-w-6xl px-6">
+            <div className="rounded-[2rem] bg-foreground px-8 py-16 text-center text-background md:py-24">
+              <h2 className="mx-auto max-w-xl text-4xl font-bold leading-[1.08] tracking-[-0.035em] md:text-5xl">
+                Your first problem is waiting
+              </h2>
+              <p className="mx-auto mt-5 max-w-md text-background/60">
+                Free to start. No setup — just sign in and begin where you are.
+              </p>
+              <Button
+                size="lg"
+                onClick={handleGoogleSignIn}
+                className="mt-9 h-12 gap-2 rounded-full bg-background px-7 text-sm text-foreground hover:bg-background/90"
+              >
+                Get started with Google
+                <ArrowRight className="size-4" />
+              </Button>
+            </div>
+          </div>
         </section>
       )}
 
-      {/* Footer */}
-      <footer className="border-t bg-muted/30">
-        <div className="container mx-auto px-4 py-12 md:py-16">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-8 mb-8">
-            {/* Brand Section */}
-            <div className="md:col-span-3 space-y-4">
-              <div className="flex items-center gap-2">
-                <img 
-                  src="/talentpath-logo.svg" 
-                  alt="TalentPath Logo" 
-                  className="h-10 w-10"
-                />
-                <span className="text-xl font-bold">
-                  TalentPath
-                </span>
+      {/* ── Footer ───────────────────────────────────────────── */}
+      <footer className="border-t bg-surface/60">
+        <div className="mx-auto max-w-6xl px-6 py-16">
+          <div className="grid grid-cols-2 gap-10 md:grid-cols-12">
+            <div className="col-span-2 md:col-span-5">
+              <div className="flex items-center gap-2.5">
+                <img src="/talentpath-logo.svg" alt="" className="size-8" />
+                <span className="text-[17px] font-semibold tracking-tight">TalentPath</span>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Empowering careers, one line of code at a time.
+              <p className="mt-5 max-w-sm leading-relaxed text-muted-foreground">
+                TalentPath brings structured practice, real contests, and curated
+                openings together — so preparation turns into offers.
               </p>
-            </div>
-
-            {/* Platform Links */}
-            <div className="md:col-span-2">
-              <h3 className="font-semibold mb-4">Platform</h3>
-              <ul className="space-y-2">
-                <li>
-                  <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    Dashboard
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/aptitude" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    Aptitude Tests
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/compiler" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    Compiler
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/contest" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    Contests
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            {/* Resources Links */}
-            <div className="md:col-span-2">
-              <h3 className="font-semibold mb-4">Resources</h3>
-              <ul className="space-y-2">
-                <li>
-                  <Link href="/dsasheet" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    DSA Sheet
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/roadmap" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    Roadmap
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/jobs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    Jobs
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            {/* Connect Section */}
-            <div className="md:col-span-2">
-              <h3 className="font-semibold mb-4">Connect</h3>
-              <a 
-                href="mailto:contact@talentpath.com" 
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
+              <a
+                href="mailto:contact@talentpath.com"
+                className="mt-6 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
-                <Mail className="h-4 w-4" />
-                Contact Us
+                <Mail className="size-4" />
+                contact@talentpath.com
               </a>
             </div>
 
-            {/* Crafted by Section */}
-            <div className="md:col-span-3">
-              <h3 className="font-semibold mb-4">Crafted by</h3>
-              <div className="space-y-4">
-                {/* Developer 1 */}
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold">
-                    R.V.V. Swamy
-                  </p>
-                  <div className="flex gap-2">
-                    <a 
-                      href="https://github.com/swamyrayudu" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-lg bg-secondary hover:bg-foreground hover:text-background transition-all"
-                      aria-label="GitHub - R.V.V. Swamy"
+            <div className="md:col-span-2">
+              <h3 className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                Platform
+              </h3>
+              <ul className="mt-5 space-y-3">
+                {[
+                  { name: 'Dashboard', href: '/dashboard' },
+                  { name: 'Aptitude', href: '/aptitude' },
+                  { name: 'Compiler', href: '/compiler' },
+                  { name: 'Contests', href: '/contest' },
+                ].map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="text-[15px] transition-colors hover:text-primary"
                     >
-                      <Github className="h-4 w-4" />
-                    </a>
-                    <a 
-                      href="https://www.linkedin.com/in/rayudu-veera-venkata-swamy/" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-lg bg-secondary hover:bg-blue-600 hover:text-white transition-all"
-                      aria-label="LinkedIn - R.V.V. Swamy"
-                    >
-                      <Linkedin className="h-4 w-4" />
-                    </a>
-                    <a 
-                      href="https://www.instagram.com/swamy__rayudu/" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-lg bg-secondary hover:bg-gradient-to-br hover:from-purple-600 hover:to-pink-600 hover:text-white transition-all"
-                      aria-label="Instagram - R.V.V. Swamy"
-                    >
-                      <Instagram className="h-4 w-4" />
-                    </a>
-                    <a 
-                      href="https://wa.me/917288819391" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-lg bg-secondary hover:bg-green-600 hover:text-white transition-all"
-                      aria-label="WhatsApp - R.V.V. Swamy"
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                    </a>
-                  </div>
-                </div> 
-                {/* <div className="space-y-2">
-                  <p className="text-sm font-semibold">
-                    Vamsi Kotamsetti
-                  </p>
-                  <div className="flex gap-2">
-                    <a 
-                      href="https://github.com/vamsi-lpu18" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-lg bg-secondary hover:bg-foreground hover:text-background transition-all"
-                      aria-label="GitHub - Vamsi Kotamsetti"
-                    >
-                      <Github className="h-4 w-4" />
-                    </a>
-                    <a 
-                      href="https://www.linkedin.com/in/vamsi-kotamsetti-47b302260/ " 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-lg bg-secondary hover:bg-blue-600 hover:text-white transition-all"
-                      aria-label="LinkedIn - Vamsi Kotamsetti"
-                    >
-                      <Linkedin className="h-4 w-4" />
-                    </a>
-                    <a 
-                      href="https://www.instagram.com" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-lg bg-secondary hover:bg-gradient-to-br hover:from-purple-600 hover:to-pink-600 hover:text-white transition-all"
-                      aria-label="Instagram - Vamsi Kotamsetti"
-                    >
-                      <Instagram className="h-4 w-4" />
-                    </a>
-                    <a 
-                      href="https://wa.me/919182683257" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-lg bg-secondary hover:bg-green-600 hover:text-white transition-all"
-                      aria-label="WhatsApp - Vamsi Kotamsetti"
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                    </a>
-                  </div>
-                </div> */}
+                      {link.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-                {/* Developer 2 */}
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold">
-                    Durga Prasad
-                  </p>
-                  <div className="flex gap-2">
-                    <a 
-                      href="https://github.com/Durga62823" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-lg bg-secondary hover:bg-foreground hover:text-background transition-all"
-                      aria-label="GitHub - P.S.V. Siva Durga Prasad"
+            <div className="md:col-span-2">
+              <h3 className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                Resources
+              </h3>
+              <ul className="mt-5 space-y-3">
+                {[
+                  { name: 'DSA Sheet', href: '/dsasheet' },
+                  { name: 'Roadmap', href: '/roadmap' },
+                  { name: 'Jobs', href: '/jobs' },
+                ].map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="text-[15px] transition-colors hover:text-primary"
                     >
-                      <Github className="h-4 w-4" />
-                    </a>
-                    <a 
-                      href="https://www.linkedin.com/in/durga-prasad-peddapalli-1616a8297/" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-lg bg-secondary hover:bg-blue-600 hover:text-white transition-all"
-                      aria-label="LinkedIn - P.S.V. Siva Durga Prasad"
-                    >
-                      <Linkedin className="h-4 w-4" />
-                    </a>
-                    <a 
-                      href="https://www.instagram.com/the_addicted__person_78/" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-lg bg-secondary hover:bg-gradient-to-br hover:from-purple-600 hover:to-pink-600 hover:text-white transition-all"
-                      aria-label="Instagram - P.S.V. Siva Durga Prasad"
-                    >
-                      <Instagram className="h-4 w-4" />
-                    </a>
-                    <a 
-                      href="https://wa.me/919030512334" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-lg bg-secondary hover:bg-green-600 hover:text-white transition-all"
-                      aria-label="WhatsApp - P.S.V. Siva Durga Prasad"
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                    </a>
+                      {link.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="col-span-2 md:col-span-3">
+              <h3 className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                Crafted by
+              </h3>
+              <div className="mt-5 space-y-4">
+                {developers.map((dev) => (
+                  <div key={dev.name}>
+                    <p className="text-[15px] font-medium">{dev.name}</p>
+                    <div className="mt-2 flex items-center gap-3.5">
+                      <SocialLink href={dev.socials.github} label={`GitHub — ${dev.name}`}>
+                        <Github className="size-4" />
+                      </SocialLink>
+                      <SocialLink
+                        href={dev.socials.linkedin}
+                        label={`LinkedIn — ${dev.name}`}
+                      >
+                        <Linkedin className="size-4" />
+                      </SocialLink>
+                      <SocialLink
+                        href={dev.socials.instagram}
+                        label={`Instagram — ${dev.name}`}
+                      >
+                        <Instagram className="size-4" />
+                      </SocialLink>
+                      <SocialLink
+                        href={dev.socials.whatsapp}
+                        label={`WhatsApp — ${dev.name}`}
+                      >
+                        <MessageCircle className="size-4" />
+                      </SocialLink>
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* Bottom Bar */}
-          <div className="pt-8 border-t">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left">
-              <p className="text-sm text-muted-foreground">
-                © 2025 TalentPath. All rights reserved.
-              </p>
-              <div className="flex gap-6">
-                <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  Privacy Policy
-                </Link>
-                <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  Terms of Service
-                </Link>
-              </div>
+          <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t pt-8 text-center sm:flex-row sm:text-left">
+            <p className="text-sm text-muted-foreground">
+              © 2025 TalentPath. All rights reserved.
+            </p>
+            <div className="flex gap-6">
+              <Link
+                href="/privacy"
+                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Privacy Policy
+              </Link>
+              <Link
+                href="/terms"
+                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Terms of Service
+              </Link>
             </div>
           </div>
         </div>

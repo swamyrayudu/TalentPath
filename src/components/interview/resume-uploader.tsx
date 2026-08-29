@@ -1,13 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Upload, FileText, X, Sparkles, Loader2 } from 'lucide-react';
+import { Upload, FileText, X, Loader2 } from 'lucide-react';
 
 interface ResumeUploaderProps {
   onResumeExtracted: (resumeText: string) => void;
@@ -99,98 +98,79 @@ export default function ResumeUploader({ onResumeExtracted, className }: ResumeU
   };
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5" />
-          Resume Upload (Optional)
-        </CardTitle>
-        <CardDescription>
-          Upload your resume (text-based PDF, Word, or TXT) or paste the text manually below to get personalized interview questions
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* File Upload */}
+    <section className={`rounded-2xl border bg-card ${className ?? ''}`}>
+      <div className="border-b px-5 py-4">
+        <h2 className="text-sm font-semibold tracking-tight">Resume</h2>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          Optional — upload or paste it and the questions get tailored to your
+          background.
+        </p>
+      </div>
+
+      <div className="space-y-5 p-5">
         <div className="space-y-2">
-          <Label htmlFor="resume-upload">Upload Resume</Label>
-          <div className="flex items-center gap-2">
-            <Input
-              id="resume-upload"
-              type="file"
-              accept=".pdf,.txt,.doc,.docx"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-            <Button
-              variant="outline"
-              onClick={() => document.getElementById('resume-upload')?.click()}
-              disabled={isExtracting}
-              className="w-full"
-            >
-              {isExtracting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Extracting text...
-                </>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload PDF, TXT, or Word
-                </>
-              )}
-            </Button>
-          </div>
-          
+          <Input
+            id="resume-upload"
+            type="file"
+            accept=".pdf,.txt,.doc,.docx"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          <Button
+            variant="outline"
+            onClick={() => document.getElementById('resume-upload')?.click()}
+            disabled={isExtracting}
+            className="w-full gap-2"
+          >
+            {isExtracting ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Extracting text…
+              </>
+            ) : (
+              <>
+                <Upload className="size-4" />
+                Upload PDF, TXT or Word
+              </>
+            )}
+          </Button>
           <p className="text-xs text-muted-foreground">
-            Note: Scanned PDFs (images) won&apos;t work. Use the text paste option below instead.
+            Scanned PDFs won&apos;t work — paste the text instead.
           </p>
-          
+
           {uploadedFile && (
-            <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm flex-1">{uploadedFile.name}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClear}
-              >
-                <X className="h-4 w-4" />
+            <div className="flex items-center gap-2 rounded-xl border px-3 py-2">
+              <FileText className="size-4 text-muted-foreground" strokeWidth={1.75} />
+              <span className="min-w-0 flex-1 truncate text-sm">{uploadedFile.name}</span>
+              <Button variant="ghost" size="icon-sm" onClick={handleClear} aria-label="Remove resume">
+                <X className="size-4" />
               </Button>
             </div>
           )}
         </div>
 
-        {/* Or Manual Input */}
         <div className="space-y-2">
-          <Label htmlFor="resume-text">Or Paste Resume Text</Label>
+          <Label htmlFor="resume-text">Or paste the text</Label>
           <Textarea
             id="resume-text"
             value={resumeText}
             onChange={(e) => handleTextChange(e.target.value)}
-            placeholder="Paste your resume text here...&#10;&#10;Example:&#10;John Doe&#10;Software Engineer&#10;&#10;Experience:&#10;- 3 years at Google as SWE&#10;- Python, React, AWS&#10;- Led team of 5 engineers..."
-            className="min-h-[200px] font-mono text-sm"
+            placeholder="Paste your resume here — experience, skills, education, projects."
+            className="min-h-[180px] font-mono text-sm"
           />
-          <p className="text-xs text-muted-foreground">
-            Include your experience, skills, education, and projects for personalized questions
-          </p>
         </div>
 
-        {/* AI Badge */}
         {resumeText && (
-          <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-lg border border-purple-500/20">
-            <Sparkles className="h-4 w-4 text-purple-500" />
-            <div className="flex-1">
-              <p className="text-sm font-medium">AI Personalization Active</p>
-              <p className="text-xs text-muted-foreground">
-                Interview questions will be tailored to your background
-              </p>
-            </div>
-            <Badge variant="secondary" className="bg-purple-500/10 text-purple-700 dark:text-purple-300">
+          <div className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3">
+            <p className="text-sm text-muted-foreground">
+              Questions will be tailored to your background.
+            </p>
+            <Badge variant="outline" className="shrink-0 tabular-nums">
               {resumeText.length} chars
             </Badge>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }

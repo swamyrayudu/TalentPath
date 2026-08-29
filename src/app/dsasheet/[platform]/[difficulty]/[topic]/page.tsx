@@ -2,27 +2,15 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSession, signIn } from 'next-auth/react';
-import { useRouter, useParams } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/card';
+import { useParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Loader2, 
-  CheckCircle, 
-  Circle, 
-  ExternalLink,
-  ArrowLeft,
-  Trophy,
-  Target,
-  Clock,
-  Search,
-  ChevronDown,
-  Lock,
-  Zap,
-  Flame,
-  Code2
-} from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { SheetBreadcrumb } from '@/components/dsa/sheet-breadcrumb';
+import { SheetProgressHeader } from '@/components/dsa/sheet-progress-header';
+import { ProblemRow } from '@/components/dsa/problem-row';
+import { FileSpreadsheet, Search, Target, X } from 'lucide-react';
 
 interface Problem {
   id: number;
@@ -54,7 +42,6 @@ const ITEMS_PER_PAGE = 500;
 
 export default function TopicProblemsPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
   const params = useParams();
   
   const platform = (params?.platform as string)?.toUpperCase() as 'LEETCODE' | 'GEEKSFORGEEKS';
@@ -260,52 +247,6 @@ export default function TopicProblemsPage() {
   const problemIds = new Set(problems.map(p => p.id));
   const relevantProgress = Object.values(userProgress).filter(p => problemIds.has(p.problemId));
   const solvedCount = relevantProgress.filter(p => p.status === 'solved').length;
-  const attemptedCount = relevantProgress.filter(p => p.status === 'attempted').length;
-  const progressPercentage = totalCount > 0 ? (solvedCount / totalCount) * 100 : 0;
-
-  if (status === 'loading' || loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="text-center space-y-4">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-full border-4 border-muted border-t-primary animate-spin mx-auto" />
-            <Code2 className="h-6 w-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary" />
-          </div>
-          <p className="text-sm text-muted-foreground font-medium">Loading problems...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const difficultyConfig = {
-    EASY: {
-      icon: Zap,
-      label: 'Easy',
-      color: 'text-emerald-500',
-      bg: 'bg-emerald-500/10',
-      border: 'border-emerald-500/20',
-      gradient: 'from-emerald-500 to-green-600',
-    },
-    MEDIUM: {
-      icon: Flame,
-      label: 'Medium',
-      color: 'text-amber-500',
-      bg: 'bg-amber-500/10',
-      border: 'border-amber-500/20',
-      gradient: 'from-amber-500 to-orange-600',
-    },
-    HARD: {
-      icon: Trophy,
-      label: 'Hard',
-      color: 'text-red-500',
-      bg: 'bg-red-500/10',
-      border: 'border-red-500/20',
-      gradient: 'from-red-500 to-rose-600',
-    },
-  };
-
-  const config = difficultyConfig[difficulty] || difficultyConfig.EASY;
-  const DiffIcon = config.icon;
 
   const platformNames: Record<string, string> = {
     LEETCODE: 'LeetCode',
@@ -313,392 +254,163 @@ export default function TopicProblemsPage() {
   };
 
   const topicName = topic
-    .split('-')
+    ?.split('-')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 
+  const difficultyLabel =
+    difficulty?.charAt(0) + difficulty?.slice(1).toLowerCase();
+
+  const isSignedOut = !session?.user;
+
+  const handleSignIn = async () => {
+    setSigningIn(true);
+    await signIn('google', { callbackUrl: window.location.href });
+    setSigningIn(false);
+  };
+
+  if (status === 'loading' || loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="mx-auto max-w-4xl px-4 py-8 md:px-6 md:py-10">
+          <Skeleton className="h-4 w-64" />
+          <Skeleton className="mt-6 h-32 rounded-2xl" />
+          <Skeleton className="mt-4 h-11 rounded-xl" />
+          <div className="mt-4 space-y-2">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 rounded-xl" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const groups = Object.entries(groupedProblemsByPattern).sort(
+    ([, a], [, b]) => a.orderIndex - b.orderIndex
+  );
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-6 max-w-7xl">
-        {/* Back Button */}
-        <Button 
-          variant="ghost" 
-          onClick={() => router.push('/dsasheet')} 
-          className="mb-4 -ml-2 text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to DSA Sheet
-        </Button>
+      <div className="mx-auto max-w-4xl px-4 py-8 md:px-6 md:py-10">
+        <SheetBreadcrumb
+          items={[
+            { label: 'DSA Sheet', href: '/dsasheet' },
+            { label: platformNames[platform] || platform, href: '/dsasheet' },
+            { label: difficultyLabel, href: '/dsasheet' },
+            { label: topicName },
+          ]}
+        />
 
-        {/* Hero Header */}
-        <div className="mb-6 space-y-4 sm:space-y-6">
-          {/* Title Section */}
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div className="space-y-3">
-              {/* Topic Title with Badge */}
-              <div className="flex flex-wrap items-center gap-3">
-                <div className={`p-2 sm:p-2.5 rounded-xl bg-gradient-to-br ${config.gradient}`}>
-                  <DiffIcon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
-                    {topicName}
-                  </h1>
-                  <div className="flex flex-wrap items-center gap-2 mt-1">
-                    <Badge className={`${config.bg} ${config.color} ${config.border} border font-medium`}>
-                      {config.label}
-                    </Badge>
-                    <Badge variant="secondary" className="font-medium">
-                      {platformNames[platform]}
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {totalCount} problems
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="flex gap-2 sm:gap-3">
-              <Card className="flex-1 sm:flex-none border bg-card/50 backdrop-blur-sm">
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="p-2 rounded-lg bg-emerald-500/10">
-                      <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500" />
-                    </div>
-                    <div>
-                      <div className="text-lg sm:text-xl font-bold">{solvedCount}</div>
-                      <div className="text-[10px] sm:text-xs text-muted-foreground">Solved</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="flex-1 sm:flex-none border bg-card/50 backdrop-blur-sm">
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="p-2 rounded-lg bg-amber-500/10">
-                      <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
-                    </div>
-                    <div>
-                      <div className="text-lg sm:text-xl font-bold">{attemptedCount}</div>
-                      <div className="text-[10px] sm:text-xs text-muted-foreground">Attempted</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Progress Section */}
-          <Card className="border bg-card/50 backdrop-blur-sm overflow-hidden">
-            <CardContent className="p-4 sm:p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                {/* Circular Progress */}
-                <div className="flex items-center gap-4">
-                  <div className="relative w-16 h-16 sm:w-20 sm:h-20">
-                    <svg className="w-full h-full transform -rotate-90">
-                      <circle
-                        cx="50%"
-                        cy="50%"
-                        r="40%"
-                        stroke="currentColor"
-                        strokeWidth="6"
-                        fill="none"
-                        className="text-muted/20"
-                      />
-                      <circle
-                        cx="50%"
-                        cy="50%"
-                        r="40%"
-                        stroke="currentColor"
-                        strokeWidth="6"
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeDasharray={`${progressPercentage * 2.51} 251`}
-                        className={config.color}
-                        style={{ transition: 'stroke-dasharray 0.5s ease' }}
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-sm sm:text-base font-bold">{progressPercentage.toFixed(0)}%</span>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Target className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-semibold">Progress</span>
-                    </div>
-                    <p className="text-lg sm:text-xl font-bold">
-                      {solvedCount}
-                      <span className="text-sm text-muted-foreground font-normal"> / {totalCount}</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {totalCount - solvedCount} remaining
-                    </p>
-                  </div>
-                </div>
-
-                {/* Linear Progress Bar */}
-                <div className="flex-1 space-y-2">
-                  <div className="h-2.5 sm:h-3 bg-muted/30 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full bg-gradient-to-r ${config.gradient} transition-all duration-500`}
-                      style={{ width: `${progressPercentage}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{solvedCount} solved</span>
-                    <span>{attemptedCount} in progress</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search problems..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 sm:pl-11 h-10 sm:h-11 bg-card border rounded-xl"
-            />
-            {searchTerm && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-7 px-2 text-muted-foreground hover:text-foreground"
-              >
-                Clear
-              </Button>
-            )}
-          </div>
+        <div className="mt-6">
+          <SheetProgressHeader
+            icon={FileSpreadsheet}
+            title={topicName}
+            description={`${platformNames[platform] || platform} · ${difficultyLabel}`}
+            solved={solvedCount}
+            total={totalCount}
+            splits={[
+              {
+                label: difficultyLabel as 'Easy' | 'Medium' | 'Hard',
+                solved: solvedCount,
+                total: totalCount,
+              },
+            ]}
+          />
         </div>
 
-        {/* Problems List */}
-      {filteredProblems.length === 0 ? (
-        <Card>
-          <CardContent className="py-16">
-            <div className="text-center">
-              <Target className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
-              <p className="text-lg font-medium text-muted-foreground mb-2">
-                {searchTerm ? 'No matching problems found' : 'No problems available yet'}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {searchTerm ? 'Try a different search term' : 'Check back later for new problems'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          {Object.entries(groupedProblemsByPattern)
-            .sort(([, a], [, b]) => a.orderIndex - b.orderIndex)
-            .map(([patternId, group]) => (
-            <div key={patternId} className="space-y-3">
-              {/* Pattern Header */}
-              <div className="flex items-center justify-between border-b pb-2">
-                <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-                  <span className="w-1.5 h-6 rounded-full bg-primary" />
-                  {group.name}
-                </h2>
-                <Badge variant="secondary" className="font-semibold">
-                  {group.problems.length} {group.problems.length === 1 ? 'problem' : 'problems'}
-                </Badge>
-              </div>
-
-              {/* Problems list under this pattern */}
-              <div className="space-y-3">
-                {group.problems.map((problem, idx) => {
-                  const progress = userProgress[problem.id];
-                  const isSolved = progress?.status === 'solved';
-                  const isAttempted = progress?.status === 'attempted';
-                  const isUpdating = updating === problem.id;
-                  const companyTags = Array.isArray(problem.companyTags) ? problem.companyTags : [];
-
-                  return (
-                    <Card 
-                      key={problem.id} 
-                      className={`transition-all duration-200 hover:shadow-md border-2 ${
-                        isSolved ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' :
-                        isAttempted ? 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800' :
-                        'hover:border-primary/50'
-                      }`}
-                    >
-                      <CardContent className="p-4 md:p-5">
-                        <div className="flex items-center gap-3 md:gap-4">
-                          {/* Checkbox */}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => session?.user && handleToggleStatus(problem.id)}
-                            disabled={isUpdating || !session?.user}
-                            className="p-0 h-9 w-9 hover:bg-transparent flex-shrink-0 relative"
-                            title={!session?.user ? "Sign in to mark problems" : ""}
-                          >
-                            {isUpdating ? (
-                              <Loader2 className="h-6 w-6 animate-spin" />
-                            ) : isSolved ? (
-                              <CheckCircle className="h-6 w-6 text-green-600 fill-green-100" />
-                            ) : isAttempted ? (
-                              <Circle className="h-6 w-6 text-yellow-600 fill-yellow-200" />
-                            ) : (
-                              <>
-                                <Circle className="h-6 w-6 text-gray-400 hover:text-gray-600 transition-colors" />
-                                {!session?.user && (
-                                  <Lock className="h-3 w-3 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-red-600" />
-                                )}
-                              </>
-                            )}
-                          </Button>
-
-                          {/* Index inside this pattern */}
-                          <div className="text-muted-foreground font-mono text-sm font-semibold w-8 flex-shrink-0">
-                            #{idx + 1}
-                          </div>
-
-                          {/* Problem Details */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <h3 className="font-semibold text-base hover:text-primary transition-colors">
-                                {problem.title}
-                              </h3>
-                              {problem.isPremium && (
-                                <Badge variant="secondary" className="text-xs">
-                                  Premium
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
-                              <span className="flex items-center gap-1">
-                                {problem.likes} likes
-                              </span>
-                              <span>•</span>
-                              <span className="flex items-center gap-1">
-                                {problem.acceptanceRate}% acceptance
-                              </span>
-                              {companyTags.length > 0 && (
-                                <>
-                                  <span>•</span>
-                                  <div className="flex gap-1 flex-wrap">
-                                    {companyTags.slice(0, 3).map((company: string) => (
-                                      <Badge key={company} variant="outline" className="text-xs">
-                                        {company}
-                                      </Badge>
-                                    ))}
-                                    {companyTags.length > 3 && (
-                                      <span className="text-xs">+{companyTags.length - 3}</span>
-                                    )}
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Status Badge & Action */}
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {isSolved && (
-                              <Badge className="bg-green-600 hover:bg-green-700 hidden md:flex">
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Solved
-                              </Badge>
-                            )}
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={async () => {
-                                if (!session?.user) {
-                                  setSigningIn(true);
-                                  await signIn('google', { 
-                                    callbackUrl: window.location.href
-                                  });
-                                  setSigningIn(false);
-                                } else {
-                                  window.open(problem.url, '_blank');
-                                }
-                              }}
-                              disabled={signingIn}
-                              className="gap-1 cursor-pointer"
-                              title={!session?.user ? "Sign in to solve problems" : ""}
-                            >
-                              {signingIn ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : !session?.user ? (
-                                <Lock className="h-4 w-4" />
-                              ) : (
-                                <ExternalLink className="h-4 w-4" />
-                              )}
-                              <span className="hidden sm:inline">
-                                {signingIn ? 'Signing in...' : !session?.user ? 'Sign in' : 'Solve'}
-                              </span>
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-          
-          {/* Infinite Scroll Trigger */}
-          {!searchTerm && (
-            <div 
-              ref={lastProblemRef}
-              className="py-4 flex justify-center"
+        {/* ── Search ───────────────────────────────────────────── */}
+        <div className="relative mt-4">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search problems"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="h-11 rounded-xl pl-10 pr-10"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              aria-label="Clear search"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
             >
-              {loadingMore && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Loading more problems...</span>
-                </div>
-              )}
-              {!loadingMore && hasMore && (
-                <Button
-                  variant="outline"
-                  onClick={loadMoreProblems}
-                  className="gap-2"
-                >
-                  <ChevronDown className="h-4 w-4" />
-                  Load More ({totalCount - problems.length} remaining)
-                </Button>
-              )}
-              {!hasMore && problems.length > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  All {totalCount} problems loaded
-                </p>
-              )}
-            </div>
+              <X className="size-4" />
+            </button>
           )}
         </div>
-      )}
 
-      {/* Legend */}
-      {problems.length > 0 && (
-        <Card className="mt-6 border-2">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-center gap-6 md:gap-8 text-sm flex-wrap">
-              <div className="flex items-center gap-2">
-                <Circle className="h-5 w-5 text-gray-400" />
-                <span className="text-muted-foreground">Todo</span>
+        {isSignedOut && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3">
+            <p className="text-sm text-muted-foreground">
+              Sign in to tick problems off and keep your progress.
+            </p>
+            <Button size="sm" onClick={handleSignIn} disabled={signingIn}>
+              {signingIn ? 'Signing in…' : 'Sign in'}
+            </Button>
+          </div>
+        )}
+
+        {/* ── Problems, grouped by pattern ─────────────────────── */}
+        {filteredProblems.length === 0 ? (
+          <div className="mt-4 flex flex-col items-center rounded-2xl border bg-card py-16 text-center">
+            <Target className="size-6 text-muted-foreground/40" strokeWidth={1.5} />
+            <p className="mt-4 text-sm font-semibold tracking-tight">
+              {searchTerm ? 'No matching problems' : 'No problems yet'}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {searchTerm
+                ? 'Try a different search term.'
+                : 'Check back later for new problems.'}
+            </p>
+          </div>
+        ) : (
+          <div className="mt-6 space-y-8">
+            {groups.map(([patternId, group]) => (
+              <section key={patternId}>
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-sm font-semibold tracking-tight">
+                    {group.name}
+                  </h2>
+                  <Badge variant="outline" className="tabular-nums">
+                    {group.problems.length}
+                  </Badge>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {group.problems.map((problem) => (
+                    <ProblemRow
+                      key={problem.id}
+                      title={problem.title}
+                      url={problem.url}
+                      difficulty={problem.difficulty}
+                      status={userProgress[problem.id]?.status}
+                      isUpdating={updating === problem.id}
+                      isLocked={isSignedOut}
+                      onToggle={() => handleToggleStatus(problem.id)}
+                      onLockedClick={handleSignIn}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
+
+            {!searchTerm && (
+              <div ref={lastProblemRef} className="flex justify-center py-2">
+                {loadingMore ? (
+                  <span className="text-sm text-muted-foreground">Loading more…</span>
+                ) : hasMore ? (
+                  <Button variant="outline" size="sm" onClick={loadMoreProblems}>
+                    Load more ({totalCount - problems.length} remaining)
+                  </Button>
+                ) : (
+                  <p className="text-sm text-muted-foreground tabular-nums">
+                    All {totalCount} problems loaded
+                  </p>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <Circle className="h-5 w-5 text-yellow-600 fill-yellow-200" />
-                <span className="text-muted-foreground">Attempted</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-600 fill-green-100" />
-                <span className="text-muted-foreground">Solved</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

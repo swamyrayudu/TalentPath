@@ -25,10 +25,10 @@ export function ContestManagementTabs({ contest, questions, contestSlug }: Conte
       <Tabs defaultValue="questions" className="w-full">
         {/* Modern Tab Bar */}
         <div className="w-full sticky top-0 z-10 bg-background/95 backdrop-blur-md pb-3 sm:pb-4">
-          <TabsList className="w-full h-auto p-1 sm:p-1.5 bg-muted/50 backdrop-blur-sm rounded-lg sm:rounded-xl shadow-md border">
+          <TabsList className="h-auto w-full rounded-xl border bg-card p-1">
             <TabsTrigger 
               value="questions" 
-              className="flex-1 flex items-center justify-center gap-1.5 sm:gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all py-2 sm:py-3 px-2 sm:px-4 rounded-md sm:rounded-lg text-xs sm:text-sm font-semibold hover:bg-muted"
+              className="flex-1 gap-2 rounded-lg py-2 text-sm data-[state=active]:bg-muted"
             >
               <FileText className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">Questions</span>
@@ -36,7 +36,7 @@ export function ContestManagementTabs({ contest, questions, contestSlug }: Conte
             </TabsTrigger>
             <TabsTrigger 
               value="add-question" 
-              className="flex-1 flex items-center justify-center gap-1.5 sm:gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all py-2 sm:py-3 px-2 sm:px-4 rounded-md sm:rounded-lg text-xs sm:text-sm font-semibold hover:bg-muted"
+              className="flex-1 gap-2 rounded-lg py-2 text-sm data-[state=active]:bg-muted"
             >
               <Plus className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">Add Question</span>
@@ -44,7 +44,7 @@ export function ContestManagementTabs({ contest, questions, contestSlug }: Conte
             </TabsTrigger>
             <TabsTrigger 
               value="settings" 
-              className="flex-1 flex items-center justify-center gap-1.5 sm:gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all py-2 sm:py-3 px-2 sm:px-4 rounded-md sm:rounded-lg text-xs sm:text-sm font-semibold hover:bg-muted"
+              className="flex-1 gap-2 rounded-lg py-2 text-sm data-[state=active]:bg-muted"
             >
               <Settings className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">Settings</span>

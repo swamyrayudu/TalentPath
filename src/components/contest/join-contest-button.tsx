@@ -61,13 +61,13 @@ export function JoinContestButton({ contestId, visibility }: JoinContestButtonPr
 
   if (visibility === 'public') {
     return (
-      <Button size="lg" onClick={handleJoin} disabled={isLoading} className="w-full">
+      <Button size="lg" onClick={handleJoin} disabled={isLoading} className="w-full gap-2">
         {isLoading ? (
-          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+          <Loader2 className="size-4 animate-spin" />
         ) : (
-          <LogIn className="h-5 w-5 mr-2" />
+          <LogIn className="size-4" />
         )}
-        Join Contest
+        Join contest
       </Button>
     );
   }
@@ -75,14 +75,14 @@ export function JoinContestButton({ contestId, visibility }: JoinContestButtonPr
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="lg" className="w-full">
-          <Lock className="h-5 w-5 mr-2" />
-          Join Private Contest
+        <Button size="lg" className="w-full gap-2">
+          <Lock className="size-4" />
+          Join private contest
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Join Private Contest</DialogTitle>
+          <DialogTitle>Join private contest</DialogTitle>
           <DialogDescription>
             This is a private contest. Please enter the access code to join.
           </DialogDescription>
@@ -105,13 +105,13 @@ export function JoinContestButton({ contestId, visibility }: JoinContestButtonPr
             />
           </div>
 
-          <Button onClick={handleJoin} disabled={isLoading || !accessCode.trim()} className="w-full">
+          <Button onClick={handleJoin} disabled={isLoading || !accessCode.trim()} className="w-full gap-2">
             {isLoading ? (
-              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              <Loader2 className="size-4 animate-spin" />
             ) : (
-              <LogIn className="h-5 w-5 mr-2" />
+              <LogIn className="size-4" />
             )}
-            Join Contest
+            Join contest
           </Button>
         </div>
       </DialogContent>

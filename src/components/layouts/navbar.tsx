@@ -33,6 +33,7 @@ const navRoutes = [
   { name: 'Contest', href: '/contest' },
   { name: 'DSA Sheet', href: '/dsasheet' },
   { name: 'Jobs', href: '/jobs' },
+  { name: 'ATS Score', href: '/ats' },
   { name: 'Roadmap', href: '/roadmap' },
 ];
 
@@ -72,86 +73,51 @@ export default function Navbar() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link 
-            href="/" 
-            className="flex items-center space-x-2.5 transition-opacity duration-200 hover:opacity-80"
-          >
-            <img 
-              src="/talentpath-logo.svg" 
-              alt="TalentPath Logo" 
-              className="h-10 w-10 transition-transform duration-200 hover:scale-105"
-            />
-            <h1 className="text-xl font-bold tracking-tight text-primary">
-              TalentPath
-            </h1>
+          <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
+            <img src="/talentpath-logo.svg" alt="TalentPath Logo" className="h-8 w-8" />
+            <span className="text-[17px] font-semibold tracking-tight">TalentPath</span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex lg:items-center lg:space-x-1">
+          <div className="hidden lg:flex lg:items-center lg:gap-1">
             {navRoutes.map((route) => {
-              const isActive = pathname === route.href;
+              const isActive = pathname === route.href || pathname.startsWith(`${route.href}/`);
 
               return (
                 <Link
                   key={route.href}
                   href={route.href}
-                  className="relative px-4 py-2 text-sm font-medium transition-all duration-300 group"
+                  className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
+                    isActive
+                      ? 'bg-muted font-medium text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
                 >
-                  <span
-                    className={`relative z-10 transition-colors duration-300 ${
-                      isActive
-                        ? 'text-primary'
-                        : 'text-muted-foreground group-hover:text-foreground'
-                    }`}
-                  >
-                    {route.name}
-                  </span>
-
-                  {/* Bottom border animation */}
-                  <span
-                    className={`absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ${
-                      isActive
-                        ? 'w-full'
-                        : 'w-0 group-hover:w-full'
-                    }`}
-                  />
-
-                  {/* Hover background */}
-                  <span
-                    className={`absolute inset-0 rounded-lg bg-accent/50 transition-opacity duration-300 ${
-                      isActive
-                        ? 'opacity-0'
-                        : 'opacity-0 group-hover:opacity-100'
-                    }`}
-                  />
+                  {route.name}
                 </Link>
               );
             })}
           </div>
 
           {/* Right Side Actions */}
-          <div className="flex items-center space-x-3">
-            <div className="transition-transform duration-200 hover:scale-105">
-              <ColorPicker />
-            </div>
-            <div className="transition-transform duration-200 hover:scale-105">
-              <ModeToggle />
-            </div>
+          <div className="flex items-center gap-2">
+            <ColorPicker />
+            <ModeToggle />
 
             {/* Desktop User Menu */}
             <div className="hidden md:block">
               {isLoading ? (
-                <div className="h-10 w-10 animate-pulse rounded-full bg-muted" />
+                <div className="h-9 w-9 animate-pulse rounded-full bg-muted" />
               ) : session?.user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="relative h-10 w-10 rounded-full transition-transform duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/20">
-                      <Avatar className="h-10 w-10 ring-2 ring-primary/20 transition-all duration-300 hover:ring-primary/40">
+                    <button className="relative ml-1 h-9 w-9 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+                      <Avatar className="h-9 w-9 border">
                         <AvatarImage
                           src={session.user.image || ''}
                           alt={session.user.name || 'User'}
                         />
-                        <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                        <AvatarFallback className="bg-muted font-medium">
                           {session.user.name?.charAt(0).toUpperCase() || 'U'}
                         </AvatarFallback>
                       </Avatar>
@@ -177,10 +143,7 @@ export default function Navbar() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link 
-                        href="/dashboard" 
-                        className="cursor-pointer transition-colors duration-200"
-                      >
+                      <Link href="/dashboard" className="cursor-pointer">
                         Profile
                       </Link>
                     </DropdownMenuItem>
@@ -188,10 +151,7 @@ export default function Navbar() {
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
-                          <Link 
-                            href="/admin" 
-                            className="cursor-pointer transition-colors duration-200"
-                          >
+                          <Link href="/admin" className="cursor-pointer">
                             Admin Dashboard
                           </Link>
                         </DropdownMenuItem>
@@ -200,7 +160,7 @@ export default function Navbar() {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={handleSignOut}
-                      className="cursor-pointer text-red-600 focus:text-red-600 transition-colors duration-200"
+                      className="cursor-pointer text-red-600 focus:text-red-600"
                     >
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
@@ -208,11 +168,8 @@ export default function Navbar() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button
-                  onClick={handleGoogleSignIn}
-                  className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
-                >
-                  Sign In
+                <Button onClick={handleGoogleSignIn} className="ml-1 rounded-full px-5 font-semibold">
+                  Sign in
                 </Button>
               )}
             </div>
@@ -221,43 +178,37 @@ export default function Navbar() {
             <div className="lg:hidden">
               <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetTrigger asChild>
-                  <button className="inline-flex items-center justify-center rounded-md p-2 transition-all duration-200 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-primary/20">
-                    <Menu className="h-6 w-6" />
-                  </button>
+                  <Button variant="ghost" size="icon" aria-label="Open menu">
+                    <Menu className="h-5 w-5" />
+                  </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-80 sm:w-96 overflow-y-auto">
+                <SheetContent side="right" className="w-80 overflow-y-auto sm:w-96">
                   <SheetHeader>
-                    <SheetTitle className="flex items-center space-x-2">
-                      <img 
-                        src="/talentpath-logo.svg" 
-                        alt="TalentPath Logo" 
-                        className="h-8 w-8"
-                      />
-                      <span className="text-primary font-bold">
-                        TalentPath
-                      </span>
+                    <SheetTitle className="flex items-center gap-2.5">
+                      <img src="/talentpath-logo.svg" alt="TalentPath Logo" className="h-7 w-7" />
+                      <span className="font-semibold tracking-tight">TalentPath</span>
                     </SheetTitle>
                   </SheetHeader>
 
-                  <div className="mt-8 flex flex-col space-y-6">
+                  <div className="mt-6 flex flex-col gap-6 px-4">
                     {/* User Info Card */}
                     {session?.user && (
-                      <div className="rounded-xl border p-4 bg-primary/5 backdrop-blur-sm transition-all duration-300 hover:shadow-md">
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="h-12 w-12 ring-2 ring-primary/20">
+                      <div className="rounded-xl border bg-card p-4">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-11 w-11 border">
                             <AvatarImage
                               src={session.user.image || ''}
                               alt={session.user.name || 'User'}
                             />
-                            <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                            <AvatarFallback className="bg-muted font-medium">
                               {session.user.name?.charAt(0).toUpperCase() || 'U'}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="flex-1 space-y-1">
-                            <p className="text-sm font-semibold">
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <p className="truncate text-sm font-semibold">
                               {session.user.name}
                             </p>
-                            <p className="text-xs text-muted-foreground truncate">
+                            <p className="truncate text-xs text-muted-foreground">
                               {session.user.email}
                             </p>
                             <Badge
@@ -275,23 +226,20 @@ export default function Navbar() {
                     {/* Mobile Navigation Links */}
                     <div className="space-y-1">
                       {navRoutes.map((route) => {
-                        const isActive = pathname === route.href;
+                        const isActive = pathname === route.href || pathname.startsWith(`${route.href}/`);
 
                         return (
                           <Link
                             key={route.href}
                             href={route.href}
                             onClick={() => setMobileMenuOpen(false)}
-                            className={`group flex items-center justify-between rounded-lg px-4 py-3 text-sm font-medium transition-all duration-300 ${
+                            className={`flex items-center rounded-lg px-4 py-2.5 text-sm transition-colors ${
                               isActive
-                                ? 'bg-primary/10 text-primary shadow-sm'
-                                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:translate-x-1'
+                                ? 'bg-muted font-medium text-foreground'
+                                : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                             }`}
                           >
-                            <span>{route.name}</span>
-                            {isActive && (
-                              <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                            )}
+                            {route.name}
                           </Link>
                         );
                       })}
@@ -302,7 +250,7 @@ export default function Navbar() {
                           <Link
                             href="/admin"
                             onClick={() => setMobileMenuOpen(false)}
-                            className="flex items-center rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground transition-all duration-300 hover:bg-accent hover:text-accent-foreground hover:translate-x-1"
+                            className="flex items-center rounded-lg px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
                           >
                             Admin Dashboard
                           </Link>
@@ -311,18 +259,18 @@ export default function Navbar() {
                     </div>
 
                     {/* Auth Button */}
-                    <div className="space-y-2 pt-4 border-t">
+                    <div className="border-t pt-4">
                       {session?.user ? (
                         <Button
                           onClick={() => {
                             handleSignOut();
                             setMobileMenuOpen(false);
                           }}
-                          variant="destructive"
-                          className="w-full gap-2 transition-all duration-300 hover:scale-105"
+                          variant="outline"
+                          className="w-full gap-2 text-red-600 hover:text-red-600"
                         >
                           <LogOut className="h-4 w-4" />
-                          Sign Out
+                          Sign out
                         </Button>
                       ) : (
                         <Button
@@ -330,9 +278,9 @@ export default function Navbar() {
                             handleGoogleSignIn();
                             setMobileMenuOpen(false);
                           }}
-                          className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
+                          className="w-full"
                         >
-                          Sign In with Google
+                          Sign in with Google
                         </Button>
                       )}
                     </div>

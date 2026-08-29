@@ -496,28 +496,46 @@ export async function getAllQuestionsFromLibrary(params?: {
 
     const totalCount = countResult?.count || 0;
 
-    // Get paginated questions with test case count
+    // Get paginated questions with test case count.
+    //
+    // Two things keep this cheap as the library grows:
+    //   * The test-case count comes from a LATERAL join rather than a correlated
+    //     subquery evaluated per output row.
+    //   * Only the first 240 characters of the description travel to the client.
+    //     Statements are full Markdown documents; the cards render a two-line
+    //     preview, so shipping the whole thing per card is pure waste. The
+    //     details dialog pulls the full text with getLibraryQuestion().
+    //
+    // Ordering is (created_at DESC, id) — created_at alone is not unique, and
+    // LIMIT/OFFSET over a non-unique sort silently drops and repeats rows.
     const offset = (page - 1) * limit;
     const allQuestions = await db
       .select({
         id: adminQuestions.id,
         title: adminQuestions.title,
-        description: adminQuestions.description,
+        description: sql<string>`LEFT(${adminQuestions.description}, 240)`,
         difficulty: adminQuestions.difficulty,
         points: adminQuestions.points,
         timeLimitSeconds: adminQuestions.timeLimitSeconds,
         memoryLimitMb: adminQuestions.memoryLimitMb,
         topics: adminQuestions.topics,
         createdAt: adminQuestions.createdAt,
-        testCaseCount: sql<number>`(
-          SELECT COUNT(*)::int 
-          FROM ${adminTestCases} 
-          WHERE ${adminTestCases.questionTitle} = ${adminQuestions.title}
-        )`,
+        testCaseCount: sql<number>`COALESCE(tc.count, 0)`,
       })
       .from(adminQuestions)
+      .leftJoin(
+        db
+          .select({
+            questionTitle: adminTestCases.questionTitle,
+            count: sql<number>`count(*)::int`.as('count'),
+          })
+          .from(adminTestCases)
+          .groupBy(adminTestCases.questionTitle)
+          .as('tc'),
+        sql`tc.question_title = ${adminQuestions.title}`,
+      )
       .where(where)
-      .orderBy(desc(adminQuestions.createdAt))
+      .orderBy(desc(adminQuestions.createdAt), asc(adminQuestions.id))
       .limit(limit)
       .offset(offset);
 
@@ -534,6 +552,38 @@ export async function getAllQuestionsFromLibrary(params?: {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     return { success: false, error: errorMessage, data: [], totalCount: 0, hasMore: false, page: 1, limit: 50 };
+  }
+}
+
+/**
+ * Full record for one library question. The list query only ships a short
+ * preview of each description, so the details dialog fetches the real statement
+ * on demand rather than every card paying for it up front.
+ */
+export async function getLibraryQuestion(id: string) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+
+    const [question] = await db
+      .select({
+        id: adminQuestions.id,
+        title: adminQuestions.title,
+        description: adminQuestions.description,
+        difficulty: adminQuestions.difficulty,
+        points: adminQuestions.points,
+        timeLimitSeconds: adminQuestions.timeLimitSeconds,
+        memoryLimitMb: adminQuestions.memoryLimitMb,
+        topics: adminQuestions.topics,
+      })
+      .from(adminQuestions)
+      .where(eq(adminQuestions.id, id))
+      .limit(1);
+
+    if (!question) return { success: false, error: 'Question not found' };
+    return { success: true, data: question };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
 

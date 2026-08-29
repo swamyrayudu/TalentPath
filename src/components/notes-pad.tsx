@@ -510,7 +510,7 @@ export default function NotesPad() {
         className="fixed z-40 select-none"
       >
         <div
-          className="w-12 h-12 rounded-full flex items-center justify-center backdrop-blur-md border shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl"
+          className="w-12 h-12 rounded-full flex items-center justify-center backdrop-blur-md border shadow-lg transition-colors duration-200"
           style={{
             backgroundColor:
               noteCount > 0
@@ -743,7 +743,7 @@ export default function NotesPad() {
                   <button
                     key={c}
                     onClick={() => { setBoardColor(c); setBoardTool('pen'); }}
-                    className="w-5 h-5 rounded-full transition-transform hover:scale-125 flex-shrink-0"
+                    className="w-5 h-5 rounded-full flex-shrink-0"
                     style={{
                       backgroundColor: c,
                       outline: boardColor === c && boardTool === 'pen' ? `2px solid ${accent}` : '1px solid rgba(128,128,128,0.3)',
@@ -815,7 +815,7 @@ export default function NotesPad() {
                     key={p}
                     onClick={() => switchPage(p)}
                     className={`w-6 h-6 rounded-full text-[10px] font-bold flex items-center justify-center transition-all ${
-                      boardPage === p ? 'text-white scale-110' : `${theme.subtext} ${isDark ? 'bg-white/5' : 'bg-black/5'} hover:scale-105`
+                      boardPage === p ? 'text-white' : `${theme.subtext} ${isDark ? 'bg-white/5' : 'bg-black/5'}`
                     }`}
                     style={boardPage === p ? { backgroundColor: accent } : {}}
                   >
@@ -861,7 +861,7 @@ export default function NotesPad() {
                   {/* Board toggle — highlighted */}
                   <button
                     onClick={() => setViewMode('board')}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center transition-all hover:scale-110"
+                    className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
                     style={{
                       backgroundColor: `${accent}22`,
                       color: accent,

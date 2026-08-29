@@ -1,30 +1,54 @@
 'use client';
-'use client';
-import React from 'react';
-import { useState, useEffect, useRef } from 'react';
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
-import { addExistingQuestionToContest, getAllQuestionsFromLibrary } from '@/actions/contest.actions';
+import {
+  addExistingQuestionToContest,
+  getAllQuestionsFromLibrary,
+  getLibraryQuestion,
+} from '@/actions/contest.actions';
 import { getAllTopics, getAdminTestCases } from '@/actions/admin-questions.actions';
 import { toast } from 'sonner';
-import { Search, Plus, Loader2, BookOpen, TestTube, Tag } from 'lucide-react';
+import { Search, Plus, Loader2, BookOpen } from 'lucide-react';
+import { ProblemStatement } from './problem-statement';
+
+const PAGE_SIZE = 20;
+
+const DIFFICULTY_STYLE: Record<string, string> = {
+  EASY: 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400',
+  MEDIUM: 'border-amber-500/40 text-amber-600 dark:text-amber-400',
+  HARD: 'border-rose-500/40 text-rose-600 dark:text-rose-400',
+};
+
+/**
+ * Rows show a plain-text lead-in. Statements are Markdown documents, so the raw
+ * text would leak `###` and backticks into the list.
+ */
+function plainPreview(description: string) {
+  return description
+    .split(/\n#{1,6}\s/)[0]
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/[`*_>#]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 interface Question {
   id: string;
@@ -57,485 +81,378 @@ interface QuestionLibraryProps {
 export function QuestionLibrary({ contestId, orderIndex }: QuestionLibraryProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
-  const [topicFilter, setTopicFilter] = useState<string>('all');
-  const [topics, setTopics] = useState<string[]>([]);
-  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
-  const [selectedTestCases, setSelectedTestCases] = useState<TestCase[]>([]);
-  const [loadingTestCases, setLoadingTestCases] = useState(false);
+  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  
-  const observerTarget = useRef<HTMLDivElement>(null);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  // Load topics on mount
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [difficultyFilter, setDifficultyFilter] = useState('all');
+  const [topicFilter, setTopicFilter] = useState('all');
+  const [topics, setTopics] = useState<string[]>([]);
+
+  const [selected, setSelected] = useState<Question | null>(null);
+  const [selectedTestCases, setSelectedTestCases] = useState<TestCase[]>([]);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [adding, setAdding] = useState<string | null>(null);
+
+  const observerTarget = useRef<HTMLDivElement>(null);
+
+  // Only the newest request is allowed to write state; a slow page-1 response
+  // must not overwrite results the user has already filtered past.
+  const requestId = useRef(0);
+
   useEffect(() => {
-    if (open) {
-      loadTopics();
-    }
+    if (!open) return;
+    getAllTopics()
+      .then(setTopics)
+      .catch(() => setTopics([]));
   }, [open]);
 
-  // Debounce search query
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 500);
-
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Reset and reload questions when filters change
-  useEffect(() => {
-    if (open) {
-      setPage(1);
-      setQuestions([]);
-      setHasMore(true);
-      loadQuestions(1);
-    }
-  }, [open, debouncedSearch, difficultyFilter, topicFilter]);
+  const loadPage = useCallback(
+    async (nextPage: number) => {
+      const id = ++requestId.current;
+      if (nextPage === 1) setIsLoading(true);
+      else setLoadingMore(true);
+      try {
+        const result = await getAllQuestionsFromLibrary({
+          page: nextPage,
+          limit: PAGE_SIZE,
+          search: debouncedSearch,
+          difficulty: difficultyFilter,
+          topic: topicFilter,
+        });
+        if (id !== requestId.current) return;
 
-  // Infinite scroll observer
+        if (!result.success) {
+          toast.error(result.error || 'Failed to load questions');
+          return;
+        }
+        const rows = result.data as Question[];
+        setTotal(result.totalCount || 0);
+        setHasMore(Boolean(result.hasMore));
+        setQuestions((prev) => (nextPage === 1 ? rows : [...prev, ...rows]));
+      } catch (error) {
+        if (id === requestId.current) {
+          toast.error(error instanceof Error ? error.message : String(error));
+        }
+      } finally {
+        if (id === requestId.current) {
+          setIsLoading(false);
+          setLoadingMore(false);
+        }
+      }
+    },
+    [debouncedSearch, difficultyFilter, topicFilter],
+  );
+
+  // Filters changed (or the dialog opened): restart from page 1.
   useEffect(() => {
+    if (!open) return;
+    setPage(1);
+    setHasMore(true);
+    loadPage(1);
+  }, [open, loadPage]);
+
+  useEffect(() => {
+    if (page > 1) loadPage(page);
+  }, [page, loadPage]);
+
+  // Infinite scroll. The cleanup captures the node it observed — reading
+  // `.current` at cleanup time can unobserve the wrong element after a re-render.
+  useEffect(() => {
+    const node = observerTarget.current;
+    if (!node || !open) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loadingMore && !isLoading) {
-          setPage((prev) => prev + 1);
-        }
+        if (entries[0].isIntersecting) setPage((p) => p + 1);
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
+    if (hasMore && !isLoading && !loadingMore) observer.observe(node);
+    return () => observer.disconnect();
+  }, [open, hasMore, isLoading, loadingMore]);
 
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
-    }
-
-    return () => {
-      if (observerTarget.current) {
-        observer.unobserve(observerTarget.current);
+  const openDetails = async (question: Question) => {
+    setSelected(question);
+    setSelectedTestCases([]);
+    setLoadingDetails(true);
+    try {
+      // The list only carries a truncated description, so pull the real
+      // statement and the samples together when the row is opened.
+      const [full, cases] = await Promise.all([
+        getLibraryQuestion(question.id),
+        getAdminTestCases(question.title),
+      ]);
+      if (full.success && full.data) {
+        setSelected((cur) => (cur?.id === question.id ? { ...cur, ...full.data } : cur));
       }
-    };
-  }, [hasMore, loadingMore, isLoading]);
-
-  // Load more when page changes
-  useEffect(() => {
-    if (page > 1 && hasMore) {
-      loadQuestions(page);
-    }
-  }, [page]);
-
-  const loadTopics = async () => {
-    try {
-      const topicsList = await getAllTopics();
-        setTopics(topicsList);
-  } catch (error) {
-        console.error('Failed to load topics:', error instanceof Error ? error.message : String(error));
-    }
-  };
-
-  const loadQuestions = async (currentPage: number) => {
-    if (currentPage === 1) {
-      setIsLoading(true);
-    } else {
-      setLoadingMore(true);
-    }
-
-    try {
-      const result = await getAllQuestionsFromLibrary({
-        page: currentPage,
-        limit: 20,
-        search: debouncedSearch,
-        difficulty: difficultyFilter,
-        topic: topicFilter,
-      });
-
-      if (result.success && result.data) {
-        if (currentPage === 1) {
-          setQuestions(result.data);
-        } else {
-          // Avoid duplicates by filtering out questions that already exist
-          setQuestions((prev) => {
-            const existingIds = new Set(prev.map(q => q.id));
-            const newQuestions = result.data.filter(q => !existingIds.has(q.id));
-            return [...prev, ...newQuestions];
-          });
-        }
-        setHasMore(result.hasMore || false);
-      } else {
-        toast.error('Failed to load questions');
-      }
-  } catch (error) {
-        toast.error(error instanceof Error ? error.message : String(error));
-    } finally {
-      setIsLoading(false);
-      setLoadingMore(false);
-    }
-  };
-
-  const loadTestCases = async (questionTitle: string) => {
-    setLoadingTestCases(true);
-    try {
-      const testCases = await getAdminTestCases(questionTitle);
-      // Show only sample test cases (first 2)
-      const sampleTestCases = testCases.filter(tc => tc.isSample).slice(0, 2);
-      setSelectedTestCases(sampleTestCases);
-  } catch (error) {
-        console.error('Failed to load test cases:', error instanceof Error ? error.message : String(error));
+      setSelectedTestCases(cases.filter((tc) => tc.isSample).slice(0, 3));
+    } catch {
       setSelectedTestCases([]);
     } finally {
-      setLoadingTestCases(false);
+      setLoadingDetails(false);
     }
   };
 
-  const handleQuestionClick = (question: Question) => {
-    setSelectedQuestion(question);
-    loadTestCases(question.title);
-  };
-
-  const handleAddQuestion = async (question: Question) => {
-    setIsLoading(true);
+  const addQuestion = async (question: Question) => {
+    setAdding(question.id);
     try {
       const result = await addExistingQuestionToContest({
         contestId,
         existingQuestionId: question.id,
         orderIndex,
       });
-
       if (result.success) {
-        toast.success(`"${question.title}" added to contest!`);
+        toast.success(`"${question.title}" added to contest`);
+        setSelected(null);
         setOpen(false);
         router.refresh();
       } else {
         toast.error(result.error || 'Failed to add question');
       }
-  } catch (error) {
-        toast.error(error instanceof Error ? error.message : String(error));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
     } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'EASY':
-        return 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20';
-      case 'MEDIUM':
-        return 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20';
-      case 'HARD':
-        return 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20';
-      default:
-        return '';
+      setAdding(null);
     }
   };
 
   return (
     <>
-      <Button 
-        variant="outline" 
-        onClick={() => setOpen(true)}
-        className="w-full"
-      >
+      <Button variant="outline" onClick={() => setOpen(true)} className="w-full">
         <BookOpen className="h-4 w-4 mr-2" />
         Add from Question Library
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-4xl h-[90vh] sm:h-[85vh] flex flex-col p-0">
-          <div className="flex flex-col h-full overflow-hidden">
-            <DialogHeader className="shrink-0 px-4 lg:px-6 pt-4 lg:pt-6 pb-3 lg:pb-4">
-              <DialogTitle className="flex items-center gap-2 text-base lg:text-lg">
-                <BookOpen className="h-4 w-4 lg:h-5 lg:w-5" />
-                Question Library
-              </DialogTitle>
-              <DialogDescription className="text-xs lg:text-sm">
-                Browse and add existing questions with test cases to your contest
-              </DialogDescription>
-            </DialogHeader>
+        <DialogContent className="max-w-3xl h-[85vh] flex flex-col gap-0 p-0">
+          <DialogHeader className="shrink-0 border-b px-5 py-4">
+            <DialogTitle className="text-base">Question Library</DialogTitle>
+            <DialogDescription className="text-xs">
+              {total > 0
+                ? `${total} question${total === 1 ? '' : 's'} with ready-made test cases`
+                : 'Questions with ready-made test cases'}
+            </DialogDescription>
+          </DialogHeader>
 
-            {/* Filters */}
-            <div className="shrink-0 px-4 lg:px-6 pb-3 lg:pb-4">
-              <div className="flex gap-2 lg:gap-3 flex-wrap">
-                <div className="flex-1 min-w-[150px] lg:min-w-[200px] relative">
-                  <Search className="absolute left-2 lg:left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 lg:h-4 lg:w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search questions..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-7 lg:pl-9 h-8 lg:h-10 text-xs lg:text-sm"
-                  />
-                </div>
-                <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
-                  <SelectTrigger className="w-28 lg:w-40 h-8 lg:h-10 text-xs lg:text-sm">
-                    <SelectValue placeholder="Difficulty" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all" className="text-xs lg:text-sm">All Levels</SelectItem>
-                    <SelectItem value="EASY" className="text-xs lg:text-sm">Easy</SelectItem>
-                    <SelectItem value="MEDIUM" className="text-xs lg:text-sm">Medium</SelectItem>
-                    <SelectItem value="HARD" className="text-xs lg:text-sm">Hard</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={topicFilter} onValueChange={setTopicFilter}>
-                  <SelectTrigger className="w-32 lg:w-48 h-8 lg:h-10 text-xs lg:text-sm">
-                    <SelectValue placeholder="Topic" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all" className="text-xs lg:text-sm">All Topics</SelectItem>
-                    {topics.map((topic) => (
-                      <SelectItem key={topic} value={topic} className="text-xs lg:text-sm">
-                        {topic}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {/* Filters */}
+          <div className="shrink-0 flex gap-2 border-b px-5 py-3">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search questions"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-9 pl-8 text-sm"
+              />
+            </div>
+            <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
+              <SelectTrigger className="h-9 w-28 text-sm shrink-0">
+                <SelectValue placeholder="Level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All levels</SelectItem>
+                <SelectItem value="EASY">Easy</SelectItem>
+                <SelectItem value="MEDIUM">Medium</SelectItem>
+                <SelectItem value="HARD">Hard</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={topicFilter} onValueChange={setTopicFilter}>
+              <SelectTrigger className="h-9 w-36 text-sm shrink-0">
+                <SelectValue placeholder="Topic" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All topics</SelectItem>
+                {topics.map((topic) => (
+                  <SelectItem key={topic} value={topic}>
+                    {topic}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Rows */}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {isLoading ? (
+              <div className="flex h-full items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               </div>
-            </div>
-
-            {/* Questions List */}
-            <div className="flex-1 min-h-0 overflow-hidden px-4 lg:px-6 pb-4 lg:pb-6">
-              {isLoading && page === 1 ? (
-                <div className="flex items-center justify-center h-full">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : questions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full">
-                  <BookOpen className="h-12 w-12 text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground">
-                    No questions match your filters
-                  </p>
-                </div>
-              ) : (
-                <div className="h-full overflow-y-auto pr-2 -mr-2 space-y-2 lg:space-y-3" ref={scrollAreaRef}>
-                  {questions.map((question, index) => (
-                    <Card
-                      key={`${question.id}-${index}`}
-                      className="hover:border-primary/50 transition-colors cursor-pointer"
-                      onClick={() => handleQuestionClick(question)}
+            ) : questions.length === 0 ? (
+              <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+                <p className="text-sm text-muted-foreground">No questions match these filters.</p>
+              </div>
+            ) : (
+              <ul className="divide-y">
+                {questions.map((question) => (
+                  <li key={question.id}>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => openDetails(question)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          openDetails(question);
+                        }
+                      }}
+                      className="flex w-full items-center gap-3 px-5 py-3 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:bg-muted/50"
                     >
-                      <CardContent className="p-3 lg:p-4">
-                        <div className="flex items-start justify-between gap-2 lg:gap-4">
-                          <div className="flex-1 space-y-1.5 lg:space-y-2 min-w-0">
-                            <div className="flex items-center gap-1.5 lg:gap-2 flex-wrap">
-                              <h3 className="font-semibold text-sm lg:text-lg break-words">{question.title}</h3>
-                              <Badge 
-                                variant="outline" 
-                                className={`${getDifficultyColor(question.difficulty)} text-[10px] lg:text-xs px-1 lg:px-2`}
-                              >
-                                {question.difficulty}
-                              </Badge>
-                              <Badge variant="secondary" className="text-[10px] lg:text-xs px-1 lg:px-2">
-                                {question.points} pts
-                              </Badge>
-                            </div>
-                            
-                            <p className="text-xs lg:text-sm text-muted-foreground line-clamp-2 break-words">
-                              {question.description}
-                            </p>
-                            
-                            {question.topics && question.topics.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {question.topics.slice(0, 3).map((topic, topicIndex) => (
-                                  <Badge key={`${question.id}-topic-${topicIndex}-${topic}`} variant="outline" className="text-[10px] lg:text-xs px-1 lg:px-2">
-                                    <Tag className="h-2 w-2 lg:h-3 lg:w-3 mr-0.5 lg:mr-1" />
-                                    {topic}
-                                  </Badge>
-                                ))}
-                                {question.topics.length > 3 && (
-                                  <Badge variant="outline" className="text-[10px] lg:text-xs px-1 lg:px-2">
-                                    +{question.topics.length - 3}
-                                  </Badge>
-                                )}
-                              </div>
-                            )}
-                            
-                            <div className="flex items-center gap-2 lg:gap-4 text-[10px] lg:text-xs text-muted-foreground flex-wrap">
-                              <span className="flex items-center gap-0.5 lg:gap-1">
-                                <TestTube className="h-2.5 w-2.5 lg:h-3 lg:w-3" />
-                                {question.testCaseCount} tests
-                              </span>
-                              <span>
-                                {question.timeLimitSeconds || 2}s
-                              </span>
-                              <span>
-                                {question.memoryLimitMb || 256}MB
-                              </span>
-                            </div>
-                          </div>
-
-                          <Button
-                            size="sm"
-                            className="shrink-0 h-7 lg:h-8 text-xs lg:text-sm px-2 lg:px-3"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddQuestion(question);
-                            }}
-                            disabled={isLoading}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline gap-2">
+                          <span className="truncate text-sm font-medium">{question.title}</span>
+                          <span
+                            className={`shrink-0 text-[11px] ${
+                              question.difficulty === 'EASY'
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : question.difficulty === 'MEDIUM'
+                                  ? 'text-amber-600 dark:text-amber-400'
+                                  : 'text-rose-600 dark:text-rose-400'
+                            }`}
                           >
-                            <Plus className="h-3 w-3 lg:h-4 lg:w-4 lg:mr-1" />
-                            <span className="hidden sm:inline">Add</span>
-                          </Button>
+                            {question.difficulty[0] + question.difficulty.slice(1).toLowerCase()}
+                          </span>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                          {question.topics?.length
+                            ? question.topics.join(' · ')
+                            : plainPreview(question.description)}
+                        </p>
+                      </div>
 
-                  {/* Loading more indicator */}
-                  {loadingMore && (
-                    <div className="flex justify-center py-4">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      <span className="hidden shrink-0 text-xs tabular-nums text-muted-foreground sm:block">
+                        {question.testCaseCount} tests
+                      </span>
+                      <span className="hidden shrink-0 text-xs tabular-nums text-muted-foreground sm:block">
+                        {question.points} pts
+                      </span>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 shrink-0 px-2 text-xs"
+                        disabled={adding === question.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addQuestion(question);
+                        }}
+                      >
+                        {adding === question.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Plus className="h-3.5 w-3.5" />
+                        )}
+                        <span className="ml-1 hidden sm:inline">Add</span>
+                      </Button>
                     </div>
-                  )}
+                  </li>
+                ))}
+              </ul>
+            )}
 
-                  {/* Infinite scroll trigger */}
-                  <div ref={observerTarget} className="h-4" />
-
-                  {/* No more results */}
-                  {!hasMore && questions.length > 0 && (
-                    <div className="text-center py-4 text-sm text-muted-foreground">
-                      No more questions
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            {loadingMore && (
+              <div className="flex justify-center py-3">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            <div ref={observerTarget} className="h-px" />
+            {!hasMore && questions.length > 0 && (
+              <p className="py-4 text-center text-xs text-muted-foreground">
+                End of library
+              </p>
+            )}
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Question Details Dialog */}
-      {selectedQuestion && (
-        <Dialog open={!!selectedQuestion} onOpenChange={() => setSelectedQuestion(null)}>
-          <DialogContent className="max-w-3xl h-[90vh] sm:h-[85vh] flex flex-col p-0">
-            <div className="flex flex-col h-full overflow-hidden">
-              <DialogHeader className="shrink-0 px-4 lg:px-6 pt-4 lg:pt-6 pb-3 lg:pb-4">
-                <DialogTitle className="break-words text-base lg:text-lg">{selectedQuestion.title}</DialogTitle>
-                <div className="flex items-center gap-1.5 lg:gap-2 mt-2 flex-wrap">
-                  <Badge 
-                    variant="outline" 
-                    className={`${getDifficultyColor(selectedQuestion.difficulty)} text-[10px] lg:text-xs px-1 lg:px-2`}
-                  >
-                    {selectedQuestion.difficulty}
-                  </Badge>
-                  <Badge variant="secondary" className="text-[10px] lg:text-xs px-1 lg:px-2">{selectedQuestion.points} points</Badge>
-                </div>
+      {/* Details */}
+      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <DialogContent className="max-w-2xl h-[85vh] flex flex-col gap-0 p-0">
+          {selected && (
+            <>
+              <DialogHeader className="shrink-0 border-b px-5 py-4">
+                <DialogTitle className="text-base">{selected.title}</DialogTitle>
+                <DialogDescription asChild>
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <Badge variant="outline" className={`${DIFFICULTY_STYLE[selected.difficulty]} text-[11px]`}>
+                      {selected.difficulty}
+                    </Badge>
+                    <Badge variant="outline" className="text-[11px]">{selected.points} pts</Badge>
+                    <Badge variant="outline" className="text-[11px]">{selected.testCaseCount} tests</Badge>
+                    <Badge variant="outline" className="text-[11px]">{selected.timeLimitSeconds ?? 2}s</Badge>
+                    <Badge variant="outline" className="text-[11px]">{selected.memoryLimitMb ?? 256} MB</Badge>
+                  </div>
+                </DialogDescription>
               </DialogHeader>
 
-              <div className="flex-1 min-h-0 overflow-y-auto px-4 lg:px-6 pb-4 lg:pb-6">
-                <div className="space-y-3 lg:space-y-4">
-                  <div>
-                    <h4 className="font-semibold mb-2 text-sm lg:text-base">Description</h4>
-                    <div className="text-xs lg:text-sm text-muted-foreground whitespace-pre-wrap break-words">
-                      {selectedQuestion.description}
-                    </div>
+              <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
+                {loadingDetails ? (
+                  <div className="flex justify-center py-10">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   </div>
+                ) : (
+                  <>
+                    <ProblemStatement content={selected.description} compact />
 
-                  <div className="grid grid-cols-2 gap-2 lg:gap-4 text-xs lg:text-sm">
-                    <div>
-                      <span className="font-semibold">Time Limit:</span>{' '}
-                      {selectedQuestion.timeLimitSeconds || 2}s
-                    </div>
-                    <div>
-                      <span className="font-semibold">Memory Limit:</span>{' '}
-                      {selectedQuestion.memoryLimitMb || 256}MB
-                    </div>
-                    <div>
-                      <span className="font-semibold">Test Cases:</span>{' '}
-                      {selectedQuestion.testCaseCount}
-                    </div>
-                    <div>
-                      <span className="font-semibold">Points:</span>{' '}
-                      {selectedQuestion.points}
-                    </div>
-                  </div>
-
-                  {selectedQuestion.topics && selectedQuestion.topics.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold mb-2 text-sm lg:text-base">Topics</h4>
-                      <div className="flex flex-wrap gap-1.5 lg:gap-2">
-                        {selectedQuestion.topics.map((topic, idx) => (
-                          <Badge key={`selected-topic-${idx}-${topic}`} variant="outline" className="text-[10px] lg:text-xs px-1 lg:px-2">
-                            <Tag className="h-2.5 w-2.5 lg:h-3 lg:w-3 mr-0.5 lg:mr-1" />
-                            {topic}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Sample Test Cases */}
-                  <div>
-                    <h4 className="font-semibold mb-2 flex items-center gap-1.5 lg:gap-2 text-sm lg:text-base">
-                      <TestTube className="h-3 w-3 lg:h-4 lg:w-4" />
-                      Sample Test Cases
-                    </h4>
-                    {loadingTestCases ? (
-                      <div className="flex items-center justify-center py-4">
-                        <Loader2 className="h-4 w-4 lg:h-5 lg:w-5 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : selectedTestCases.length > 0 ? (
-                      <div className="space-y-2 lg:space-y-3">
-                        {selectedTestCases.map((testCase, idx) => (
-                          <Card key={testCase.id} className="border-2">
-                            <CardContent className="p-2 lg:p-3">
-                              <div className="space-y-1.5 lg:space-y-2">
-                                <div className="flex items-center justify-between mb-1.5 lg:mb-2 flex-wrap gap-1 lg:gap-2">
-                                  <span className="text-xs lg:text-sm font-semibold">Example {idx + 1}</span>
-                                  <Badge variant="outline" className="text-[10px] lg:text-xs px-1 lg:px-2">{testCase.points} points</Badge>
-                                </div>
+                    {selectedTestCases.length > 0 && (
+                      <div className="mt-6">
+                        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          Sample test cases
+                        </h4>
+                        <div className="space-y-2">
+                          {selectedTestCases.map((tc, i) => (
+                            <div key={tc.id} className="rounded-md border p-3">
+                              <p className="mb-2 text-xs font-medium">Example {i + 1}</p>
+                              <div className="grid gap-2 sm:grid-cols-2">
                                 <div>
-                                  <p className="text-[10px] lg:text-xs font-semibold text-muted-foreground mb-1">Input:</p>
-                                  <pre className="bg-muted/50 p-1.5 lg:p-2 rounded text-[10px] lg:text-xs font-mono overflow-x-auto border whitespace-pre-wrap break-all">
-                                    {testCase.input.replace(/\\n/g, '\n')}
+                                  <p className="mb-1 text-[11px] text-muted-foreground">Input</p>
+                                  <pre className="overflow-x-auto rounded bg-muted/50 p-2 font-mono text-[11px] whitespace-pre">
+                                    {tc.input.replace(/\\n/g, '\n')}
                                   </pre>
                                 </div>
                                 <div>
-                                  <p className="text-[10px] lg:text-xs font-semibold text-muted-foreground mb-1">Expected Output:</p>
-                                  <pre className="bg-muted/50 p-1.5 lg:p-2 rounded text-[10px] lg:text-xs font-mono overflow-x-auto border whitespace-pre-wrap break-all">
-                                    {testCase.expectedOutput.replace(/\\n/g, '\n')}
+                                  <p className="mb-1 text-[11px] text-muted-foreground">Output</p>
+                                  <pre className="overflow-x-auto rounded bg-muted/50 p-2 font-mono text-[11px] whitespace-pre">
+                                    {tc.expectedOutput.replace(/\\n/g, '\n')}
                                   </pre>
                                 </div>
                               </div>
-                            </CardContent>
-                          </Card>
-                        ))}
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    ) : (
-                      <p className="text-xs lg:text-sm text-muted-foreground">No sample test cases available</p>
                     )}
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-3 lg:pt-4 sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t -mx-4 lg:-mx-6 px-4 lg:px-6 py-3 lg:py-4 mt-3 lg:mt-4">
-                    <Button variant="outline" onClick={() => setSelectedQuestion(null)} size="sm" className="h-8 lg:h-10 text-xs lg:text-sm">
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        handleAddQuestion(selectedQuestion);
-                        setSelectedQuestion(null);
-                      }}
-                      disabled={isLoading}
-                      size="sm"
-                      className="h-8 lg:h-10 text-xs lg:text-sm"
-                    >
-                      {isLoading ? (
-                        <Loader2 className="h-3 w-3 lg:h-4 lg:w-4 lg:mr-2 animate-spin" />
-                      ) : (
-                        <Plus className="h-3 w-3 lg:h-4 lg:w-4 lg:mr-2" />
-                      )}
-                      Add to Contest
-                    </Button>
-                  </div>
-                </div>
+                  </>
+                )}
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+
+              <div className="shrink-0 flex justify-end gap-2 border-t px-5 py-3">
+                <Button variant="outline" size="sm" onClick={() => setSelected(null)}>
+                  Cancel
+                </Button>
+                <Button size="sm" disabled={adding === selected.id} onClick={() => addQuestion(selected)}>
+                  {adding === selected.id ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Plus className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  Add to contest
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
