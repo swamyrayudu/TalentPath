@@ -138,6 +138,16 @@ const developers = [
       whatsapp: 'https://wa.me/',
     },
   },
+   {
+    name: 'S Dhanush',
+    role: 'Full Stack Developer',
+    socials: {
+      github: 'https://github.com/swamyrayudu',
+      linkedin: 'https://www.linkedin.com/in/dhanush-srinivasa-4a6678300/',
+      instagram: 'https://www.instagram.com',
+      whatsapp: 'https://wa.me/919030512334',
+    },
+  }
 ];
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
