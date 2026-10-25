@@ -6,7 +6,6 @@ import {
   LearnerProfile,
   SuggestionResult,
   FOCUS_LINKS,
-  CORE_TOPICS,
 } from './ai-suggestions-types';
 
 export * from './ai-suggestions-types';

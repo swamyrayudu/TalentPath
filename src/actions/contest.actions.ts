@@ -1806,7 +1806,7 @@ export async function getUserContestStats(userId: string) {
         totalAccepted,
         uniqueProblemsSolved,
         questionStats,
-        recentSubmissions: allSubmissions.slice(0, 10),
+        recentSubmissions: allSubmissions,
       },
     };
   } catch (error) {

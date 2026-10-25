@@ -12,7 +12,6 @@ import {
   Trophy,
   Brain,
   Flame,
-  CheckCircle2,
   ArrowRight,
   Target,
   Briefcase,
@@ -26,6 +25,8 @@ import {
   AiSuggestionsSection,
   AiSuggestionsSkeleton,
 } from '@/components/dashboard/ai-suggestions-section';
+import { RecentlySolvedPaginated } from '@/components/dashboard/recently-solved-paginated';
+import { ContestSubmissionsPaginated } from '@/components/dashboard/contest-submissions-paginated';
 
 interface ProgressWithProblem {
   id: number;
@@ -302,7 +303,7 @@ export default async function Dashboard() {
     easy: solved.filter(p => p.difficulty?.toUpperCase() === 'EASY').length,
     medium: solved.filter(p => p.difficulty?.toUpperCase() === 'MEDIUM').length,
     hard: solved.filter(p => p.difficulty?.toUpperCase() === 'HARD').length,
-    recentSubmissions: solved.slice(0, 8),
+    recentSubmissions: solved,
   };
 
   // Solved in the last 7 days — a more actionable number than a lifetime total.
@@ -658,32 +659,7 @@ export default async function Dashboard() {
                     ) : null
                   }
                 >
-                  {dsaStats.recentSubmissions.length === 0 ? (
-                    <EmptyState
-                      icon={Code2}
-                      message="Nothing solved yet."
-                      href="/dsasheet"
-                      cta="Start solving"
-                    />
-                  ) : (
-                    <div>
-                      {dsaStats.recentSubmissions.map(item => (
-                        <ListRow
-                          key={item.id}
-                          title={item.title || 'Untitled problem'}
-                          meta={item.solvedAt ? shortDate(item.solvedAt) : '—'}
-                          trailing={
-                            <div className="flex shrink-0 items-center gap-2.5">
-                              <Badge variant="outline" className="text-xs font-normal">
-                                {item.difficulty || 'N/A'}
-                              </Badge>
-                              <CheckCircle2 className="size-4 text-emerald-500" />
-                            </div>
-                          }
-                        />
-                      ))}
-                    </div>
-                  )}
+                  <RecentlySolvedPaginated items={dsaStats.recentSubmissions} pageSize={5} />
                 </Panel>
               </div>
 
@@ -784,36 +760,7 @@ export default async function Dashboard() {
                 </Panel>
 
                 <Panel title="Recent submissions">
-                  {contestStats.recentSubmissions.length === 0 ? (
-                    <EmptyState
-                      icon={Trophy}
-                      message="No contest submissions yet."
-                      href="/contest"
-                      cta="Join a contest"
-                    />
-                  ) : (
-                    <div>
-                      {contestStats.recentSubmissions.slice(0, 8).map((submission, index) => (
-                        <ListRow
-                          key={index}
-                          title={submission.questionTitle || 'Untitled problem'}
-                          meta={shortDate(submission.submittedAt)}
-                          trailing={
-                            <Badge
-                              variant="outline"
-                              className={`shrink-0 text-xs font-normal ${
-                                submission.verdict === 'accepted'
-                                  ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400'
-                                  : ''
-                              }`}
-                            >
-                              {submission.verdict === 'accepted' ? 'Accepted' : 'Pending'}
-                            </Badge>
-                          }
-                        />
-                      ))}
-                    </div>
-                  )}
+                  <ContestSubmissionsPaginated items={contestStats.recentSubmissions} pageSize={5} />
                 </Panel>
               </div>
 
