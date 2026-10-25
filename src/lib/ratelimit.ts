@@ -1,8 +1,8 @@
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
-const redisUrl = process.env.UPSTASH_REDIS_REST_URL2;
-const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN2;
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL2 || process.env.UPSTASH_REDIS_REST_URL1;
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN2 || process.env.UPSTASH_REDIS_REST_TOKEN1;
 
 /**
  * Compiler Rate Limiter

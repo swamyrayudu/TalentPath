@@ -40,4 +40,8 @@ emailWorker.on('failed', (job, err) => {
   console.error(`[Worker] Job ${job?.id} failed with error:`, err);
 });
 
+emailWorker.on('error', (err) => {
+  console.error('[Worker] Worker error:', err.message);
+});
+
 console.log('[Worker] Email worker process successfully initialized and listening for jobs.');

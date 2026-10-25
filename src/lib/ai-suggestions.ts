@@ -1,86 +1,21 @@
 import 'server-only';
 
 import { getCachedData, setCachedData } from '@/lib/redis';
+import {
+  Suggestion,
+  LearnerProfile,
+  SuggestionResult,
+  FOCUS_LINKS,
+  CORE_TOPICS,
+} from './ai-suggestions-types';
 
-/**
- * Turns a learner's own numbers into a handful of "do this next" suggestions.
- *
- * The model gets a compact profile — never raw rows — and must answer in JSON.
- * Every failure path (no key, bad JSON, network) falls through to the rule-based
- * suggestions below, so the dashboard always has something useful to show.
- */
-
-export type SuggestionFocus =
-  | 'daily'
-  | 'dsa'
-  | 'aptitude'
-  | 'contest'
-  | 'interview'
-  | 'roadmap'
-  | 'jobs';
-
-export interface Suggestion {
-  title: string;
-  detail: string;
-  focus: SuggestionFocus;
-}
-
-export interface LearnerProfile {
-  solvedTotal: number;
-  easy: number;
-  medium: number;
-  hard: number;
-  solvedThisWeek: number;
-  daysSinceLastSolve: number | null;
-  topTopics: string[];
-  missingTopics: string[];
-  aptitudeTests: number;
-  aptitudeAverage: number;
-  aptitudeWeakest: { topic: string; score: number } | null;
-  aptitudeStrongest: { topic: string; score: number } | null;
-  contestSubmissions: number;
-  contestAcceptance: number | null;
-  contestSolved: number;
-  dailyStreak: number;
-  dailyLongest: number;
-  dailyThisMonth: number;
-  dailySolvedToday: boolean;
-  interviewsCompleted: number;
-}
+export * from './ai-suggestions-types';
 
 const SUGGESTIONS_TTL = 6 * 60 * 60; // 6 hours
 
 export const getSuggestionsCacheKey = (userId: string) => `ai:suggestions:${userId}`;
 
-export const FOCUS_LINKS: Record<SuggestionFocus, { href: string; label: string }> = {
-  daily: { href: '/dsasheet#daily-problem', label: 'Today’s problem' },
-  dsa: { href: '/dsasheet', label: 'Open DSA sheet' },
-  aptitude: { href: '/aptitude', label: 'Take a test' },
-  contest: { href: '/contest', label: 'Browse contests' },
-  interview: { href: '/interview', label: 'Mock interview' },
-  roadmap: { href: '/roadmap', label: 'View roadmap' },
-  jobs: { href: '/jobs', label: 'See jobs' },
-};
-
 const VALID_FOCUS = new Set<string>(Object.keys(FOCUS_LINKS));
-
-/** Topics an interview loop keeps coming back to, used to spot coverage gaps. */
-export const CORE_TOPICS = [
-  'Array',
-  'String',
-  'Hash Table',
-  'Two Pointers',
-  'Binary Search',
-  'Sliding Window',
-  'Linked List',
-  'Stack',
-  'Tree',
-  'Graph',
-  'Dynamic Programming',
-  'Greedy',
-  'Backtracking',
-  'Heap (Priority Queue)',
-];
 
 /* ── Rule-based fallback ─────────────────────────────────────────── */
 
@@ -330,20 +265,8 @@ async function generateSuggestions(profile: LearnerProfile): Promise<Suggestion[
   }
 }
 
-export interface SuggestionResult {
-  suggestions: Suggestion[];
-  source: 'ai' | 'rules';
-  generatedAt: string;
-}
 
-/**
- * Cached per user. The cache key carries a fingerprint of the profile so the
- * advice refreshes as soon as the numbers behind it move, not on a timer.
- */
-export async function getAiSuggestions(
-  userId: string,
-  profile: LearnerProfile
-): Promise<SuggestionResult> {
+export function getSuggestionsKeyForProfile(userId: string, profile: LearnerProfile): string {
   const fingerprint = [
     profile.solvedTotal,
     profile.hard,
@@ -356,9 +279,34 @@ export async function getAiSuggestions(
     profile.interviewsCompleted,
   ].join('-');
 
-  const key = `${getSuggestionsCacheKey(userId)}:${fingerprint}`;
-  const cached = await getCachedData<SuggestionResult>(key);
-  if (cached) return cached;
+  return `${getSuggestionsCacheKey(userId)}:${fingerprint}`;
+}
+
+/**
+ * Checks cache for existing AI suggestions. Does NOT trigger any AI generation.
+ */
+export async function getCachedAiSuggestions(
+  userId: string,
+  profile: LearnerProfile
+): Promise<SuggestionResult | null> {
+  const key = getSuggestionsKeyForProfile(userId, profile);
+  return await getCachedData<SuggestionResult>(key);
+}
+
+/**
+ * Explicitly requests AI suggestions. Only called when the user clicks 'AI Review'.
+ */
+export async function requestAiReview(
+  userId: string,
+  profile: LearnerProfile,
+  forceRefresh = false
+): Promise<SuggestionResult> {
+  const key = getSuggestionsKeyForProfile(userId, profile);
+
+  if (!forceRefresh) {
+    const cached = await getCachedData<SuggestionResult>(key);
+    if (cached) return cached;
+  }
 
   const aiSuggestions = await generateSuggestions(profile);
   const result: SuggestionResult = aiSuggestions.length
@@ -376,3 +324,14 @@ export async function getAiSuggestions(
 
   return result;
 }
+
+/**
+ * Main suggestions resolver. Uses requestAiReview.
+ */
+export async function getAiSuggestions(
+  userId: string,
+  profile: LearnerProfile
+): Promise<SuggestionResult> {
+  return requestAiReview(userId, profile);
+}
+

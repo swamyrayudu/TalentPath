@@ -1,8 +1,9 @@
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Sparkles } from 'lucide-react';
-import { FOCUS_LINKS } from '@/lib/ai-suggestions';
-import type { Suggestion } from '@/lib/ai-suggestions';
+import { ArrowRight, Sparkles, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { FOCUS_LINKS } from '@/lib/ai-suggestions-types';
+import type { Suggestion } from '@/lib/ai-suggestions-types';
 
 const FOCUS_LABEL: Record<string, string> = {
   daily: 'Daily',
@@ -15,28 +16,48 @@ const FOCUS_LABEL: Record<string, string> = {
 };
 
 /**
- * What to do next, derived from this learner's own numbers. Rendered on the
- * server — the suggestions are already resolved by the time this mounts.
+ * What to do next, derived from this learner's own numbers.
  */
 export function AiSuggestionsCard({
   suggestions,
   source,
+  onRefresh,
+  isRefreshing,
 }: {
   suggestions: Suggestion[];
   source: 'ai' | 'rules';
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }) {
   if (suggestions.length === 0) return null;
 
   return (
     <section className="rounded-2xl border bg-card">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
         <div className="flex items-center gap-2.5">
           <Sparkles className="size-4 text-primary" strokeWidth={1.75} />
-          <h2 className="text-sm font-semibold">Suggested for you</h2>
+          <h2 className="text-sm font-semibold">AI Performance Review</h2>
+          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+            {source === 'ai' ? 'AI · from your activity' : 'From your activity'}
+          </span>
         </div>
-        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-          {source === 'ai' ? 'AI · from your activity' : 'From your activity'}
-        </span>
+
+        {onRefresh && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className="h-7 gap-1.5 px-2.5 text-xs font-medium"
+          >
+            {isRefreshing ? (
+              <Loader2 className="size-3 animate-spin text-primary" />
+            ) : (
+              <Sparkles className="size-3 text-primary" />
+            )}
+            {isRefreshing ? 'Analyzing...' : 'Refresh AI Review'}
+          </Button>
+        )}
       </div>
 
       <div className="divide-y">

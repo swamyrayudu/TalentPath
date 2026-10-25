@@ -1,12 +1,12 @@
 import React from 'react';
 import { Sparkles } from 'lucide-react';
-import { getAiSuggestions } from '@/lib/ai-suggestions';
+import { getCachedAiSuggestions } from '@/lib/ai-suggestions';
 import type { LearnerProfile } from '@/lib/ai-suggestions';
-import { AiSuggestionsCard } from '@/components/dashboard/ai-suggestions-card';
+import { AiSuggestionsClient } from '@/components/dashboard/ai-suggestions-client';
 
 /**
- * Streams in behind Suspense. Generating suggestions means a round trip to the
- * model on a cache miss, which is far too slow to hold up the whole dashboard.
+ * Loads cached suggestions if already generated, without triggering automatic AI calls.
+ * Fresh AI generation only runs on explicit user click.
  */
 export async function AiSuggestionsSection({
   userId,
@@ -15,8 +15,8 @@ export async function AiSuggestionsSection({
   userId: string;
   profile: LearnerProfile;
 }) {
-  const { suggestions, source } = await getAiSuggestions(userId, profile);
-  return <AiSuggestionsCard suggestions={suggestions} source={source} />;
+  const cached = await getCachedAiSuggestions(userId, profile);
+  return <AiSuggestionsClient profile={profile} initialResult={cached} />;
 }
 
 export function AiSuggestionsSkeleton() {
